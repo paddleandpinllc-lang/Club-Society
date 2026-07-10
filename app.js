@@ -1,6 +1,7 @@
 ﻿const STORAGE_KEY = "paddlePinClub.v1";
 const CLOUD_CONFIG_KEY = "clubSociety.cloudConfig.v1";
 const INTEGRATION_CONFIG_KEY = "clubSociety.integrationConfig.v1";
+const PADDLE_PINT_SYNC_CONFIG_KEY = "clubSociety.paddlePintSync.v1";
 const DEFAULT_LOCATION = { street: "", city: "Watkinsville", state: "GA", zip: "30677" };
 const DEFAULT_PUBLIC_VIEW = {
   headline: "Find your next game",
@@ -67,6 +68,9 @@ const els = {
   publicViewForm: document.querySelector("#publicViewForm"),
   shopForm: document.querySelector("#shopForm"),
   integrationForm: document.querySelector("#integrationForm"),
+  paddlePintSyncForm: document.querySelector("#paddlePintSyncForm"),
+  importPaddlePintBtn: document.querySelector("#importPaddlePintBtn"),
+  paddlePintSyncStatus: document.querySelector("#paddlePintSyncStatus"),
   cloudConfigForm: document.querySelector("#cloudConfigForm"),
   seedDemoBtn: document.querySelector("#seedDemoBtn"),
   saveSnapshotBtn: document.querySelector("#saveSnapshotBtn"),
@@ -135,6 +139,8 @@ els.profileForm.addEventListener("submit", saveProfile);
 els.publicViewForm.addEventListener("submit", savePublicView);
 els.shopForm.addEventListener("submit", saveShopCollection);
 els.integrationForm.addEventListener("submit", saveIntegrationConfig);
+els.paddlePintSyncForm.addEventListener("submit", savePaddlePintSyncConfig);
+els.importPaddlePintBtn.addEventListener("click", importPaddlePintSubmissions);
 els.cloudConfigForm.addEventListener("submit", saveCloudConfig);
 els.rosterSearch.addEventListener("input", renderPlayers);
 document.querySelector("#playerList").addEventListener("click", handlePlayerListClick);
@@ -191,6 +197,8 @@ function loadState() {
     verificationCodes: {},
     admins: [{ id: "owner", name: "Event Owner", email: LOCAL_ADMIN_EMAIL, role: "Host Admin" }],
     profiles: [],
+    paddlePintImportedIds: [],
+    selectedEventRosterId: "",
     sync: { status: "Local only", lastSync: "", pending: 0 },
   };
 
@@ -215,6 +223,8 @@ function normalizeState(data) {
   }));
   data.events = data.events || [];
   data.players = data.players || [];
+  data.paddlePintImportedIds = data.paddlePintImportedIds || [];
+  data.selectedEventRosterId = data.selectedEventRosterId || "";
   return data;
 }
 
@@ -256,6 +266,7 @@ function render() {
   els.modes.forEach((item) => item.classList.toggle("active", item.dataset.mode === state.mode));
   renderMetrics();
   renderEvents();
+  renderEventRoster();
   renderEventOptions();
   renderPublicViewControls();
   renderPublicViewPreview();
@@ -275,6 +286,7 @@ function render() {
   renderShopCollections();
   renderArchive();
   renderIntegrationConfig();
+  renderPaddlePintSyncConfig();
   renderIntegrationEventOptions();
   renderCloudConfig();
   renderCloudStatus();
@@ -554,6 +566,7 @@ function eventCard(event) {
       <p class="meta">Public link: /events/${escapeHtml(event.slug || event.id)}</p>
       <p class="meta">${escapeHtml(event.note || "")}</p>
       <div class="card-actions">
+        <button type="button" data-view-event-roster="${escapeHtml(event.id)}">View RSVPs</button>
         <button type="button" data-edit-event="${escapeHtml(event.id)}">Edit</button>
         <button type="button" data-archive-event="${escapeHtml(event.id)}">Archive</button>
         <button class="danger" type="button" data-delete-event="${escapeHtml(event.id)}">Delete</button>
@@ -563,13 +576,67 @@ function eventCard(event) {
 }
 
 function handleEventListClick(event) {
+  const rosterButton = event.target.closest("[data-view-event-roster]");
   const editButton = event.target.closest("[data-edit-event]");
   const archiveButton = event.target.closest("[data-archive-event]");
   const deleteButton = event.target.closest("[data-delete-event]");
 
+  if (rosterButton) viewEventRoster(rosterButton.dataset.viewEventRoster);
   if (editButton) editEvent(editButton.dataset.editEvent);
   if (archiveButton) archiveEvent(archiveButton.dataset.archiveEvent);
   if (deleteButton) deleteEvent(deleteButton.dataset.deleteEvent);
+}
+
+function viewEventRoster(id) {
+  state.selectedEventRosterId = id;
+  saveState();
+  renderEventRoster();
+  document.querySelector("#eventRosterPanel")?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+}
+
+function renderEventRoster() {
+  const panel = document.querySelector("#eventRosterPanel");
+  if (!panel) return;
+  const event = state.events.find((item) => item.id === state.selectedEventRosterId);
+  if (!event) {
+    panel.innerHTML = "";
+    return;
+  }
+
+  const roster = eventPlayers(event.id).sort((a, b) => (a.lastName || "").localeCompare(b.lastName || ""));
+  panel.innerHTML = `
+    <article class="card event-roster-card">
+      <span class="status-pill">${roster.length} RSVP${roster.length === 1 ? "" : "s"}</span>
+      <strong>${escapeHtml(event.name)}</strong>
+      <p class="meta">${escapeHtml(event.date)} | ${escapeHtml(event.venue)} | ${escapeHtml(event.format)}</p>
+      ${roster.length ? `
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Player</th>
+                <th>Email</th>
+                <th>Phone</th>
+                <th>Status</th>
+                <th>Shirt</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${roster.map((player) => `
+                <tr>
+                  <td>${escapeHtml(player.firstName)} ${escapeHtml(player.lastName)}</td>
+                  <td>${escapeHtml(player.email || "")}</td>
+                  <td>${escapeHtml(player.phone || "")}</td>
+                  <td>${escapeHtml(player.status || "RSVP")}</td>
+                  <td>${escapeHtml([player.shirtGender, player.shirtSize, player.optionalShirtChoice].filter(Boolean).join(" / ") || "-")}</td>
+                </tr>
+              `).join("")}
+            </tbody>
+          </table>
+        </div>
+      ` : `<p class="meta">No RSVPs have been imported for this event yet.</p>`}
+    </article>
+  `;
 }
 
 function editEvent(id) {
@@ -590,6 +657,7 @@ function deleteEvent(id) {
   if (!window.confirm(`Delete ${item.name}? This removes it from public events and event dropdowns.`)) return;
   state.events = state.events.filter((event) => event.id !== id);
   state.players = state.players.map((player) => player.eventId === id ? { ...player, eventId: "" } : player);
+  if (state.selectedEventRosterId === id) state.selectedEventRosterId = "";
   saveState();
   render();
   showAdminMessage("#eventList", "success", "Event deleted.");
@@ -608,6 +676,7 @@ function archiveEvent(id) {
     players: attendees,
   });
   state.events = state.events.filter((event) => event.id !== id);
+  if (state.selectedEventRosterId === id) state.selectedEventRosterId = "";
   saveState();
   render();
   showAdminMessage("#eventList", "success", "Event archived.");
@@ -1414,6 +1483,205 @@ function renderIntegrationConfig() {
   renderIntegrationStatus();
 }
 
+function loadPaddlePintSyncConfig() {
+  try {
+    return JSON.parse(localStorage.getItem(PADDLE_PINT_SYNC_CONFIG_KEY)) || {};
+  } catch {
+    return {};
+  }
+}
+
+function savePaddlePintSyncConfig(event) {
+  event.preventDefault();
+  const data = Object.fromEntries(new FormData(els.paddlePintSyncForm).entries());
+  localStorage.setItem(PADDLE_PINT_SYNC_CONFIG_KEY, JSON.stringify(data));
+  renderPaddlePintSyncStatus("Paddle + Pint sync settings saved.");
+}
+
+function renderPaddlePintSyncConfig() {
+  const config = {
+    endpointUrl: "https://club-society.pages.dev/api/paddle-pint",
+    ...loadPaddlePintSyncConfig(),
+  };
+  Object.entries(config).forEach(([name, value]) => {
+    const field = els.paddlePintSyncForm.elements[name];
+    if (field) field.value = value || "";
+  });
+  if (!els.paddlePintSyncStatus.innerHTML) {
+    renderPaddlePintSyncStatus("T-shirt claims and event RSVPs are stored in Cloudflare D1. Import RSVPs here to attach them to app events.");
+  }
+}
+
+async function importPaddlePintSubmissions() {
+  const config = {
+    endpointUrl: "https://club-society.pages.dev/api/paddle-pint",
+    ...Object.fromEntries(new FormData(els.paddlePintSyncForm).entries()),
+  };
+  if (!config.endpointUrl?.trim()) {
+    renderPaddlePintSyncStatus("Add the Club Society endpoint URL first.", "notice");
+    return;
+  }
+  if (!config.adminKey?.trim()) {
+    renderPaddlePintSyncStatus("Add the admin sync key first. It must match ADMIN_SYNC_KEY in Cloudflare.", "notice");
+    return;
+  }
+
+  localStorage.setItem(PADDLE_PINT_SYNC_CONFIG_KEY, JSON.stringify(config));
+  renderPaddlePintSyncStatus("Checking Cloudflare for Paddle + Pint RSVPs...");
+
+  try {
+    const url = new URL(config.endpointUrl);
+    url.searchParams.set("type", "round_robin_event");
+    const response = await fetch(url.toString(), {
+      headers: { "X-Admin-Key": config.adminKey },
+    });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok || result.ok === false) {
+      renderPaddlePintSyncStatus(result.error || `Sync failed with status ${response.status}`, "notice");
+      return;
+    }
+
+    const stats = importRoundRobinSubmissions(result.submissions || []);
+    saveState();
+    render();
+    renderPaddlePintSyncStatus(`Imported ${stats.playersCreated} player RSVP${stats.playersCreated === 1 ? "" : "s"} into ${stats.eventsTouched} event${stats.eventsTouched === 1 ? "" : "s"}. Skipped ${stats.skipped} already-imported submission${stats.skipped === 1 ? "" : "s"}.`, "success");
+  } catch (error) {
+    renderPaddlePintSyncStatus(`Sync failed: ${error.message}`, "notice");
+  }
+}
+
+function importRoundRobinSubmissions(submissions) {
+  const imported = new Set(state.paddlePintImportedIds.map(String));
+  const touchedEvents = new Set();
+  let playersCreated = 0;
+  let skipped = 0;
+
+  submissions
+    .filter((submission) => submission.type === "round_robin_event")
+    .reverse()
+    .forEach((submission) => {
+      const submissionId = String(submission.id || `${submission.email}-${submission.event_date}`);
+      if (imported.has(submissionId)) {
+        skipped += 1;
+        return;
+      }
+
+      const event = findOrCreatePaddlePintEvent(submission);
+      touchedEvents.add(event.id);
+      const createdPrimary = upsertImportedPlayer(submission, event.id);
+      if (createdPrimary) playersCreated += 1;
+
+      parseAdditionalPlayers(submission.additional_players_json).forEach((guest, index) => {
+        const createdGuest = upsertImportedGuestPlayer(guest, submission, event.id, index);
+        if (createdGuest) playersCreated += 1;
+      });
+
+      imported.add(submissionId);
+      state.paddlePintImportedIds.push(submissionId);
+    });
+
+  return { playersCreated, skipped, eventsTouched: touchedEvents.size };
+}
+
+function findOrCreatePaddlePintEvent(submission) {
+  const submittedDate = submission.event_date || "Upcoming";
+  const eventDate = dateInputValue(submittedDate);
+  let event = state.events.find((item) => item.paddlePintEventDate === submittedDate)
+    || state.events.find((item) => item.date === eventDate && /paddle \+ pint/i.test(item.name));
+
+  if (event) return event;
+
+  event = {
+    id: newId(),
+    name: `Paddle + Pint - ${submittedDate}`,
+    venue: "Paddle + Pin",
+    date: eventDate,
+    format: "Round Robin",
+    capacity: "32",
+    courts: "4",
+    note: "Imported from the Paddle + Pint Shopify form.",
+    sport: "pickleball",
+    slug: slugify(`paddle-pint-${submittedDate}`),
+    published: true,
+    paddlePintEventDate: submittedDate,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
+  state.events.unshift(event);
+  return event;
+}
+
+function upsertImportedPlayer(submission, eventId) {
+  const email = String(submission.email || "").trim().toLowerCase();
+  const existing = state.players.find((player) => player.email?.toLowerCase() === email && player.eventId === eventId);
+  const record = {
+    id: existing?.id || newId(),
+    firstName: titleCase(submission.first_name || ""),
+    lastName: titleCase(submission.last_name || ""),
+    email,
+    phone: submission.phone || "",
+    skill: "Open",
+    waiver: "Needs Signature",
+    paid: "Not tracked",
+    status: "RSVP",
+    eventId,
+    sport: "pickleball",
+    checkedIn: false,
+    shirtGender: submission.shirt_gender || "",
+    shirtSize: submission.shirt_size || "",
+    optionalShirtChoice: submission.optional_shirt_choice || "",
+    notes: submission.notes || "",
+    source: submission.source || "paddleandpin.com",
+    importedSubmissionId: String(submission.id || ""),
+  };
+
+  if (existing) {
+    Object.assign(existing, record);
+    return false;
+  }
+  state.players.unshift(record);
+  return true;
+}
+
+function upsertImportedGuestPlayer(guest, submission, eventId, index) {
+  const firstName = titleCase(guest.first_name || guest.firstName || "");
+  const lastName = titleCase(guest.last_name || guest.lastName || "");
+  if (!firstName && !lastName) return false;
+
+  const guestKey = `${submission.id || submission.email}-guest-${index}`;
+  const existing = state.players.find((player) => player.importedGuestKey === guestKey);
+  if (existing) return false;
+
+  state.players.push({
+    id: newId(),
+    firstName,
+    lastName,
+    email: "",
+    phone: "",
+    skill: "Open",
+    waiver: "Needs Signature",
+    paid: "Not tracked",
+    status: "Additional player",
+    eventId,
+    sport: "pickleball",
+    checkedIn: false,
+    notes: `Additional player for ${submission.first_name || ""} ${submission.last_name || ""}`.trim(),
+    source: submission.source || "paddleandpin.com",
+    importedSubmissionId: String(submission.id || ""),
+    importedGuestKey: guestKey,
+  });
+  return true;
+}
+
+function renderPaddlePintSyncStatus(message, tone = "") {
+  els.paddlePintSyncStatus.innerHTML = `
+    <article class="card ${tone}">
+      <strong>${escapeHtml(message)}</strong>
+      <p class="meta">Endpoint: https://club-society.pages.dev/api/paddle-pint | Table: paddle_pint_submissions</p>
+    </article>
+  `;
+}
+
 function renderIntegrationEventOptions() {
   const events = state.events.filter((event) => (event.sport || "pickleball") === state.mode);
   els.integrationEventSelect.innerHTML = events.length
@@ -1776,6 +2044,23 @@ function eventName(id) {
 
 function eventPlayers(id) {
   return state.players.filter((player) => player.eventId === id);
+}
+
+function dateInputValue(value) {
+  const parsed = Date.parse(value);
+  if (Number.isNaN(parsed)) return new Date().toISOString().slice(0, 10);
+  return new Date(parsed).toISOString().slice(0, 10);
+}
+
+function parseAdditionalPlayers(value) {
+  if (Array.isArray(value)) return value;
+  if (!value) return [];
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
 }
 
 function findEventId(name) {

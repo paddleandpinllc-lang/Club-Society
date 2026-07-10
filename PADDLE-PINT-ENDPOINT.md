@@ -6,6 +6,18 @@ This app now includes a Cloudflare Pages Function:
 POST /api/paddle-pint
 ```
 
+Admins can also import saved round-robin submissions into Club Society events from:
+
+```text
+GET /api/paddle-pint?type=round_robin_event
+```
+
+The admin import requires this request header:
+
+```text
+X-Admin-Key: your ADMIN_SYNC_KEY value
+```
+
 Use this endpoint from the Paddle + Pin Shopify site:
 
 ```text
@@ -82,11 +94,43 @@ paddle_pint_submissions
 
 ## Allowed CORS Origin
 
-Only this origin is allowed:
+Public form submissions are allowed from:
 
 ```text
 https://www.paddleandpin.com
 ```
+
+Protected admin imports are also allowed from the Club Society app:
+
+```text
+https://club-society.pages.dev
+```
+
+## Club Society Admin Import
+
+T-shirt claims and event RSVPs both save into the same D1 table:
+
+```text
+paddle_pint_submissions
+```
+
+Round-robin event submissions can be pulled into the Club Society event roster:
+
+1. In Cloudflare Pages, add an environment variable or secret named `ADMIN_SYNC_KEY`.
+2. Redeploy the Pages project.
+3. Open Club Society.
+4. Go to Integrations > Paddle + Pint Shopify > Submission Sync.
+5. Confirm the endpoint URL is:
+
+```text
+https://club-society.pages.dev/api/paddle-pint
+```
+
+6. Paste the same `ADMIN_SYNC_KEY` value into the admin sync key field.
+7. Click `Import Paddle + Pint RSVPs`.
+8. Go to Events and click `View RSVPs` on a Paddle + Pint event.
+
+If a matching Paddle + Pint event for the submitted date does not exist yet, the app creates one automatically.
 
 ## Round Robin JSON
 

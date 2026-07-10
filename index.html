@@ -385,6 +385,7 @@
                 </div>
               </div>
               <div id="eventList" class="stack"></div>
+              <div id="eventRosterPanel" class="stack event-roster-panel"></div>
             </section>
           </div>
         </section>
@@ -741,6 +742,23 @@
                 <button id="draftSocialBtn" type="button">Draft Facebook/Instagram Post</button>
               </div>
               <div id="integrationStatus" class="stack"></div>
+            </section>
+            <section class="panel full">
+              <div class="panel-head">
+                <div>
+                  <p class="eyebrow">Paddle + Pint Shopify</p>
+                  <h2>Submission Sync</h2>
+                </div>
+              </div>
+              <form id="paddlePintSyncForm" class="form-grid">
+                <label class="full">Club Society endpoint URL<input name="endpointUrl" type="url" value="https://club-society.pages.dev/api/paddle-pint" required></label>
+                <label class="full">Admin sync key<input name="adminKey" type="password" placeholder="Paste the Cloudflare ADMIN_SYNC_KEY"></label>
+                <div class="form-actions full">
+                  <button class="primary" type="submit">Save Sync Settings</button>
+                  <button id="importPaddlePintBtn" type="button">Import Paddle + Pint RSVPs</button>
+                </div>
+              </form>
+              <div id="paddlePintSyncStatus" class="sync-status"></div>
             </section>
           </div>
         </section>
