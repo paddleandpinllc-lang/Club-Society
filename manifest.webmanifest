@@ -1,0 +1,17 @@
+{
+  "name": "Club Society",
+  "short_name": "Club Society",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#faf6ed",
+  "theme_color": "#0b2231",
+  "description": "Where ballers & golfers come to play, connect, and challenge.",
+  "icons": [
+    {
+      "src": "club-society-mark.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

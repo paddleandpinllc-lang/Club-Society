@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">Club Society mark</title>
+  <desc id="desc">A premium S-shaped club mark with subtle pickleball and golf cues.</desc>
+  <rect width="512" height="512" rx="112" fill="#0b2231"/>
+  <circle cx="256" cy="256" r="180" fill="#fff7e8"/>
+  <path d="M348 132c-34-24-92-31-133-12-35 16-53 44-49 73 5 39 40 56 88 68 39 10 62 19 66 41 3 18-11 33-36 41-33 11-77 1-114-26l-37 54c49 35 116 46 169 29 49-16 80-55 75-101-5-48-44-70-100-84-34-9-53-16-55-33-2-13 9-23 27-29 24-8 58-2 81 14l18-35Z" fill="#0b2231"/>
+  <path d="M148 333c61 52 168 73 252 23-23 54-78 91-142 91-76 0-139-55-152-127 13 2 27 7 42 13Z" fill="#1f8a62"/>
+  <path d="M122 250c28-42 74-71 129-78 58-7 107 12 145 42-9-69-68-122-140-122-76 0-139 60-143 135l9 23Z" fill="#f4b52b"/>
+  <path d="M364 162c28 25 45 63 45 103 0 13-2 26-5 38l-38-16c4-33-7-67-31-91l29-34Z" fill="#f56b3b"/>
+  <circle cx="194" cy="173" r="11" fill="#fff7e8"/>
+  <circle cx="224" cy="148" r="8" fill="#fff7e8"/>
+  <circle cx="181" cy="218" r="8" fill="#fff7e8"/>
+  <path d="M336 142c38 33 61 81 61 134" fill="none" stroke="#fff7e8" stroke-width="16" stroke-linecap="round"/>
+  <path d="M344 137l54 9-32 42" fill="#fff7e8"/>
+</svg>

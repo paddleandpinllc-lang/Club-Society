@@ -1,0 +1,853 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#0b2231">
+    <title>Club Society</title>
+    <link rel="manifest" href="manifest.webmanifest">
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <aside class="sidebar">
+      <div class="brand">
+        <img src="club-society-mark.svg" alt="">
+        <div>
+          <strong>Club Society</strong>
+          <span>Where ballers & golfers come to play, connect, and challenge.</span>
+        </div>
+      </div>
+      <nav class="nav" aria-label="Main navigation">
+        <button class="nav-item active" data-view="command">Command</button>
+        <button class="nav-item" data-view="events">Events</button>
+        <button class="nav-item" data-view="publicView">Public View</button>
+        <button class="nav-item public-nav" data-view="publicEvents">Public Events</button>
+        <button class="nav-item public-nav" data-view="profile">Player Profile</button>
+        <button class="nav-item public-nav" data-view="discover">Discover</button>
+        <button class="nav-item" data-view="checkin">Check-In</button>
+        <button class="nav-item public-nav" data-view="public">Public Check-In</button>
+        <button class="nav-item" data-view="rounds">Round Robin</button>
+        <button class="nav-item" data-view="tournament">Tournament</button>
+        <button class="nav-item" data-view="community">Community</button>
+        <button class="nav-item" data-view="host">Host Dashboard</button>
+        <button class="nav-item" data-view="shop">Shop</button>
+        <button class="nav-item" data-view="archive">Archive</button>
+        <button class="nav-item" data-view="integrations">Integrations</button>
+        <button class="nav-item" data-view="launch">Launch</button>
+      </nav>
+      <div class="mode-card">
+        <span>Play mode</span>
+        <div class="segmented" role="group" aria-label="Sport mode">
+          <button class="mode active" data-mode="pickleball">Pickleball</button>
+          <button class="mode golf-locked" data-mode="golf">Golf</button>
+        </div>
+      </div>
+    </aside>
+
+    <div class="app">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">Admin preview</p>
+          <h1>Club Society</h1>
+          <p class="lede">Where ballers & golfers come to play, connect, and challenge.</p>
+        </div>
+        <img class="top-mark" src="club-society-mark.svg" alt="">
+          <div class="top-actions">
+            <button id="seedDemoBtn">Load Demo Club</button>
+            <button class="primary" id="saveSnapshotBtn">Export Snapshot</button>
+          </div>
+      </header>
+
+      <main>
+        <section class="view active" id="command">
+          <div class="metric-grid">
+            <article class="metric"><span>Active players</span><strong id="metricPlayers">0</strong></article>
+            <article class="metric"><span>Checked in</span><strong id="metricCheckedIn">0</strong></article>
+            <article class="metric"><span>Open events</span><strong id="metricEvents">0</strong></article>
+            <article class="metric"><span>Community posts</span><strong id="metricPosts">0</strong></article>
+          </div>
+          <div class="workspace two">
+            <section class="panel">
+              <div class="panel-head">
+                <div>
+                  <p class="eyebrow">Tonight</p>
+                  <h2>Event Control</h2>
+                </div>
+                <div class="toolbar">
+                  <button data-jump="discover">Discover</button>
+                  <button data-jump="publicEvents">Public Events</button>
+                  <button data-jump="public">Public Check-In</button>
+                  <button class="primary" data-jump="checkin">Admin Check-In</button>
+                </div>
+              </div>
+              <div id="commandEvents" class="stack"></div>
+            </section>
+            <section class="panel art-panel">
+              <img class="panel-mark" src="club-society-mark.svg" alt="">
+              <div>
+                <p class="eyebrow">Club concept</p>
+                <h2>One app for pickleball nights, golf groups, hosts, players, and local commerce.</h2>
+              </div>
+              <div class="play-card">
+                <span>Next build targets</span>
+                <ul>
+                  <li>Hosted PWA for admins</li>
+                  <li>Shared cloud event data</li>
+                  <li>Public player matching</li>
+                  <li>Paddle + Pin shopping paths</li>
+                </ul>
+              </div>
+            </section>
+          </div>
+        </section>
+
+        <section class="view" id="profile">
+          <div class="workspace two">
+            <section class="panel">
+              <div class="panel-head">
+                <div>
+                  <p class="eyebrow">Player account</p>
+                  <h2>Create Profile</h2>
+                </div>
+              </div>
+              <form id="profileForm" class="form-grid">
+                <input name="profileId" type="hidden">
+                <label>First name<input name="firstName" required></label>
+                <label>Last name<input name="lastName" required></label>
+                <label>Email<input name="email" type="email" required></label>
+                <label>Phone number<input name="phone" type="tel" placeholder="555-0101"></label>
+                <label class="full">Street address<input name="street" placeholder="123 Main Street"></label>
+                <label>City<input name="city" value="Watkinsville" placeholder="Watkinsville"></label>
+                <label>State<input name="state" value="GA" placeholder="GA"></label>
+                <label>ZIP code<input name="zip" inputmode="numeric" value="30677" placeholder="30677"></label>
+                <label>Pickleball level
+                  <select name="skill">
+                    <option>Beginner</option>
+                    <option selected>Intermediate</option>
+                    <option>Advanced</option>
+                    <option>Open</option>
+                  </select>
+                </label>
+                <label>Availability
+                  <select name="availability">
+                    <option>Weeknights</option>
+                    <option>Weekends</option>
+                    <option>Mornings</option>
+                    <option>Flexible</option>
+                  </select>
+                </label>
+                <label class="full checkbox-line">
+                  <input name="smsSubscriber" type="checkbox">
+                  Send me SMS updates about events, matches, and waitlist changes.
+                </label>
+                <label>Verification method
+                  <select name="verificationMethod">
+                    <option value="email">Email verification</option>
+                    <option value="sms">SMS verification</option>
+                  </select>
+                </label>
+                <label>Verification code<input name="verificationCode" inputmode="numeric" placeholder="Enter code"></label>
+                <div class="full verification-actions">
+                  <button id="sendVerificationBtn" type="button">Send Verification Code</button>
+                  <button id="verifyProfileBtn" type="button">Verify Profile</button>
+                  <span id="profileVerificationStatus">Not verified</span>
+                </div>
+                <fieldset class="full interest-checks">
+                  <legend>Play interests</legend>
+                  <label><input name="interests" type="checkbox" value="Social round robins"> Social round robins</label>
+                  <label><input name="interests" type="checkbox" value="Tournaments"> Tournaments</label>
+                  <label><input name="interests" type="checkbox" value="Beginner-friendly play"> Beginner-friendly play</label>
+                  <label><input name="interests" type="checkbox" value="Competitive drills"> Competitive drills</label>
+                  <label><input name="interests" type="checkbox" value="Golf groups"> Golf groups</label>
+                  <label><input name="interests" type="checkbox" value="Casual Golfing"> Casual Golfing</label>
+                </fieldset>
+                <div class="form-actions full">
+                  <button class="primary" type="submit">Save Profile</button>
+                  <button id="cancelProfileEditBtn" type="button">Cancel Edit</button>
+                </div>
+              </form>
+            </section>
+            <section class="panel">
+              <div class="panel-head">
+                <div>
+                  <p class="eyebrow">Member directory</p>
+                  <h2>Player Profiles</h2>
+                </div>
+              </div>
+              <div id="profileList" class="profile-grid"></div>
+            </section>
+          </div>
+        </section>
+
+        <section class="view" id="discover">
+          <div class="discover-shell">
+            <section class="discover-hero">
+              <p class="eyebrow">Play. Connect. Challenge.</p>
+              <h2>Discover local play</h2>
+              <p>Find players, open matches, tournaments, and club challenges from one public-facing hub.</p>
+            </section>
+            <section class="panel">
+              <div class="panel-head">
+                <div>
+                  <p class="eyebrow">Matches</p>
+                  <h2>Recommended Connections</h2>
+                </div>
+              </div>
+              <div id="matchList" class="match-grid"></div>
+            </section>
+            <section class="panel">
+              <div class="panel-head">
+                <div>
+                  <p class="eyebrow">Tournaments</p>
+                  <h2>Discovery Board</h2>
+                </div>
+              </div>
+              <div id="tournamentDiscoveryList" class="discovery-grid"></div>
+            </section>
+          </div>
+        </section>
+
+        <section class="view" id="publicEvents">
+          <div class="public-event-shell">
+            <section class="public-hero public-event-hero">
+              <img src="club-society-mark.svg" alt="">
+              <p class="eyebrow">Public events</p>
+              <h2>Find your next game</h2>
+              <p>Browse published Club Society events, RSVP, and join the waitlist when an event fills up.</p>
+            </section>
+            <section class="panel">
+              <div class="panel-head">
+                <div>
+                  <p class="eyebrow">Live public page preview</p>
+                  <h2>Published Events</h2>
+                </div>
+              </div>
+              <div id="publicEventList" class="event-public-grid"></div>
+            </section>
+            <section class="panel public-rsvp-panel">
+              <div class="panel-head">
+                <div>
+                  <p class="eyebrow">Player RSVP</p>
+                  <h2>Reserve a spot</h2>
+                </div>
+              </div>
+              <form id="publicRsvpForm" class="form-grid">
+                <label class="full">Event
+                  <select name="eventId" id="publicRsvpEvent"></select>
+                </label>
+                <label>First name<input name="firstName" required></label>
+                <label>Last name<input name="lastName" required></label>
+                <label>Email<input name="email" type="email" required></label>
+                <label>Phone<input name="phone" type="tel"></label>
+                <label>Skill
+                  <select name="skill">
+                    <option>Beginner</option>
+                    <option selected>Intermediate</option>
+                    <option>Advanced</option>
+                    <option>Open</option>
+                  </select>
+                </label>
+                <label>Payment
+                  <select name="paid">
+                    <option selected>Not tracked</option>
+                    <option>Paid</option>
+                    <option>Needs payment</option>
+                  </select>
+                </label>
+                <label class="full">Notes<textarea name="notes" rows="2" placeholder="Partner request, arrival note, or anything the host should know"></textarea></label>
+                <button class="primary full" type="submit">Submit RSVP</button>
+              </form>
+              <div id="publicRsvpResult" class="public-result"></div>
+            </section>
+          </div>
+        </section>
+
+        <section class="view" id="golfSoon">
+          <div class="golf-soon">
+            <section class="golf-hero-panel">
+              <p class="eyebrow">Golf mode</p>
+              <h2>Coming Soon</h2>
+              <p>Club Society Golf is being shaped as its own experience for leagues, foursomes, scrambles, trips, and local challenges.</p>
+              <div class="golf-pill-row">
+                <span>Play</span>
+                <span>Connect</span>
+                <span>Challenge</span>
+              </div>
+            </section>
+            <section class="panel">
+              <div class="panel-head">
+                <div>
+                  <p class="eyebrow">Preview path</p>
+                  <h2>Golf tools we are building toward</h2>
+                </div>
+              </div>
+              <div class="golf-feature-grid">
+                <article class="card"><strong>Play</strong><p class="meta">Golf scrambles, tee groups, nine-hole socials, leagues, and outing schedules.</p></article>
+                <article class="card"><strong>Connect</strong><p class="meta">Find foursomes, local groups, beginner-friendly play, and club-hosted meetups.</p></article>
+                <article class="card"><strong>Challenge</strong><p class="meta">Team challenges, leaderboards, skins, putting contests, and season standings.</p></article>
+              </div>
+            </section>
+          </div>
+        </section>
+
+        <section class="view" id="public">
+          <div class="public-shell">
+            <section class="public-hero">
+              <img src="club-society-mark.svg" alt="">
+              <p class="eyebrow">Player check-in</p>
+              <h2>Welcome to Club Society</h2>
+              <p>Search your RSVP, confirm your details, and check in. Other player information stays private.</p>
+            </section>
+            <section class="panel public-panel">
+              <form id="publicCheckinForm" class="form-grid">
+                <label class="full">Find your RSVP
+                  <input id="publicLookup" placeholder="Enter your name, email, or phone">
+                </label>
+                <button id="publicFindBtn" class="primary full" type="button">Find Me</button>
+                <div id="publicResult" class="full public-result"></div>
+                <label>First name<input name="firstName" required></label>
+                <label>Last name<input name="lastName" required></label>
+                <label>Email<input name="email" type="email" required></label>
+                <label>Phone<input name="phone" type="tel"></label>
+                <label>Skill
+                  <select name="skill">
+                    <option>Beginner</option>
+                    <option selected>Intermediate</option>
+                    <option>Advanced</option>
+                    <option>Open</option>
+                  </select>
+                </label>
+                <input name="waiver" type="hidden" value="Needs Signature">
+                <div class="waiver-status">
+                  <span>Waiver status</span>
+                  <strong id="publicWaiverStatus">Needs Signature</strong>
+                  <button id="openWaiverBtn" type="button">Review Waiver</button>
+                </div>
+                <label class="full checkbox-line">
+                  <input name="confirm" type="checkbox" required>
+                  I confirm this is my information and I am checking in for today.
+                </label>
+                <button class="primary full" type="submit">Complete Check-In</button>
+              </form>
+            </section>
+          </div>
+        </section>
+
+        <section class="view" id="events">
+          <div class="workspace two">
+            <section class="panel">
+              <div class="panel-head">
+                <div>
+                  <p class="eyebrow">Host setup</p>
+                  <h2>Create Event</h2>
+                </div>
+              </div>
+              <form id="eventForm" class="form-grid">
+                <input name="eventId" type="hidden">
+                <label>Event name<input name="name" required value="Paddle + Pint Night"></label>
+                <label>Venue<input name="venue" required value="South Main Brewing"></label>
+                <label>Date<input name="date" type="date" required></label>
+                <label>Format
+                  <select name="format">
+                    <option>Round Robin</option>
+                    <option>Tournament</option>
+                    <option>Open Play</option>
+                    <option>Golf Scramble</option>
+                  </select>
+                </label>
+                <label>Capacity<input name="capacity" type="number" min="2" value="32"></label>
+                <label>Courts / bays<input name="courts" type="number" min="1" value="4"></label>
+                <label>Visibility
+                  <select name="published">
+                    <option value="true" selected>Published</option>
+                    <option value="false">Draft</option>
+                  </select>
+                </label>
+                <label>Public link slug<input name="slug" placeholder="paddle-pint-night"></label>
+                <label class="full">Public note<textarea name="note" rows="3">Social play, rotating partners, and post-play pint specials.</textarea></label>
+                <div class="form-actions full">
+                  <button class="primary" type="submit">Save Event</button>
+                  <button id="cancelEventEditBtn" type="button">Cancel Edit</button>
+                </div>
+              </form>
+              <div class="template-strip" aria-label="Event templates">
+                <button data-template="pint">Paddle + Pint</button>
+                <button data-template="ladder">Skill Ladder</button>
+                <button data-template="open">Open Play</button>
+                <button data-template="scramble">Golf Scramble</button>
+              </div>
+            </section>
+            <section class="panel">
+              <div class="panel-head">
+                <div>
+                  <p class="eyebrow">Calendar</p>
+                  <h2>Events</h2>
+                </div>
+              </div>
+              <div id="eventList" class="stack"></div>
+            </section>
+          </div>
+        </section>
+
+        <section class="view" id="publicView">
+          <div class="workspace two">
+            <section class="panel">
+              <div class="panel-head">
+                <div>
+                  <p class="eyebrow">Backend controls</p>
+                  <h2>Public View</h2>
+                </div>
+              </div>
+              <form id="publicViewForm" class="form-grid">
+                <label class="full">Public headline<input name="headline" required></label>
+                <label class="full">Intro text<textarea name="intro" rows="3" required></textarea></label>
+                <label>Primary button label<input name="primaryLabel" required></label>
+                <label>Secondary label<input name="secondaryLabel"></label>
+                <label class="full">Public announcement<textarea name="announcement" rows="2"></textarea></label>
+                <fieldset class="full interest-checks">
+                  <legend>Featured events</legend>
+                  <div id="featuredEventControls" class="check-list"></div>
+                </fieldset>
+                <fieldset class="full interest-checks">
+                  <legend>Featured players</legend>
+                  <div id="featuredPlayerControls" class="check-list"></div>
+                </fieldset>
+                <button class="primary full" type="submit">Save Public View</button>
+              </form>
+            </section>
+            <section class="panel">
+              <div class="panel-head">
+                <div>
+                  <p class="eyebrow">Preview</p>
+                  <h2>Public Main Page</h2>
+                </div>
+              </div>
+              <div id="publicViewPreview" class="stack"></div>
+            </section>
+          </div>
+        </section>
+
+        <section class="view" id="checkin">
+          <div class="workspace two">
+            <section class="panel">
+              <div class="panel-head">
+                <div>
+                  <p class="eyebrow">Onsite</p>
+                  <h2>Player Check-In</h2>
+                </div>
+              </div>
+              <form id="playerForm" class="form-grid">
+                <div class="full quick-fill">
+                  <label>Already RSVP'd?
+                    <input id="rsvpLookup" list="rsvpOptions" placeholder="Search name, email, or phone">
+                    <datalist id="rsvpOptions"></datalist>
+                  </label>
+                  <button id="fillRsvpBtn" type="button">Fill RSVP</button>
+                </div>
+                <label>First name<input name="firstName" required></label>
+                <label>Last name<input name="lastName" required></label>
+                <label>Email<input name="email" type="email" required></label>
+                <label>Phone<input name="phone" type="tel"></label>
+                <label>Event
+                  <select name="eventId" id="playerEvent"></select>
+                </label>
+                <label>Skill
+                  <select name="skill">
+                    <option>Beginner</option>
+                    <option selected>Intermediate</option>
+                    <option>Advanced</option>
+                    <option>Open</option>
+                  </select>
+                </label>
+                <label>Waiver
+                  <select name="waiver">
+                    <option>Signed</option>
+                    <option>Needs Signature</option>
+                  </select>
+                </label>
+                <label>Status
+                  <select name="status">
+                    <option>RSVP</option>
+                    <option selected>Checked in</option>
+                    <option>Walk-up</option>
+                    <option>Waitlist</option>
+                  </select>
+                </label>
+                <label>Paid
+                  <select name="paid">
+                    <option>Paid</option>
+                    <option selected>Not tracked</option>
+                    <option>Needs payment</option>
+                  </select>
+                </label>
+                <label class="full">Notes<textarea name="notes" rows="2"></textarea></label>
+                <button class="primary full" type="submit">Check In</button>
+              </form>
+            </section>
+            <section class="panel">
+              <div class="panel-head">
+                <div>
+                  <p class="eyebrow">Live roster</p>
+                  <h2>Players</h2>
+                </div>
+                <div class="toolbar">
+                  <input id="rosterSearch" class="search" placeholder="Search roster">
+                  <button id="csvImportBtn">Import CSV</button>
+                  <button id="exportCsvBtn">Export CSV</button>
+                  <input id="csvImport" type="file" accept=".csv,text/csv" hidden>
+                </div>
+              </div>
+              <div id="playerList" class="stack"></div>
+              <div class="waiver-box">
+                <div class="panel-head compact">
+                  <div>
+                    <p class="eyebrow">Follow-up</p>
+                    <h2>Waiver Queue</h2>
+                  </div>
+                </div>
+                <div id="waiverList" class="stack"></div>
+              </div>
+            </section>
+          </div>
+        </section>
+
+        <section class="view" id="rounds">
+          <section class="panel">
+            <div class="panel-head">
+              <div>
+                <p class="eyebrow">Auto scheduler</p>
+                <h2>Round Robin Generator</h2>
+              </div>
+              <div class="toolbar">
+                <label>Courts<input id="courtCount" type="number" min="1" value="4"></label>
+                <label>Rounds<input id="roundCount" type="number" min="1" value="4"></label>
+                <button class="primary" id="buildRoundsBtn">Generate</button>
+              </div>
+            </div>
+            <div id="roundList" class="round-grid"></div>
+          </section>
+        </section>
+
+        <section class="view" id="tournament">
+          <section class="panel">
+            <div class="panel-head">
+              <div>
+                <p class="eyebrow">Scalable bracket</p>
+                <h2>Tournament</h2>
+              </div>
+              <div class="toolbar">
+                <button id="seedBracketBtn">Seed From Check-Ins</button>
+                <button class="primary" id="advanceBracketBtn">Advance Winners</button>
+              </div>
+            </div>
+            <div class="tournament-promo">
+              <strong>Tournament discovery</strong>
+              <span>Published tournament events also appear on the Discover board for players.</span>
+            </div>
+            <div id="bracket" class="bracket"></div>
+          </section>
+        </section>
+
+        <section class="view" id="community">
+          <div class="workspace two">
+            <section class="panel">
+              <div class="panel-head">
+                <div>
+                  <p class="eyebrow">Find play</p>
+                  <h2>Community Match Board</h2>
+                </div>
+              </div>
+              <form id="postForm" class="form-grid">
+                <label>Name<input name="name" required></label>
+                <label>Type
+                  <select name="type">
+                    <option>Looking for players</option>
+                    <option>Looking for tournament</option>
+                    <option>Hosting open play</option>
+                    <option>Golf foursome</option>
+                  </select>
+                </label>
+                <label>Location<input name="location" required></label>
+                <label>Skill / vibe<input name="skill" value="Social intermediate"></label>
+                <label class="full">Post<textarea name="body" rows="3" required></textarea></label>
+                <button class="primary full" type="submit">Post Match Request</button>
+              </form>
+            </section>
+            <section class="panel">
+              <div class="panel-head">
+                <div>
+                  <p class="eyebrow">Local board</p>
+                  <h2>Posts</h2>
+                </div>
+              </div>
+              <div id="communityList" class="stack"></div>
+            </section>
+          </div>
+        </section>
+
+        <section class="view" id="host">
+          <div class="metric-grid">
+            <article class="metric"><span>Capacity used</span><strong id="hostCapacity">0%</strong></article>
+            <article class="metric"><span>Waivers needed</span><strong id="hostWaivers">0</strong></article>
+            <article class="metric"><span>Courts active</span><strong id="hostCourts">0</strong></article>
+            <article class="metric"><span>Revenue paths</span><strong>Shop + events</strong></article>
+          </div>
+          <section class="panel">
+            <div class="panel-head">
+              <div>
+                <p class="eyebrow">Operations</p>
+                <h2>Host Dashboard</h2>
+              </div>
+            </div>
+            <div id="hostActions" class="action-grid"></div>
+          </section>
+          <div class="workspace two host-phase-two">
+            <section class="panel">
+              <div class="panel-head">
+                <div>
+                  <p class="eyebrow">Shared access</p>
+                  <h2>Admin Team</h2>
+                </div>
+              </div>
+              <form id="adminForm" class="form-grid">
+                <label>Name<input name="name" required placeholder="Co-host name"></label>
+                <label>Role
+                  <select name="role">
+                    <option>Host Admin</option>
+                    <option>Check-In Only</option>
+                    <option>Scorekeeper</option>
+                  </select>
+                </label>
+                <label class="full">Email<input name="email" type="email" required placeholder="admin@example.com"></label>
+                <button class="primary full" type="submit">Add Admin</button>
+              </form>
+              <div id="adminList" class="stack admin-list"></div>
+            </section>
+            <section class="panel">
+              <div class="panel-head">
+                <div>
+                  <p class="eyebrow">Sync ready</p>
+                  <h2>Shared Database Preview</h2>
+                </div>
+                <button id="mockSyncBtn" type="button">Mock Sync</button>
+              </div>
+              <div id="syncStatus" class="sync-status"></div>
+            </section>
+          </div>
+        </section>
+
+        <section class="view" id="shop">
+          <div class="workspace two">
+            <section class="panel shop-panel">
+              <div>
+                <p class="eyebrow">Paddle + Pin commerce</p>
+                <h2>Shop connection</h2>
+                <p>Use this area for event merch, paddles, league shirts, golf gear, and local drops. Today it opens Paddle + Pin; later it can become in-app collections and event bundles.</p>
+              </div>
+              <a class="shop-link" href="https://www.paddleandpin.com" target="_blank" rel="noreferrer">Open Paddle + Pin Shop</a>
+            </section>
+            <section class="panel">
+              <div class="panel-head">
+                <div>
+                  <p class="eyebrow">Future products</p>
+                  <h2>Club revenue ideas</h2>
+                </div>
+              </div>
+              <div class="tag-cloud">
+                <span>Event tickets</span><span>Merch bundles</span><span>League dues</span><span>Partner offers</span><span>Golf outings</span><span>Clinics</span>
+              </div>
+            </section>
+            <section class="panel full">
+              <div class="panel-head">
+                <div>
+                  <p class="eyebrow">Collections</p>
+                  <h2>Shop Drops</h2>
+                </div>
+              </div>
+              <form id="shopForm" class="form-grid admin-editor">
+                <input name="shopId" type="hidden">
+                <label>Collection title<input name="title" required placeholder="Event Night Kit"></label>
+                <label>Tag<input name="tag" required placeholder="Merch bundle"></label>
+                <label class="full">Description<textarea name="body" rows="2" required></textarea></label>
+                <label class="full">Shop link<input name="url" type="url" value="https://www.paddleandpin.com"></label>
+                <div class="form-actions full">
+                  <button class="primary" type="submit">Save Shop Drop</button>
+                  <button id="cancelShopEditBtn" type="button">Cancel Edit</button>
+                </div>
+              </form>
+              <div id="shopCollections" class="collection-grid"></div>
+            </section>
+          </div>
+        </section>
+
+        <section class="view" id="archive">
+          <div class="workspace two">
+            <section class="panel">
+              <div class="panel-head">
+                <div>
+                  <p class="eyebrow">Event history</p>
+                  <h2>Archive</h2>
+                </div>
+                <button id="exportArchiveBtn" type="button">Export Archive CSV</button>
+              </div>
+              <div id="archiveList" class="stack"></div>
+            </section>
+            <section class="panel">
+              <div class="panel-head">
+                <div>
+                  <p class="eyebrow">Export</p>
+                  <h2>Event Reports</h2>
+                </div>
+              </div>
+              <div id="archiveExportPanel" class="stack"></div>
+            </section>
+          </div>
+        </section>
+
+        <section class="view" id="integrations">
+          <div class="workspace two">
+            <section class="panel">
+              <div class="panel-head">
+                <div>
+                  <p class="eyebrow">Email marketing</p>
+                  <h2>Brevo Setup</h2>
+                </div>
+              </div>
+              <form id="integrationForm" class="form-grid">
+                <label>Brevo sender email<input name="brevoSenderEmail" type="email" placeholder="events@clubsociety.com"></label>
+                <label>Brevo sender name<input name="brevoSenderName" placeholder="Club Society"></label>
+                <label>Announcement template ID<input name="brevoAnnouncementTemplate" inputmode="numeric"></label>
+                <label>Reminder template ID<input name="brevoReminderTemplate" inputmode="numeric"></label>
+                <label>Follow-up template ID<input name="brevoFollowupTemplate" inputmode="numeric"></label>
+                <label class="full">Email worker endpoint<input name="emailWorkerUrl" type="url" placeholder="https://your-worker.workers.dev/email"></label>
+                <label>Facebook Page ID<input name="facebookPageId"></label>
+                <label>Instagram Business Account ID<input name="instagramAccountId"></label>
+                <label class="full">Social worker endpoint<input name="socialWorkerUrl" type="url" placeholder="https://your-worker.workers.dev/social"></label>
+                <button class="primary full" type="submit">Save Integration Settings</button>
+              </form>
+            </section>
+            <section class="panel">
+              <div class="panel-head">
+                <div>
+                  <p class="eyebrow">Publishing tools</p>
+                  <h2>Email + Social Drafts</h2>
+                </div>
+              </div>
+              <div class="integration-actions">
+                <label>Choose event<select id="integrationEventSelect"></select></label>
+                <button id="draftAnnouncementBtn" type="button">Draft Announcement Email</button>
+                <button id="draftReminderBtn" type="button">Draft Reminder Email</button>
+                <button id="draftFollowupBtn" type="button">Draft Follow-Up Email</button>
+                <button id="draftSocialBtn" type="button">Draft Facebook/Instagram Post</button>
+              </div>
+              <div id="integrationStatus" class="stack"></div>
+            </section>
+          </div>
+        </section>
+
+        <section class="view" id="launch">
+          <div class="launch-shell">
+            <section class="launch-hero">
+              <p class="eyebrow">Phase 4</p>
+              <h2>Hosted PWA Launch</h2>
+              <p>Prepare Club Society for iPhone installs, desktop installs, shared admin data, and public event pages.</p>
+            </section>
+            <section class="panel">
+              <div class="panel-head">
+                <div>
+                  <p class="eyebrow">Cloud connection</p>
+                  <h2>Supabase Sync</h2>
+                </div>
+              </div>
+              <form id="cloudConfigForm" class="form-grid">
+                <label>Supabase URL<input name="supabaseUrl" placeholder="https://your-project.supabase.co"></label>
+                <label>Anon public key<input name="supabaseAnonKey" placeholder="Paste anon public key"></label>
+                <label>Club ID<input name="clubId" value="club-society-main"></label>
+                <label>Mode
+                  <select name="syncMode">
+                    <option value="local">Local only</option>
+                    <option value="supabase">Supabase</option>
+                  </select>
+                </label>
+                <button class="primary full" type="submit">Save Cloud Settings</button>
+              </form>
+              <div class="launch-actions">
+                <button id="pushCloudBtn" type="button">Push Local Data</button>
+                <button id="pullCloudBtn" type="button">Pull Cloud Data</button>
+              </div>
+              <div id="cloudStatus" class="sync-status"></div>
+            </section>
+            <section class="panel">
+              <div class="panel-head">
+                <div>
+                  <p class="eyebrow">Install path</p>
+                  <h2>Admin App Distribution</h2>
+                </div>
+              </div>
+              <div class="launch-grid">
+                <article class="launch-card"><strong>1. Host the PWA</strong><p>Put this folder on HTTPS through Cloudflare Pages, Netlify, Vercel, or similar static hosting.</p></article>
+                <article class="launch-card"><strong>2. Install on iPhone</strong><p>Open the hosted link in Safari, tap Share, then Add to Home Screen.</p></article>
+                <article class="launch-card"><strong>3. Install on Desktop</strong><p>Open the hosted link in Chrome or Edge and choose Install app.</p></article>
+                <article class="launch-card"><strong>4. Connect shared data</strong><p>Create the Supabase table from the included SQL file, then save the settings above.</p></article>
+              </div>
+            </section>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <aside class="golf-drawer" id="golfDrawer" aria-hidden="true">
+      <div class="drawer-head">
+        <div>
+          <p class="eyebrow">Club Society Golf</p>
+          <h2>Coming Soon</h2>
+        </div>
+        <button id="closeGolfDrawer" type="button" aria-label="Close golf preview">Close</button>
+      </div>
+      <div class="drawer-brand">
+        <span>Play</span>
+        <span>Connect</span>
+        <span>Challenge</span>
+      </div>
+      <div class="drawer-list">
+        <article>
+          <strong>Golf-first event tools</strong>
+          <p>Scrambles, foursomes, tee groups, outings, and social scoring.</p>
+        </article>
+        <article>
+          <strong>Player matching</strong>
+          <p>Help golfers find a group without exposing private admin lists.</p>
+        </article>
+        <article>
+          <strong>Challenge system</strong>
+          <p>Build toward ladders, leaderboards, skins, and club challenges.</p>
+        </article>
+      </div>
+    </aside>
+    <button class="drawer-backdrop" id="golfBackdrop" type="button" aria-label="Close golf preview"></button>
+
+    <div class="waiver-modal" id="waiverModal" aria-hidden="true">
+      <section class="waiver-dialog" role="dialog" aria-modal="true" aria-labelledby="waiverTitle">
+        <div class="panel-head">
+          <div>
+            <p class="eyebrow">Required waiver</p>
+            <h2 id="waiverTitle">Liability Waiver & Release</h2>
+          </div>
+        </div>
+        <div class="waiver-copy">
+          <p>I acknowledge that participation in pickleball activities involves inherent risks, including but not limited to physical injury, collisions, falls, and other unforeseen risks. I voluntarily assume all risks associated with participation.</p>
+          <p>I understand that alcohol may be present at this event and accept full responsibility for my conduct and safety.</p>
+          <p>I hereby release, waive, and discharge Paddle + Pin, LLC, South Main Brewing, LLC and Community Fueled Properties, LLC, its owners, employees, partners, and affiliates from any and all liability, claims, demands, or causes of action arising from participation.</p>
+          <p>I certify that I am physically capable of participating and agree to follow all event rules and instructions.</p>
+          <p><strong>By selecting I Agree, I agree to this waiver and release of liability.</strong></p>
+        </div>
+        <div class="waiver-actions">
+          <button id="waiverDisagreeBtn" type="button">I Disagree</button>
+          <button class="primary" id="waiverAgreeBtn" type="button">I Agree</button>
+        </div>
+      </section>
+    </div>
+
+    <script src="app.js"></script>
+  </body>
+</html>
