@@ -22,6 +22,7 @@
         </div>
       </div>
       <nav class="nav" aria-label="Main navigation">
+        <button class="nav-item public-nav" data-view="societyApp">Society App</button>
         <button class="nav-item active" data-view="command">Command</button>
         <button class="nav-item" data-view="events">Events</button>
         <button class="nav-item" data-view="publicView">Public View</button>
@@ -102,6 +103,214 @@
                 </ul>
               </div>
             </section>
+          </div>
+        </section>
+
+        <section class="view" id="societyApp">
+          <div class="society-phone-shell">
+            <header class="society-app-top">
+              <button class="society-icon-button" data-society-tab="account" type="button" aria-label="Account">CS</button>
+              <div class="society-wordmark">
+                <img src="club-society-mark.svg" alt="">
+                <strong>Club Society</strong>
+                <span>Athens Pickleball</span>
+              </div>
+              <button class="society-icon-button" data-society-tab="settings" type="button" aria-label="Settings">...</button>
+            </header>
+
+            <section class="society-hero-card">
+              <p class="eyebrow">Join the Society</p>
+              <h2>Find your game inside 50 miles of 30605.</h2>
+              <p>Pickleball play, partners, courts, instructors, events, and host tools for Athens and the surrounding area.</p>
+              <div class="society-sport-switch" aria-label="Sport direction">
+                <button class="active" data-society-tab="home" type="button">Pickleball</button>
+                <button data-society-tab="golfSoonMini" type="button">Golf</button>
+              </div>
+            </section>
+
+            <div class="society-tab active" data-society-panel="home">
+              <section class="society-join-card">
+                <div>
+                  <span class="society-kicker">Society Pass</span>
+                  <h3>Sign up or log in</h3>
+                  <p>Save your profile, get matched faster, and join local play without retyping everything.</p>
+                </div>
+                <form id="societyAccountForm" class="society-form">
+                  <input name="name" placeholder="Full name" required>
+                  <input name="email" type="email" placeholder="Email" required>
+                  <select name="skill">
+                    <option>Beginner</option>
+                    <option selected>Intermediate</option>
+                    <option>Advanced</option>
+                    <option>Open</option>
+                  </select>
+                  <button class="primary" type="submit">Join the Society</button>
+                </form>
+                <div id="societyAccountMessage" class="society-message"></div>
+              </section>
+
+              <section class="society-quick-grid" aria-label="Pickleball shortcuts">
+                <button data-society-tab="games" type="button"><span>Play</span><strong>Find games</strong></button>
+                <button data-society-tab="partners" type="button"><span>Connect</span><strong>Find partners</strong></button>
+                <button data-society-tab="host" type="button"><span>Host</span><strong>Run an event</strong></button>
+                <button data-society-tab="learn" type="button"><span>Learn</span><strong>Instructors</strong></button>
+                <button data-society-tab="courts" type="button"><span>Nearby</span><strong>Courts</strong></button>
+                <button data-society-tab="events" type="button"><span>Challenge</span><strong>Tournaments</strong></button>
+              </section>
+
+              <section class="society-section">
+                <div class="society-section-head">
+                  <div>
+                    <p class="eyebrow">Next up</p>
+                    <h3>Athens area play</h3>
+                  </div>
+                  <button data-society-tab="games" type="button">View all</button>
+                </div>
+                <div class="society-stack">
+                  <article class="society-list-card">
+                    <strong>Paddle + Pint Round Robin</strong>
+                    <span>Tonight | South Main Brewing | Social 2.5-4.0</span>
+                    <p>Rotating partners, post-play hang, host-managed check-in.</p>
+                  </article>
+                  <article class="society-list-card">
+                    <strong>Beginner Friendly Open Play</strong>
+                    <span>Tomorrow | Southeast Clarke Park | 8 spots</span>
+                    <p>Low-pressure games for newer players and returning players.</p>
+                  </article>
+                </div>
+              </section>
+            </div>
+
+            <div class="society-tab" data-society-panel="games">
+              <section class="society-section">
+                <p class="eyebrow">Athens + 50 miles</p>
+                <h3>Find games</h3>
+                <div class="society-filter-row">
+                  <button class="active" type="button">Next 7 days</button>
+                  <button type="button">Open play</button>
+                  <button type="button">Round robins</button>
+                </div>
+                <div class="society-stack">
+                  <article class="society-list-card"><strong>Watkinsville Social Mixer</strong><span>Watkinsville | 30677 | 12 miles</span><p>Intermediate social play with rotating partners.</p></article>
+                  <article class="society-list-card"><strong>UGA Area Morning Open Play</strong><span>Athens | 30605 | 3 miles</span><p>Drop-in games, all levels welcome before lunch.</p></article>
+                  <article class="society-list-card"><strong>Madison County Evening Games</strong><span>Danielsville | 30633 | 18 miles</span><p>Casual courts and partner matching.</p></article>
+                </div>
+              </section>
+            </div>
+
+            <div class="society-tab" data-society-panel="partners">
+              <section class="society-section">
+                <p class="eyebrow">Player matching</p>
+                <h3>Find partners</h3>
+                <div class="society-stack">
+                  <article class="society-list-card"><strong>Intermediate doubles partner</strong><span>Athens | Weeknights | 3.0-ish</span><p>Looking for social-but-competitive games near 30605.</p></article>
+                  <article class="society-list-card"><strong>Beginner practice group</strong><span>Watkinsville | Weekends</span><p>Drills, easy games, and patient partners.</p></article>
+                  <article class="society-list-card"><strong>Challenge court crew</strong><span>Oconee / Athens | Advanced</span><p>Small group forming for ladder-style matches.</p></article>
+                </div>
+              </section>
+            </div>
+
+            <div class="society-tab" data-society-panel="host">
+              <section class="society-section">
+                <p class="eyebrow">Host tools</p>
+                <h3>Host a tournament or round robin</h3>
+                <div class="society-action-card">
+                  <strong>Start with the format</strong>
+                  <p>Create a round robin, open play night, private group, ladder, or tournament. Host controls stay in the admin side for now.</p>
+                  <div class="society-filter-row">
+                    <button data-jump="events" type="button">Create Event</button>
+                    <button data-jump="rounds" type="button">Round Robin</button>
+                    <button data-jump="tournament" type="button">Tournament</button>
+                  </div>
+                </div>
+                <div class="society-stack">
+                  <article class="society-list-card"><strong>Round robin</strong><span>Best for 8-40 players</span><p>Auto-generate teams, rotate partners, and manage courts.</p></article>
+                  <article class="society-list-card"><strong>Tournament</strong><span>Best for brackets and winners</span><p>Build toward seeded brackets, divisions, sponsors, and payouts.</p></article>
+                </div>
+              </section>
+            </div>
+
+            <div class="society-tab" data-society-panel="learn">
+              <section class="society-section">
+                <p class="eyebrow">Local instruction</p>
+                <h3>Find instructors</h3>
+                <div class="society-stack">
+                  <article class="society-list-card"><strong>Beginner fundamentals</strong><span>Athens | Private or small group</span><p>Dinking, serving, positioning, and first match confidence.</p></article>
+                  <article class="society-list-card"><strong>3.0 to 3.5 clinic</strong><span>Watkinsville | Weekly clinic</span><p>Shot selection, resets, and smarter doubles patterns.</p></article>
+                  <article class="society-list-card"><strong>Host your clinic</strong><span>Instructor onboarding</span><p>List your lessons inside Club Society for local players.</p></article>
+                </div>
+              </section>
+            </div>
+
+            <div class="society-tab" data-society-panel="courts">
+              <section class="society-section">
+                <p class="eyebrow">Nearby courts</p>
+                <h3>Pickleball courts near 30605</h3>
+                <div class="society-stack">
+                  <article class="society-list-card"><strong>Southeast Clarke Park</strong><span>Athens | Public courts</span><p>Good starting point for Athens-area open play.</p></article>
+                  <article class="society-list-card"><strong>Herman C. Michael Park</strong><span>Watkinsville | Oconee County</span><p>Popular Oconee-area court option inside the 50-mile zone.</p></article>
+                  <article class="society-list-card"><strong>Bishop Park area</strong><span>Athens | Community play</span><p>Useful central location for partner matching and meetups.</p></article>
+                </div>
+              </section>
+            </div>
+
+            <div class="society-tab" data-society-panel="events">
+              <section class="society-section">
+                <p class="eyebrow">Events + tournaments</p>
+                <h3>Challenge board</h3>
+                <div class="society-stack">
+                  <article class="society-list-card"><strong>Club Society Skill Ladder</strong><span>Coming soon | Athens</span><p>Season-based standings and challenge matches.</p></article>
+                  <article class="society-list-card"><strong>Paddle + Pint Night</strong><span>South Main Brewing | Round robin</span><p>Social competition with local commerce tie-ins.</p></article>
+                  <article class="society-list-card"><strong>Host submitted tournament</strong><span>Local groups</span><p>Future listing path for leagues, nonprofits, and clubs.</p></article>
+                </div>
+              </section>
+            </div>
+
+            <div class="society-tab" data-society-panel="golfSoonMini">
+              <section class="society-section">
+                <p class="eyebrow">Golf</p>
+                <h3>Coming soon</h3>
+                <div class="society-action-card"><strong>Golf will become its own side of Club Society.</strong><p>For now, pickleball gets the full buildout. Golf will expand into tee groups, scrambles, outings, and challenges.</p></div>
+              </section>
+            </div>
+
+            <div class="society-tab" data-society-panel="account">
+              <section class="society-section">
+                <p class="eyebrow">Account</p>
+                <h3>Profile, login, and membership</h3>
+                <div class="society-action-card">
+                  <strong>Member access</strong>
+                  <p>This is the first front-end account flow. The next backend step is real authentication and cloud profiles.</p>
+                  <button data-society-tab="home" type="button">Back to sign up</button>
+                </div>
+              </section>
+            </div>
+
+            <div class="society-tab" data-society-panel="settings">
+              <section class="society-section">
+                <p class="eyebrow">Settings + legal</p>
+                <h3>App settings</h3>
+                <div class="society-settings-list">
+                  <button type="button">Privacy Policy</button>
+                  <button type="button">Terms of Use</button>
+                  <button type="button">Community Guidelines</button>
+                  <button type="button">Liability Waiver</button>
+                  <button type="button">Location and Safety Notice</button>
+                </div>
+                <div class="society-legal-copy">
+                  <strong>Legal placeholders</strong>
+                  <p>Final policies should be reviewed by legal counsel before public launch. This section reserves space for privacy, terms, waiver, safety, content rules, and contact information.</p>
+                </div>
+              </section>
+            </div>
+
+            <nav class="society-bottom-nav" aria-label="Club Society app navigation">
+              <button class="active" data-society-tab="home" type="button">Home</button>
+              <button data-society-tab="courts" type="button">Nearby</button>
+              <button data-society-tab="games" type="button">Games</button>
+              <button data-society-tab="partners" type="button">Groups</button>
+              <button data-society-tab="settings" type="button">Settings</button>
+            </nav>
           </div>
         </section>
 

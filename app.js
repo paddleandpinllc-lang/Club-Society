@@ -65,6 +65,8 @@ const els = {
   playerForm: document.querySelector("#playerForm"),
   postForm: document.querySelector("#postForm"),
   publicRsvpForm: document.querySelector("#publicRsvpForm"),
+  societyAccountForm: document.querySelector("#societyAccountForm"),
+  societyAccountMessage: document.querySelector("#societyAccountMessage"),
   adminForm: document.querySelector("#adminForm"),
   profileForm: document.querySelector("#profileForm"),
   publicViewForm: document.querySelector("#publicViewForm"),
@@ -141,6 +143,8 @@ els.eventForm.addEventListener("submit", saveEvent);
 els.playerForm.addEventListener("submit", savePlayer);
 els.postForm.addEventListener("submit", savePost);
 els.publicRsvpForm.addEventListener("submit", savePublicRsvp);
+els.societyAccountForm.addEventListener("submit", saveSocietyAccount);
+document.querySelector("#societyApp").addEventListener("click", handleSocietyAppClick);
 els.adminForm.addEventListener("submit", saveAdmin);
 els.profileForm.addEventListener("submit", saveProfile);
 els.publicViewForm.addEventListener("submit", savePublicView);
@@ -419,6 +423,60 @@ function savePost(event) {
   els.postForm.reset();
   saveState();
   render();
+}
+
+function saveSocietyAccount(event) {
+  event.preventDefault();
+  const data = Object.fromEntries(new FormData(els.societyAccountForm).entries());
+  const [firstName = "", ...rest] = data.name.trim().split(/\s+/);
+  const lastName = rest.join(" ");
+  const existing = state.profiles.find((profile) => profile.email?.toLowerCase() === data.email.toLowerCase());
+  const profile = {
+    id: existing?.id || newId(),
+    firstName: titleCase(firstName),
+    lastName: titleCase(lastName),
+    email: data.email.trim().toLowerCase(),
+    phone: existing?.phone || "",
+    street: existing?.street || "",
+    city: existing?.city || "Athens",
+    state: existing?.state || "GA",
+    zip: existing?.zip || "30605",
+    skill: data.skill,
+    availability: existing?.availability || "Flexible",
+    interests: Array.from(new Set([...(existing?.interests || []), "Find local games", "Social round robins"])),
+    smsSubscriber: existing?.smsSubscriber || false,
+    sport: "pickleball",
+    verificationStatus: existing?.verificationStatus || "Unverified",
+    verificationMethod: existing?.verificationMethod || "email",
+    source: "Society app signup",
+    updatedAt: new Date().toISOString(),
+  };
+  if (existing) Object.assign(existing, profile);
+  else state.profiles.unshift(profile);
+  saveState();
+  renderProfiles();
+  els.societyAccountMessage.textContent = existing ? "Welcome back. Your Society profile was updated." : "You are on the Society list. Profile saved locally for this build.";
+  els.societyAccountForm.reset();
+}
+
+function handleSocietyAppClick(event) {
+  const tabButton = event.target.closest("[data-society-tab]");
+  if (tabButton) {
+    setSocietyTab(tabButton.dataset.societyTab);
+    return;
+  }
+
+  const jumpButton = event.target.closest("[data-jump]");
+  if (jumpButton) setView(jumpButton.dataset.jump);
+}
+
+function setSocietyTab(tab) {
+  document.querySelectorAll("[data-society-panel]").forEach((panel) => {
+    panel.classList.toggle("active", panel.dataset.societyPanel === tab);
+  });
+  document.querySelectorAll("#societyApp [data-society-tab]").forEach((button) => {
+    button.classList.toggle("active", button.dataset.societyTab === tab);
+  });
 }
 
 function savePublicRsvp(event) {
