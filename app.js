@@ -78,6 +78,9 @@ const els = {
   rosterSearch: document.querySelector("#rosterSearch"),
   courtCount: document.querySelector("#courtCount"),
   roundCount: document.querySelector("#roundCount"),
+  roundPlayerSource: document.querySelector("#roundPlayerSource"),
+  roundRotationStyle: document.querySelector("#roundRotationStyle"),
+  roundPlayerPicker: document.querySelector("#roundPlayerPicker"),
   buildRoundsBtn: document.querySelector("#buildRoundsBtn"),
   seedBracketBtn: document.querySelector("#seedBracketBtn"),
   advanceBracketBtn: document.querySelector("#advanceBracketBtn"),
@@ -150,6 +153,8 @@ document.querySelector("#profileList").addEventListener("click", handleProfileLi
 document.querySelector("#shopCollections").addEventListener("click", handleShopListClick);
 document.querySelector("#archiveList").addEventListener("click", handleArchiveListClick);
 els.buildRoundsBtn.addEventListener("click", buildRounds);
+els.roundPlayerSource.addEventListener("change", renderRoundPlayerPicker);
+els.roundPlayerPicker.addEventListener("change", saveRoundManualSelection);
 els.seedBracketBtn.addEventListener("click", seedBracket);
 els.advanceBracketBtn.addEventListener("click", advanceBracket);
 els.fillRsvpBtn.addEventListener("click", fillRsvp);
@@ -199,6 +204,7 @@ function loadState() {
     admins: [{ id: "owner", name: "Event Owner", email: LOCAL_ADMIN_EMAIL, role: "Host Admin" }],
     profiles: [],
     paddlePintImportedIds: [],
+    roundSettings: { selectedPlayerIds: [] },
     selectedEventRosterId: "",
     sync: { status: "Local only", lastSync: "", pending: 0 },
   };
@@ -225,6 +231,7 @@ function normalizeState(data) {
   data.events = data.events || [];
   data.players = data.players || [];
   data.paddlePintImportedIds = data.paddlePintImportedIds || [];
+  data.roundSettings = { selectedPlayerIds: [], ...(data.roundSettings || {}) };
   data.selectedEventRosterId = data.selectedEventRosterId || "";
   return data;
 }
@@ -970,33 +977,84 @@ function checkedPlayers() {
   return state.players.filter((player) => player.checkedIn && (player.sport || "pickleball") === state.mode);
 }
 
-function buildRounds() {
+function roundEligiblePlayers() {
   const players = checkedPlayers().sort(skillSort);
+  if (els.roundPlayerSource.value !== "manual") return players;
+
+  const selected = new Set(state.roundSettings.selectedPlayerIds || []);
+  return players.filter((player) => selected.has(player.id));
+}
+
+function renderRoundPlayerPicker() {
+  const players = checkedPlayers().sort(skillSort);
+  const manual = els.roundPlayerSource.value === "manual";
+  els.roundPlayerPicker.classList.toggle("is-hidden", !manual);
+
+  if (!manual) {
+    els.roundPlayerPicker.innerHTML = "";
+    return;
+  }
+
+  const selected = new Set(state.roundSettings.selectedPlayerIds || players.map((player) => player.id));
+  state.roundSettings.selectedPlayerIds = Array.from(selected);
+  els.roundPlayerPicker.innerHTML = players.length
+    ? `
+      <div class="round-picker-head">
+        <strong>Manual player selection</strong>
+        <span>${selected.size} of ${players.length} checked-in players selected</span>
+      </div>
+      <div class="check-list round-check-list">
+        ${players.map((player) => `
+          <label>
+            <input type="checkbox" value="${player.id}" ${selected.has(player.id) ? "checked" : ""}>
+            ${escapeHtml(player.firstName)} ${escapeHtml(player.lastName)}
+            <span>${escapeHtml(player.skill || "Open")}${playerGender(player) ? ` / ${escapeHtml(playerGender(player))}` : ""}</span>
+          </label>
+        `).join("")}
+      </div>
+    `
+    : `<div class="empty">No checked-in players are ready for round robin yet.</div>`;
+}
+
+function saveRoundManualSelection() {
+  state.roundSettings.selectedPlayerIds = Array.from(els.roundPlayerPicker.querySelectorAll("input[type='checkbox']:checked")).map((input) => input.value);
+  saveState();
+  renderRoundPlayerPicker();
+}
+
+function buildRounds() {
+  const players = roundEligiblePlayers();
   const courts = Number(els.courtCount.value);
   const roundCount = Number(els.roundCount.value);
+  const rotationStyle = els.roundRotationStyle.value;
 
   if (players.length < 4) {
-    document.querySelector("#roundList").innerHTML = `<div class="empty">Check in at least 4 players.</div>`;
+    document.querySelector("#roundList").innerHTML = `<div class="empty">Select at least 4 checked-in players.</div>`;
     return;
   }
 
   state.rounds = [];
+  const history = { partners: new Map(), opponents: new Map() };
+
   for (let round = 1; round <= roundCount; round += 1) {
-    const rotated = rotate(players, round - 1);
-    const available = [...rotated];
+    const step = rotationStyle === "rotate-two" ? (round - 1) * 2 : round - 1;
+    const available = distributeByStrengthAndGender(rotate(players, step));
     const matches = [];
     const activeCourts = Math.min(courts, Math.floor(available.length / 4));
 
     for (let court = 1; court <= activeCourts; court += 1) {
       const group = available.splice(0, 4);
+      const teams = chooseBalancedTeams(group, history);
       matches.push({
         court,
-        teamA: [group[0].id, group[3].id],
-        teamB: [group[1].id, group[2].id],
+        teamA: teams.teamA.map((player) => player.id),
+        teamB: teams.teamB.map((player) => player.id),
+        balanceNote: teams.note,
       });
+      recordMatchHistory(teams.teamA, teams.teamB, history);
     }
 
-    state.rounds.push({ round, matches, sitting: available.map((player) => player.id) });
+    state.rounds.push({ round, rotationStyle, matches, sitting: available.map((player) => player.id) });
   }
 
   saveState();
@@ -1005,20 +1063,115 @@ function buildRounds() {
 
 function renderRounds() {
   const target = document.querySelector("#roundList");
+  renderRoundPlayerPicker();
   target.innerHTML = state.rounds.length
     ? state.rounds.map((round) => `
       <article class="card round-card">
         <strong>Round ${round.round}</strong>
+        <p class="meta">${round.rotationStyle === "rotate-two" ? "Rotate 2 players per round" : "Balanced team scoring"}</p>
         ${round.matches.map((match) => `
           <div class="match">
             <p class="meta">Court ${match.court}</p>
             <strong>${names(match.teamA)} vs ${names(match.teamB)}</strong>
+            ${match.balanceNote ? `<span class="match-note">${escapeHtml(match.balanceNote)}</span>` : ""}
           </div>
         `).join("")}
         ${round.sitting.length ? `<p class="meta">Sitting: ${names(round.sitting)}</p>` : ""}
       </article>
     `).join("")
     : `<div class="empty">Generate round-robin assignments after check-in.</div>`;
+}
+
+function distributeByStrengthAndGender(players) {
+  const sorted = [...players].sort((a, b) => skillScore(b) - skillScore(a) || a.lastName.localeCompare(b.lastName));
+  const groups = [[], []];
+  sorted.forEach((player, index) => groups[index % 2].push(player));
+  return groups.flatMap((group, index) => index % 2 ? group.reverse() : group);
+}
+
+function chooseBalancedTeams(group, history) {
+  const pairings = [
+    [[group[0], group[1]], [group[2], group[3]]],
+    [[group[0], group[2]], [group[1], group[3]]],
+    [[group[0], group[3]], [group[1], group[2]]],
+  ];
+  const best = pairings
+    .map(([teamA, teamB]) => ({ teamA, teamB, score: teamBalanceScore(teamA, teamB, history) }))
+    .sort((a, b) => a.score - b.score)[0];
+  return {
+    ...best,
+    note: balanceNote(best.teamA, best.teamB),
+  };
+}
+
+function teamBalanceScore(teamA, teamB, history) {
+  const skillGap = Math.abs(teamSkill(teamA) - teamSkill(teamB));
+  const genderPenalty = genderMixPenalty(teamA) + genderMixPenalty(teamB) + genderSidePenalty(teamA, teamB);
+  const repeatPenalty = repeatCount(teamA, history.partners) * 4
+    + repeatCount(teamB, history.partners) * 4
+    + opponentRepeatCount(teamA, teamB, history.opponents) * 2;
+  return skillGap * 6 + genderPenalty + repeatPenalty;
+}
+
+function teamSkill(team) {
+  return team.reduce((total, player) => total + skillScore(player), 0);
+}
+
+function skillScore(player) {
+  const weight = { Beginner: 1, Intermediate: 2, Open: 3, Advanced: 4 };
+  return weight[player.skill] || 2;
+}
+
+function playerGender(player) {
+  const raw = String(player.gender || player.shirtGender || "").toLowerCase();
+  if (raw.startsWith("m")) return "Men";
+  if (raw.startsWith("w") || raw.startsWith("f")) return "Women";
+  return "";
+}
+
+function genderMixPenalty(team) {
+  const genders = team.map(playerGender).filter(Boolean);
+  if (genders.length < 2) return 0;
+  return new Set(genders).size === 1 ? 3 : -3;
+}
+
+function genderSidePenalty(teamA, teamB) {
+  const known = [...teamA, ...teamB].map(playerGender).filter(Boolean);
+  if (known.length < 4) return 0;
+  const womenA = teamA.filter((player) => playerGender(player) === "Women").length;
+  const womenB = teamB.filter((player) => playerGender(player) === "Women").length;
+  return Math.abs(womenA - womenB) * 2;
+}
+
+function balanceNote(teamA, teamB) {
+  const skillGap = Math.abs(teamSkill(teamA) - teamSkill(teamB));
+  const mixed = [teamA, teamB].every((team) => new Set(team.map(playerGender).filter(Boolean)).size > 1);
+  if (mixed && skillGap <= 1) return "Even teams with mixed sides";
+  if (skillGap <= 1) return "Even skill match";
+  return "Best available balance";
+}
+
+function recordMatchHistory(teamA, teamB, history) {
+  addPair(teamA[0].id, teamA[1].id, history.partners);
+  addPair(teamB[0].id, teamB[1].id, history.partners);
+  teamA.forEach((a) => teamB.forEach((b) => addPair(a.id, b.id, history.opponents)));
+}
+
+function repeatCount(team, map) {
+  return pairCount(team[0].id, team[1].id, map);
+}
+
+function opponentRepeatCount(teamA, teamB, map) {
+  return teamA.reduce((total, a) => total + teamB.reduce((sum, b) => sum + pairCount(a.id, b.id, map), 0), 0);
+}
+
+function addPair(a, b, map) {
+  const key = [a, b].sort().join(":");
+  map.set(key, (map.get(key) || 0) + 1);
+}
+
+function pairCount(a, b, map) {
+  return map.get([a, b].sort().join(":")) || 0;
 }
 
 function seedBracket() {

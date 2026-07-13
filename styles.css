@@ -1147,6 +1147,63 @@ textarea {
   border-left: 6px solid var(--gold);
 }
 
+.round-player-picker {
+  margin: 0 0 14px;
+}
+
+.round-player-picker.is-hidden {
+  display: none;
+}
+
+.round-picker-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  border: 1px solid rgba(31, 138, 98, 0.18);
+  border-radius: 12px 12px 0 0;
+  background: rgba(31, 138, 98, 0.07);
+  padding: 11px 12px;
+}
+
+.round-picker-head span,
+.round-check-list span,
+.match-note {
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.round-check-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 8px;
+  border: 1px solid rgba(31, 138, 98, 0.18);
+  border-top: 0;
+  border-radius: 0 0 12px 12px;
+  padding: 10px;
+}
+
+.round-check-list label {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 6px 9px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+  padding: 9px;
+}
+
+.round-check-list span {
+  grid-column: 2;
+}
+
+.match-note {
+  display: block;
+  margin-top: 5px;
+}
+
 .winner-select {
   margin-top: 8px;
 }

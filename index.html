@@ -525,9 +525,22 @@
               <div class="toolbar">
                 <label>Courts<input id="courtCount" type="number" min="1" value="4"></label>
                 <label>Rounds<input id="roundCount" type="number" min="1" value="4"></label>
+                <label>Players
+                  <select id="roundPlayerSource">
+                    <option value="checked" selected>All checked in</option>
+                    <option value="manual">Manual select</option>
+                  </select>
+                </label>
+                <label>Rotation
+                  <select id="roundRotationStyle">
+                    <option value="balanced" selected>Balanced teams</option>
+                    <option value="rotate-two">Rotate 2 players</option>
+                  </select>
+                </label>
                 <button class="primary" id="buildRoundsBtn">Generate</button>
               </div>
             </div>
+            <div id="roundPlayerPicker" class="round-player-picker"></div>
             <div id="roundList" class="round-grid"></div>
           </section>
         </section>
