@@ -780,8 +780,10 @@ function fillRsvp() {
 }
 
 function findPublicPlayer() {
-  const player = findPlayerByPrivateLookup(els.publicLookup.value);
-  els.publicCheckinForm.dataset.playerId = player?.id || "";
+  const match = findCheckinLookupRecord(els.publicLookup.value);
+  const player = match?.player || match?.profile || null;
+  els.publicCheckinForm.dataset.playerId = match?.player?.id || "";
+  els.publicCheckinForm.dataset.profileId = match?.profile?.id || "";
 
   if (!player) {
     els.publicResult.innerHTML = `
@@ -802,8 +804,8 @@ function findPublicPlayer() {
 
   els.publicResult.innerHTML = `
     <div class="public-message success">
-      <strong>We found your RSVP, ${escapeHtml(player.firstName)}.</strong>
-      <span>${player.checkedIn ? "You are already checked in. You can update and submit again if needed." : "Confirm your details below to finish check-in."}</span>
+      <strong>${match.player ? "We found your RSVP" : "We found your player profile"}, ${escapeHtml(player.firstName)}.</strong>
+      <span>${match.player?.checkedIn ? "You are already checked in. You can update and submit again if needed." : "Confirm your details below to finish check-in."}</span>
     </div>
   `;
   setPublicWaiverStatus(player.waiver || "Needs Signature");
@@ -821,6 +823,8 @@ function savePublicCheckin(event) {
 
   const existing = state.players.find((player) => player.id === els.publicCheckinForm.dataset.playerId)
     || state.players.find((player) => player.email.toLowerCase() === data.email.toLowerCase());
+  const matchedProfile = state.profiles.find((profile) => profile.id === els.publicCheckinForm.dataset.profileId)
+    || findProfileByPrivateLookup(data.email || data.phone || `${data.firstName} ${data.lastName}`);
   const player = {
     firstName: data.firstName,
     lastName: data.lastName,
@@ -828,7 +832,7 @@ function savePublicCheckin(event) {
     phone: data.phone,
     skill: data.skill,
     waiver: data.waiver,
-    status: existing?.status === "Walk-up" ? "Walk-up" : "Checked in",
+    status: existing?.status === "Walk-up" ? "Walk-up" : matchedProfile && !existing ? "Profile check-in" : existing ? "Checked in" : "Walk-up",
     paid: existing?.paid || "Not tracked",
     eventId: existing?.eventId || state.events[0]?.id || "",
     notes: existing?.notes || "",
@@ -838,7 +842,16 @@ function savePublicCheckin(event) {
   };
 
   if (existing) Object.assign(existing, player);
-  else state.players.unshift({ ...player, id: newId(), status: "Walk-up" });
+  else state.players.unshift({ ...player, id: newId() });
+  upsertPlayerDirectoryProfile({
+    firstName: data.firstName,
+    lastName: data.lastName,
+    email: data.email,
+    phone: data.phone,
+    skill: data.skill,
+    interests: ["Social round robins"],
+    source: "Public check-in",
+  });
 
   saveState();
   render();
@@ -849,6 +862,16 @@ function savePublicCheckin(event) {
     </div>
   `;
   clearPublicForm(true);
+}
+
+function findCheckinLookupRecord(value) {
+  const player = findPlayerByPrivateLookup(value);
+  if (player) return { player, profile: findProfileByPrivateLookup(player.email || player.phone || `${player.firstName} ${player.lastName}`) };
+
+  const profile = findProfileByPrivateLookup(value);
+  if (profile) return { player: null, profile };
+
+  return null;
 }
 
 function openWaiverModal() {
@@ -903,9 +926,23 @@ function findPlayerByPrivateLookup(value) {
   }) || null;
 }
 
+function findProfileByPrivateLookup(value) {
+  const query = String(value || "").trim().toLowerCase();
+  if (query.length < 3) return null;
+
+  return state.profiles.find((profile) => {
+    const exactEmail = profile.email?.toLowerCase() === query;
+    const exactPhone = digits(profile.phone) && digits(profile.phone) === digits(query);
+    const name = `${profile.firstName} ${profile.lastName}`.toLowerCase();
+    const nameMatch = name.includes(query);
+    return exactEmail || exactPhone || nameMatch;
+  }) || null;
+}
+
 function clearPublicForm(keepMessage) {
   els.publicCheckinForm.reset();
   els.publicCheckinForm.dataset.playerId = "";
+  els.publicCheckinForm.dataset.profileId = "";
   els.publicCheckinForm.dataset.pendingSubmit = "";
   setPublicWaiverStatus("Needs Signature");
   if (!keepMessage) {
@@ -1500,7 +1537,7 @@ function savePaddlePintSyncConfig(event) {
 
 function renderPaddlePintSyncConfig() {
   const config = {
-    endpointUrl: "https://club-society.pages.dev/api/paddle-pint",
+    endpointUrl: "https://clubsociety.app/api/paddle-pint",
     ...loadPaddlePintSyncConfig(),
   };
   Object.entries(config).forEach(([name, value]) => {
@@ -1514,7 +1551,7 @@ function renderPaddlePintSyncConfig() {
 
 async function importPaddlePintSubmissions() {
   const config = {
-    endpointUrl: "https://club-society.pages.dev/api/paddle-pint",
+    endpointUrl: "https://clubsociety.app/api/paddle-pint",
     ...Object.fromEntries(new FormData(els.paddlePintSyncForm).entries()),
   };
   if (!config.endpointUrl?.trim()) {
@@ -1544,7 +1581,7 @@ async function importPaddlePintSubmissions() {
     const stats = importRoundRobinSubmissions(result.submissions || []);
     saveState();
     render();
-    renderPaddlePintSyncStatus(`Imported ${stats.playersCreated} player RSVP${stats.playersCreated === 1 ? "" : "s"} into ${stats.eventsTouched} event${stats.eventsTouched === 1 ? "" : "s"}. Skipped ${stats.skipped} already-imported submission${stats.skipped === 1 ? "" : "s"}.`, "success");
+    renderPaddlePintSyncStatus(`Imported ${stats.playersCreated} player RSVP${stats.playersCreated === 1 ? "" : "s"} into ${stats.eventsTouched} event${stats.eventsTouched === 1 ? "" : "s"} and updated ${stats.profilesTouched} reusable player profile${stats.profilesTouched === 1 ? "" : "s"}. Skipped ${stats.skipped} already-imported submission${stats.skipped === 1 ? "" : "s"}.`, "success");
   } catch (error) {
     renderPaddlePintSyncStatus(`Sync failed: ${error.message}`, "notice");
   }
@@ -1554,6 +1591,7 @@ function importRoundRobinSubmissions(submissions) {
   const imported = new Set(state.paddlePintImportedIds.map(String));
   const touchedEvents = new Set();
   let playersCreated = 0;
+  let profilesTouched = 0;
   let skipped = 0;
 
   submissions
@@ -1570,17 +1608,19 @@ function importRoundRobinSubmissions(submissions) {
       touchedEvents.add(event.id);
       const createdPrimary = upsertImportedPlayer(submission, event.id);
       if (createdPrimary) playersCreated += 1;
+      if (upsertDirectoryProfileFromSubmission(submission)) profilesTouched += 1;
 
       parseAdditionalPlayers(submission.additional_players_json).forEach((guest, index) => {
         const createdGuest = upsertImportedGuestPlayer(guest, submission, event.id, index);
         if (createdGuest) playersCreated += 1;
+        if (upsertDirectoryProfileFromGuest(guest, submission)) profilesTouched += 1;
       });
 
       imported.add(submissionId);
       state.paddlePintImportedIds.push(submissionId);
     });
 
-  return { playersCreated, skipped, eventsTouched: touchedEvents.size };
+  return { playersCreated, profilesTouched, skipped, eventsTouched: touchedEvents.size };
 }
 
 function findOrCreatePaddlePintEvent(submission) {
@@ -1673,11 +1713,90 @@ function upsertImportedGuestPlayer(guest, submission, eventId, index) {
   return true;
 }
 
+function upsertDirectoryProfileFromSubmission(submission) {
+  const email = String(submission.email || "").trim().toLowerCase();
+  const phone = submission.phone || "";
+  const firstName = titleCase(submission.first_name || "");
+  const lastName = titleCase(submission.last_name || "");
+  if (!email && !phone && !firstName && !lastName) return false;
+
+  return upsertPlayerDirectoryProfile({
+    firstName,
+    lastName,
+    email,
+    phone,
+    skill: "Open",
+    interests: ["Social round robins"],
+    source: submission.source || "paddleandpin.com",
+  });
+}
+
+function upsertDirectoryProfileFromGuest(guest, submission) {
+  const firstName = titleCase(guest.first_name || guest.firstName || "");
+  const lastName = titleCase(guest.last_name || guest.lastName || "");
+  if (!firstName && !lastName) return false;
+
+  return upsertPlayerDirectoryProfile({
+    firstName,
+    lastName,
+    email: "",
+    phone: "",
+    skill: "Open",
+    interests: ["Social round robins"],
+    source: submission.source || "paddleandpin.com",
+  });
+}
+
+function upsertPlayerDirectoryProfile(profile) {
+  const email = String(profile.email || "").trim().toLowerCase();
+  const phoneDigits = digits(profile.phone);
+  const firstName = profile.firstName || "";
+  const lastName = profile.lastName || "";
+  const nameKey = `${firstName} ${lastName}`.trim().toLowerCase();
+
+  const existing = state.profiles.find((item) => {
+    const itemEmail = String(item.email || "").trim().toLowerCase();
+    const itemPhone = digits(item.phone);
+    const itemName = `${item.firstName || ""} ${item.lastName || ""}`.trim().toLowerCase();
+    return (email && itemEmail === email) || (phoneDigits && itemPhone === phoneDigits) || (!email && !phoneDigits && nameKey && itemName === nameKey);
+  });
+
+  const record = {
+    id: existing?.id || newId(),
+    firstName,
+    lastName,
+    email,
+    phone: profile.phone || "",
+    street: existing?.street || "",
+    city: existing?.city || DEFAULT_LOCATION.city,
+    state: existing?.state || DEFAULT_LOCATION.state,
+    zip: existing?.zip || DEFAULT_LOCATION.zip,
+    skill: profile.skill || existing?.skill || "Open",
+    availability: existing?.availability || "Flexible",
+    interests: Array.from(new Set([...(existing?.interests || []), ...(profile.interests || [])])),
+    smsSubscriber: existing?.smsSubscriber || false,
+    sport: existing?.sport || "pickleball",
+    verificationStatus: existing?.verificationStatus || "Imported",
+    verificationMethod: existing?.verificationMethod || "email",
+    source: profile.source || existing?.source || "Club Society",
+    importedAt: existing?.importedAt || new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
+
+  if (existing) {
+    Object.assign(existing, record);
+    return true;
+  }
+
+  state.profiles.unshift(record);
+  return true;
+}
+
 function renderPaddlePintSyncStatus(message, tone = "") {
   els.paddlePintSyncStatus.innerHTML = `
     <article class="card ${tone}">
       <strong>${escapeHtml(message)}</strong>
-      <p class="meta">Endpoint: https://club-society.pages.dev/api/paddle-pint | Table: paddle_pint_submissions</p>
+      <p class="meta">Endpoint: https://clubsociety.app/api/paddle-pint | Table: paddle_pint_submissions</p>
     </article>
   `;
 }
