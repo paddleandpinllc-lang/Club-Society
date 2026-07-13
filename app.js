@@ -3,6 +3,7 @@ const CLOUD_CONFIG_KEY = "clubSociety.cloudConfig.v1";
 const INTEGRATION_CONFIG_KEY = "clubSociety.integrationConfig.v1";
 const PADDLE_PINT_SYNC_CONFIG_KEY = "clubSociety.paddlePintSync.v1";
 const PADDLE_PINT_ENDPOINT_URL = "https://clubsociety.app/api/paddle-pint";
+const APP_VERSION = document.querySelector('meta[name="app-version"]')?.content || "local-dev";
 const DEFAULT_LOCATION = { street: "", city: "Watkinsville", state: "GA", zip: "30677" };
 const DEFAULT_PUBLIC_VIEW = {
   headline: "Find your next game",
@@ -184,7 +185,16 @@ els.golfBackdrop.addEventListener("click", closeGolfPreview);
 els.closeGolfDrawer.addEventListener("click", closeGolfPreview);
 
 if ("serviceWorker" in navigator) {
-  navigator.serviceWorker.register("sw.js").catch(() => {});
+  let refreshingForUpdate = false;
+  navigator.serviceWorker.addEventListener("controllerchange", () => {
+    if (refreshingForUpdate) return;
+    refreshingForUpdate = true;
+    window.location.reload();
+  });
+  navigator.serviceWorker.register(`sw.js?v=${encodeURIComponent(APP_VERSION)}`).then((registration) => {
+    registration.update().catch(() => {});
+    setInterval(() => registration.update().catch(() => {}), 15 * 60 * 1000);
+  }).catch(() => {});
 }
 
 render();

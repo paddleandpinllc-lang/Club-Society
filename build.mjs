@@ -1,6 +1,7 @@
-import { copyFile, mkdir, rm } from "node:fs/promises";
+import { copyFile, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 
 const outputDir = "dist";
+const buildVersion = process.env.CF_PAGES_COMMIT_SHA?.slice(0, 12) || `build-${Date.now()}`;
 const staticFiles = [
   "index.html",
   "styles.css",
@@ -17,10 +18,18 @@ const staticFiles = [
   "supabase-schema.sql",
   "PHASE-4-LAUNCH.md"
 ];
+const versionedTextFiles = new Set(["index.html", "app.js", "sw.js"]);
 
 await rm(outputDir, { recursive: true, force: true });
 await mkdir(outputDir, { recursive: true });
 
 for (const file of staticFiles) {
-  await copyFile(file, `${outputDir}/${file}`);
+  if (versionedTextFiles.has(file)) {
+    const contents = await readFile(file, "utf8");
+    await writeFile(`${outputDir}/${file}`, contents.replaceAll("local-dev", buildVersion));
+  } else {
+    await copyFile(file, `${outputDir}/${file}`);
+  }
 }
+
+console.log(`Club Society build version: ${buildVersion}`);
