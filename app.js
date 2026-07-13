@@ -82,7 +82,6 @@ const els = {
   courtCount: document.querySelector("#courtCount"),
   roundCount: document.querySelector("#roundCount"),
   roundPlayerSource: document.querySelector("#roundPlayerSource"),
-  roundRotationStyle: document.querySelector("#roundRotationStyle"),
   roundPlayerPicker: document.querySelector("#roundPlayerPicker"),
   buildRoundsBtn: document.querySelector("#buildRoundsBtn"),
   clearRoundsBtn: document.querySelector("#clearRoundsBtn"),
@@ -1152,7 +1151,7 @@ function renderRoundPlayerPicker() {
           <label>
             <input type="checkbox" value="${player.id}" ${selected.has(player.id) ? "checked" : ""}>
             ${escapeHtml(player.firstName)} ${escapeHtml(player.lastName)}
-            <span>${escapeHtml(player.skill || "Open")}${playerGender(player) ? ` / ${escapeHtml(playerGender(player))}` : ""}</span>
+            <span>${escapeHtml(player.skill || "Open")}</span>
           </label>
         `).join("")}
       </div>
@@ -1168,9 +1167,10 @@ function saveRoundManualSelection() {
 
 function buildRounds() {
   const players = roundEligiblePlayers();
-  const courts = Number(els.courtCount.value);
-  const roundCount = Number(els.roundCount.value);
-  const rotationStyle = els.roundRotationStyle.value;
+  const courts = Math.max(1, Number(els.courtCount.value) || 1);
+  const courtCapacity = courts * 4;
+  const requestedRounds = Math.max(1, Number(els.roundCount.value) || 1);
+  const roundCount = Math.max(requestedRounds, Math.ceil(players.length / courtCapacity));
 
   if (players.length < 4) {
     document.querySelector("#roundList").innerHTML = `<div class="empty">Select at least 4 checked-in players.</div>`;
@@ -1178,27 +1178,23 @@ function buildRounds() {
   }
 
   state.rounds = [];
-  const history = { partners: new Map(), opponents: new Map() };
+  const shuffledPlayers = shuffle(players);
 
   for (let round = 1; round <= roundCount; round += 1) {
-    const step = rotationStyle === "rotate-two" ? (round - 1) * 2 : round - 1;
-    const available = distributeByStrengthAndGender(rotate(players, step));
+    const available = rotate(shuffledPlayers, (round - 1) * courtCapacity);
     const matches = [];
     const activeCourts = Math.min(courts, Math.floor(available.length / 4));
 
     for (let court = 1; court <= activeCourts; court += 1) {
       const group = available.splice(0, 4);
-      const teams = chooseBalancedTeams(group, history);
       matches.push({
         court,
-        teamA: teams.teamA.map((player) => player.id),
-        teamB: teams.teamB.map((player) => player.id),
-        balanceNote: teams.note,
+        teamA: [group[0].id, group[1].id],
+        teamB: [group[2].id, group[3].id],
       });
-      recordMatchHistory(teams.teamA, teams.teamB, history);
     }
 
-    state.rounds.push({ round, rotationStyle, matches, sitting: available.map((player) => player.id) });
+    state.rounds.push({ round, rotationStyle: "random", matches, sitting: available.map((player) => player.id) });
   }
 
   saveState();
@@ -1214,7 +1210,7 @@ function renderRounds() {
         <div class="round-card-head">
           <div>
             <strong>Round ${round.round}</strong>
-            <p class="meta">${round.rotationStyle === "rotate-two" ? "Rotate 2 players per round" : "Balanced team scoring"}</p>
+            <p class="meta">Random draw from checked-in players</p>
           </div>
           <button type="button" data-clear-round="${round.round}">Clear Round</button>
         </div>
@@ -1222,7 +1218,6 @@ function renderRounds() {
           <div class="match">
             <p class="meta">Court ${match.court}</p>
             <strong>${names(match.teamA)} vs ${names(match.teamB)}</strong>
-            ${match.balanceNote ? `<span class="match-note">${escapeHtml(match.balanceNote)}</span>` : ""}
             <div class="round-edit-grid">
               ${roundSlotSelect(round, match, matchIndex, "teamA", 0)}
               ${roundSlotSelect(round, match, matchIndex, "teamA", 1)}
@@ -1332,98 +1327,6 @@ function clearAllRounds() {
   state.rounds = [];
   saveState();
   renderRounds();
-}
-
-function distributeByStrengthAndGender(players) {
-  const sorted = [...players].sort((a, b) => skillScore(b) - skillScore(a) || a.lastName.localeCompare(b.lastName));
-  const groups = [[], []];
-  sorted.forEach((player, index) => groups[index % 2].push(player));
-  return groups.flatMap((group, index) => index % 2 ? group.reverse() : group);
-}
-
-function chooseBalancedTeams(group, history) {
-  const pairings = [
-    [[group[0], group[1]], [group[2], group[3]]],
-    [[group[0], group[2]], [group[1], group[3]]],
-    [[group[0], group[3]], [group[1], group[2]]],
-  ];
-  const best = pairings
-    .map(([teamA, teamB]) => ({ teamA, teamB, score: teamBalanceScore(teamA, teamB, history) }))
-    .sort((a, b) => a.score - b.score)[0];
-  return {
-    ...best,
-    note: balanceNote(best.teamA, best.teamB),
-  };
-}
-
-function teamBalanceScore(teamA, teamB, history) {
-  const skillGap = Math.abs(teamSkill(teamA) - teamSkill(teamB));
-  const genderPenalty = genderMixPenalty(teamA) + genderMixPenalty(teamB) + genderSidePenalty(teamA, teamB);
-  const repeatPenalty = repeatCount(teamA, history.partners) * 4
-    + repeatCount(teamB, history.partners) * 4
-    + opponentRepeatCount(teamA, teamB, history.opponents) * 2;
-  return skillGap * 6 + genderPenalty + repeatPenalty;
-}
-
-function teamSkill(team) {
-  return team.reduce((total, player) => total + skillScore(player), 0);
-}
-
-function skillScore(player) {
-  const weight = { Beginner: 1, Intermediate: 2, Open: 3, Advanced: 4 };
-  return weight[player.skill] || 2;
-}
-
-function playerGender(player) {
-  const raw = String(player.gender || player.shirtGender || "").toLowerCase();
-  if (raw.startsWith("m")) return "Men";
-  if (raw.startsWith("w") || raw.startsWith("f")) return "Women";
-  return "";
-}
-
-function genderMixPenalty(team) {
-  const genders = team.map(playerGender).filter(Boolean);
-  if (genders.length < 2) return 0;
-  return new Set(genders).size === 1 ? 3 : -3;
-}
-
-function genderSidePenalty(teamA, teamB) {
-  const known = [...teamA, ...teamB].map(playerGender).filter(Boolean);
-  if (known.length < 4) return 0;
-  const womenA = teamA.filter((player) => playerGender(player) === "Women").length;
-  const womenB = teamB.filter((player) => playerGender(player) === "Women").length;
-  return Math.abs(womenA - womenB) * 2;
-}
-
-function balanceNote(teamA, teamB) {
-  const skillGap = Math.abs(teamSkill(teamA) - teamSkill(teamB));
-  const mixed = [teamA, teamB].every((team) => new Set(team.map(playerGender).filter(Boolean)).size > 1);
-  if (mixed && skillGap <= 1) return "Even teams with mixed sides";
-  if (skillGap <= 1) return "Even skill match";
-  return "Best available balance";
-}
-
-function recordMatchHistory(teamA, teamB, history) {
-  addPair(teamA[0].id, teamA[1].id, history.partners);
-  addPair(teamB[0].id, teamB[1].id, history.partners);
-  teamA.forEach((a) => teamB.forEach((b) => addPair(a.id, b.id, history.opponents)));
-}
-
-function repeatCount(team, map) {
-  return pairCount(team[0].id, team[1].id, map);
-}
-
-function opponentRepeatCount(teamA, teamB, map) {
-  return teamA.reduce((total, a) => total + teamB.reduce((sum, b) => sum + pairCount(a.id, b.id, map), 0), 0);
-}
-
-function addPair(a, b, map) {
-  const key = [a, b].sort().join(":");
-  map.set(key, (map.get(key) || 0) + 1);
-}
-
-function pairCount(a, b, map) {
-  return map.get([a, b].sort().join(":")) || 0;
 }
 
 function seedBracket() {
@@ -2663,6 +2566,15 @@ function skillSort(a, b) {
 function rotate(items, count) {
   const copy = [...items];
   for (let i = 0; i < count; i += 1) copy.push(copy.shift());
+  return copy;
+}
+
+function shuffle(items) {
+  const copy = [...items];
+  for (let i = copy.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [copy[i], copy[j]] = [copy[j], copy[i]];
+  }
   return copy;
 }
 
