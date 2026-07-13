@@ -1169,8 +1169,7 @@ function buildRounds() {
   const players = roundEligiblePlayers();
   const courts = Math.max(1, Number(els.courtCount.value) || 1);
   const courtCapacity = courts * 4;
-  const requestedRounds = Math.max(1, Number(els.roundCount.value) || 1);
-  const roundCount = Math.max(requestedRounds, Math.ceil(players.length / courtCapacity));
+  const roundCount = Math.max(1, Number(els.roundCount.value) || 1);
 
   if (players.length < 4) {
     document.querySelector("#roundList").innerHTML = `<div class="empty">Select at least 4 checked-in players.</div>`;
@@ -1178,10 +1177,22 @@ function buildRounds() {
   }
 
   state.rounds = [];
-  const shuffledPlayers = shuffle(players);
+  let drawBag = shuffle(players);
+  const drawNextPlayer = () => {
+    if (!drawBag.length) drawBag = shuffle(players);
+    return drawBag.shift();
+  };
 
   for (let round = 1; round <= roundCount; round += 1) {
-    const available = rotate(shuffledPlayers, (round - 1) * courtCapacity);
+    const roundPlayers = [];
+    const slotsThisRound = Math.min(courtCapacity, players.length);
+    while (roundPlayers.length < slotsThisRound) {
+      const nextPlayer = drawNextPlayer();
+      if (!nextPlayer) break;
+      roundPlayers.push(nextPlayer);
+    }
+
+    const available = [...roundPlayers];
     const matches = [];
     const activeCourts = Math.min(courts, Math.floor(available.length / 4));
 
@@ -1194,7 +1205,13 @@ function buildRounds() {
       });
     }
 
-    state.rounds.push({ round, rotationStyle: "random", matches, sitting: available.map((player) => player.id) });
+    const playingIds = new Set(roundPlayers.map((player) => player.id));
+    state.rounds.push({
+      round,
+      rotationStyle: "random",
+      matches,
+      sitting: players.filter((player) => !playingIds.has(player.id)).map((player) => player.id),
+    });
   }
 
   saveState();
@@ -1210,7 +1227,7 @@ function renderRounds() {
         <div class="round-card-head">
           <div>
             <strong>Round ${round.round}</strong>
-            <p class="meta">Random draw from checked-in players</p>
+            <p class="meta">Random draw bag; repeats only after everyone selected has been used</p>
           </div>
           <button type="button" data-clear-round="${round.round}">Clear Round</button>
         </div>
@@ -2561,12 +2578,6 @@ function camelHeader(value) {
 function skillSort(a, b) {
   const weight = { Advanced: 0, Open: 1, Intermediate: 2, Beginner: 3 };
   return (weight[a.skill] ?? 9) - (weight[b.skill] ?? 9) || a.lastName.localeCompare(b.lastName);
-}
-
-function rotate(items, count) {
-  const copy = [...items];
-  for (let i = 0; i < count; i += 1) copy.push(copy.shift());
-  return copy;
 }
 
 function shuffle(items) {
