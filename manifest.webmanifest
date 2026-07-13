@@ -1,20 +1,21 @@
 {
   "name": "Club Society",
   "short_name": "Club Society",
-  "start_url": "./index.html",
+  "start_url": "/",
+  "scope": "/",
   "display": "standalone",
   "background_color": "#faf6ed",
   "theme_color": "#0b2231",
   "description": "Where ballers & golfers come to play, connect, and challenge.",
   "icons": [
     {
-      "src": "club-society-icon-192.png",
+      "src": "/club-society-icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "club-society-icon-512.png",
+      "src": "/club-society-icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"

@@ -1,4 +1,4 @@
-const CACHE_NAME = "club-society-v14";
+const CACHE_NAME = "club-society-v15";
 const ASSETS = ["./", "./index.html", "./styles.css", "./app.js", "./manifest.webmanifest", "./club-society-mark.svg", "./favicon-32.png", "./apple-touch-icon.png", "./club-society-icon-192.png", "./club-society-icon-512.png", "./sample-rsvp-import.csv", "./supabase-schema.sql", "./PHASE-4-LAUNCH.md"];
 
 self.addEventListener("install", (event) => {
