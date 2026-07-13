@@ -2,6 +2,7 @@
 const CLOUD_CONFIG_KEY = "clubSociety.cloudConfig.v1";
 const INTEGRATION_CONFIG_KEY = "clubSociety.integrationConfig.v1";
 const PADDLE_PINT_SYNC_CONFIG_KEY = "clubSociety.paddlePintSync.v1";
+const PADDLE_PINT_ENDPOINT_URL = "https://clubsociety.app/api/paddle-pint";
 const DEFAULT_LOCATION = { street: "", city: "Watkinsville", state: "GA", zip: "30677" };
 const DEFAULT_PUBLIC_VIEW = {
   headline: "Find your next game",
@@ -1522,7 +1523,12 @@ function renderIntegrationConfig() {
 
 function loadPaddlePintSyncConfig() {
   try {
-    return JSON.parse(localStorage.getItem(PADDLE_PINT_SYNC_CONFIG_KEY)) || {};
+    const config = JSON.parse(localStorage.getItem(PADDLE_PINT_SYNC_CONFIG_KEY)) || {};
+    if (!config.endpointUrl || config.endpointUrl.includes("club-society.pages.dev")) {
+      config.endpointUrl = PADDLE_PINT_ENDPOINT_URL;
+      localStorage.setItem(PADDLE_PINT_SYNC_CONFIG_KEY, JSON.stringify(config));
+    }
+    return config;
   } catch {
     return {};
   }
@@ -1537,7 +1543,7 @@ function savePaddlePintSyncConfig(event) {
 
 function renderPaddlePintSyncConfig() {
   const config = {
-    endpointUrl: "https://clubsociety.app/api/paddle-pint",
+    endpointUrl: PADDLE_PINT_ENDPOINT_URL,
     ...loadPaddlePintSyncConfig(),
   };
   Object.entries(config).forEach(([name, value]) => {
@@ -1551,9 +1557,13 @@ function renderPaddlePintSyncConfig() {
 
 async function importPaddlePintSubmissions() {
   const config = {
-    endpointUrl: "https://clubsociety.app/api/paddle-pint",
+    endpointUrl: PADDLE_PINT_ENDPOINT_URL,
     ...Object.fromEntries(new FormData(els.paddlePintSyncForm).entries()),
   };
+  if (!config.endpointUrl || config.endpointUrl.includes("club-society.pages.dev")) {
+    config.endpointUrl = PADDLE_PINT_ENDPOINT_URL;
+    els.paddlePintSyncForm.elements.endpointUrl.value = PADDLE_PINT_ENDPOINT_URL;
+  }
   if (!config.endpointUrl?.trim()) {
     renderPaddlePintSyncStatus("Add the Club Society endpoint URL first.", "notice");
     return;
@@ -1796,7 +1806,7 @@ function renderPaddlePintSyncStatus(message, tone = "") {
   els.paddlePintSyncStatus.innerHTML = `
     <article class="card ${tone}">
       <strong>${escapeHtml(message)}</strong>
-      <p class="meta">Endpoint: https://clubsociety.app/api/paddle-pint | Table: paddle_pint_submissions</p>
+      <p class="meta">Endpoint: ${escapeHtml(PADDLE_PINT_ENDPOINT_URL)} | Table: paddle_pint_submissions</p>
     </article>
   `;
 }
