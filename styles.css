@@ -1147,6 +1147,18 @@ textarea {
   border-left: 6px solid var(--gold);
 }
 
+.round-card-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+  margin-bottom: 10px;
+}
+
+.round-card-head .meta {
+  margin-top: 3px;
+}
+
 .round-player-picker {
   margin: 0 0 14px;
 }
@@ -1202,6 +1214,24 @@ textarea {
 .match-note {
   display: block;
   margin-top: 5px;
+}
+
+.round-edit-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.round-edit-grid label {
+  min-height: auto;
+  font-size: 0.76rem;
+}
+
+.round-edit-grid select {
+  min-height: 36px;
+  padding: 7px 9px;
+  font-size: 0.84rem;
 }
 
 .winner-select {

@@ -83,11 +83,13 @@ const els = {
   roundRotationStyle: document.querySelector("#roundRotationStyle"),
   roundPlayerPicker: document.querySelector("#roundPlayerPicker"),
   buildRoundsBtn: document.querySelector("#buildRoundsBtn"),
+  clearRoundsBtn: document.querySelector("#clearRoundsBtn"),
   seedBracketBtn: document.querySelector("#seedBracketBtn"),
   advanceBracketBtn: document.querySelector("#advanceBracketBtn"),
   rsvpLookup: document.querySelector("#rsvpLookup"),
   fillRsvpBtn: document.querySelector("#fillRsvpBtn"),
   cancelEventEditBtn: document.querySelector("#cancelEventEditBtn"),
+  cancelPlayerEditBtn: document.querySelector("#cancelPlayerEditBtn"),
   cancelProfileEditBtn: document.querySelector("#cancelProfileEditBtn"),
   cancelShopEditBtn: document.querySelector("#cancelShopEditBtn"),
   sendVerificationBtn: document.querySelector("#sendVerificationBtn"),
@@ -156,10 +158,14 @@ document.querySelector("#archiveList").addEventListener("click", handleArchiveLi
 els.buildRoundsBtn.addEventListener("click", buildRounds);
 els.roundPlayerSource.addEventListener("change", renderRoundPlayerPicker);
 els.roundPlayerPicker.addEventListener("change", saveRoundManualSelection);
+els.clearRoundsBtn.addEventListener("click", clearAllRounds);
+document.querySelector("#roundList").addEventListener("click", handleRoundListClick);
+document.querySelector("#roundList").addEventListener("change", handleRoundListChange);
 els.seedBracketBtn.addEventListener("click", seedBracket);
 els.advanceBracketBtn.addEventListener("click", advanceBracket);
 els.fillRsvpBtn.addEventListener("click", fillRsvp);
 els.cancelEventEditBtn.addEventListener("click", resetEventForm);
+els.cancelPlayerEditBtn.addEventListener("click", resetPlayerForm);
 els.cancelProfileEditBtn.addEventListener("click", resetProfileForm);
 els.cancelShopEditBtn.addEventListener("click", resetShopForm);
 els.sendVerificationBtn.addEventListener("click", sendProfileVerification);
@@ -377,15 +383,33 @@ function resetEventForm() {
 function savePlayer(event) {
   event.preventDefault();
   const data = Object.fromEntries(new FormData(els.playerForm).entries());
-  const existing = state.players.find((player) => player.email.toLowerCase() === data.email.toLowerCase());
-  const player = { ...data, id: existing?.id || newId(), sport: state.mode, checkedIn: true, status: data.status || "Checked in", checkedInAt: new Date().toISOString() };
+  const existing = state.players.find((player) => player.id === data.playerId)
+    || state.players.find((player) => player.email?.toLowerCase() === data.email.toLowerCase());
+  const player = {
+    ...data,
+    id: existing?.id || newId(),
+    sport: state.mode,
+    checkedIn: !["Waitlist", "Left event"].includes(data.status),
+    status: data.status || "Checked in",
+    checkedInAt: existing?.checkedInAt || new Date().toISOString(),
+  };
+  delete player.playerId;
 
   if (existing) Object.assign(existing, player);
   else state.players.unshift(player);
 
-  els.playerForm.reset();
+  resetPlayerForm();
   saveState();
   render();
+  showAdminMessage("#playerList", "success", existing ? "Player updated." : "Player checked in.");
+}
+
+function resetPlayerForm() {
+  els.playerForm.reset();
+  els.playerForm.elements.playerId.value = "";
+  els.playerForm.elements.status.value = "Checked in";
+  els.playerForm.elements.paid.value = "Not tracked";
+  els.playerForm.querySelector("button[type=submit]").textContent = "Check In";
 }
 
 function savePost(event) {
@@ -712,16 +736,32 @@ function renderPlayers() {
       <article class="card player-card">
         <div class="card-copy">
           <strong>${escapeHtml(player.firstName)} ${escapeHtml(player.lastName)}</strong>
-          <p class="meta">${escapeHtml(player.skill)} | ${escapeHtml(player.email)} | ${escapeHtml(player.status || "Checked in")}</p>
+          <p class="meta">${escapeHtml(player.skill)} | ${escapeHtml(player.email)} | ${escapeHtml(player.status || "Checked in")} | ${player.checkedIn ? "Checked in" : "Not active"}</p>
           <p class="meta">Waiver: ${escapeHtml(player.waiver)} | Paid: ${escapeHtml(player.paid || "Not tracked")}${player.eventId ? ` | ${escapeHtml(eventName(player.eventId))}` : ""}</p>
         </div>
-        <button class="danger delete-player-btn" type="button" data-delete-player="${escapeHtml(player.id)}" aria-label="Delete ${escapeHtml(player.firstName)} ${escapeHtml(player.lastName)}">Delete Player</button>
+        <div class="card-actions">
+          <button type="button" data-edit-player="${escapeHtml(player.id)}">Edit</button>
+          <button type="button" data-toggle-player-active="${escapeHtml(player.id)}">${player.checkedIn ? "Mark Out" : "Check In"}</button>
+          <button class="danger delete-player-btn" type="button" data-delete-player="${escapeHtml(player.id)}" aria-label="Delete ${escapeHtml(player.firstName)} ${escapeHtml(player.lastName)}">Delete</button>
+        </div>
       </article>
     `).join("")
     : `<div class="empty">No players checked in yet.</div>`;
 }
 
 function handlePlayerListClick(event) {
+  const editButton = event.target.closest("[data-edit-player]");
+  if (editButton) {
+    editPlayer(editButton.dataset.editPlayer);
+    return;
+  }
+
+  const activeButton = event.target.closest("[data-toggle-player-active]");
+  if (activeButton) {
+    togglePlayerActive(activeButton.dataset.togglePlayerActive);
+    return;
+  }
+
   const button = event.target.closest("[data-delete-player]");
   if (!button) return;
 
@@ -732,10 +772,48 @@ function handlePlayerListClick(event) {
   if (!window.confirm(`Delete ${name} from check-in?`)) return;
 
   deletePlayer(player.id);
+  showAdminMessage("#playerList", "success", "Player deleted.");
+}
+
+function editPlayer(id) {
+  const player = state.players.find((item) => item.id === id);
+  if (!player) return;
+  Object.entries(player).forEach(([name, value]) => {
+    const field = els.playerForm.elements[name === "id" ? "playerId" : name];
+    if (field) field.value = value || "";
+  });
+  els.playerForm.elements.playerId.value = player.id;
+  els.playerForm.querySelector("button[type=submit]").textContent = "Update Player";
+  els.playerForm.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function togglePlayerActive(id) {
+  const player = state.players.find((item) => item.id === id);
+  if (!player) return;
+  if (player.checkedIn) {
+    if (!window.confirm(`Mark ${player.firstName} ${player.lastName} out and remove them from current rounds?`)) return;
+    player.checkedIn = false;
+    player.status = "Left event";
+    removePlayerFromActivePlay(id);
+  } else {
+    player.checkedIn = true;
+    player.status = "Checked in";
+    player.checkedInAt = new Date().toISOString();
+  }
+  saveState();
+  render();
+  showAdminMessage("#playerList", "success", player.checkedIn ? "Player checked back in." : "Player marked out.");
 }
 
 function deletePlayer(id) {
   state.players = state.players.filter((player) => player.id !== id);
+  removePlayerFromActivePlay(id);
+  state.roundSettings.selectedPlayerIds = (state.roundSettings.selectedPlayerIds || []).filter((playerId) => playerId !== id);
+  saveState();
+  render();
+}
+
+function removePlayerFromActivePlay(id) {
   state.rounds = state.rounds
     .map((round) => ({
       ...round,
@@ -757,8 +835,6 @@ function deletePlayer(id) {
     }))
     .filter((match) => match.players.length);
   state.sync.pending = (state.sync.pending || 0) + 1;
-  saveState();
-  render();
 }
 
 function renderRsvpOptions() {
@@ -1077,19 +1153,127 @@ function renderRounds() {
   target.innerHTML = state.rounds.length
     ? state.rounds.map((round) => `
       <article class="card round-card">
-        <strong>Round ${round.round}</strong>
-        <p class="meta">${round.rotationStyle === "rotate-two" ? "Rotate 2 players per round" : "Balanced team scoring"}</p>
-        ${round.matches.map((match) => `
+        <div class="round-card-head">
+          <div>
+            <strong>Round ${round.round}</strong>
+            <p class="meta">${round.rotationStyle === "rotate-two" ? "Rotate 2 players per round" : "Balanced team scoring"}</p>
+          </div>
+          <button type="button" data-clear-round="${round.round}">Clear Round</button>
+        </div>
+        ${round.matches.map((match, matchIndex) => `
           <div class="match">
             <p class="meta">Court ${match.court}</p>
             <strong>${names(match.teamA)} vs ${names(match.teamB)}</strong>
             ${match.balanceNote ? `<span class="match-note">${escapeHtml(match.balanceNote)}</span>` : ""}
+            <div class="round-edit-grid">
+              ${roundSlotSelect(round, match, matchIndex, "teamA", 0)}
+              ${roundSlotSelect(round, match, matchIndex, "teamA", 1)}
+              ${roundSlotSelect(round, match, matchIndex, "teamB", 0)}
+              ${roundSlotSelect(round, match, matchIndex, "teamB", 1)}
+            </div>
           </div>
         `).join("")}
         ${round.sitting.length ? `<p class="meta">Sitting: ${names(round.sitting)}</p>` : ""}
       </article>
     `).join("")
     : `<div class="empty">Generate round-robin assignments after check-in.</div>`;
+}
+
+function roundSlotSelect(round, match, matchIndex, teamKey, slotIndex) {
+  const selectedId = match[teamKey]?.[slotIndex] || "";
+  const label = `${teamKey === "teamA" ? "Team A" : "Team B"} ${slotIndex + 1}`;
+  return `
+    <label>${label}
+      <select data-round-slot="${round.round}" data-match-index="${matchIndex}" data-team-key="${teamKey}" data-slot-index="${slotIndex}">
+        ${roundPlayerOptions(round, selectedId)}
+      </select>
+    </label>
+  `;
+}
+
+function roundPlayerOptions(round, selectedId = "") {
+  const ids = new Set([
+    ...checkedPlayers().map((player) => player.id),
+    ...(round.sitting || []),
+    ...(round.matches || []).flatMap((match) => [...(match.teamA || []), ...(match.teamB || [])]),
+  ]);
+  const players = Array.from(ids)
+    .map((id) => state.players.find((player) => player.id === id))
+    .filter(Boolean)
+    .sort(skillSort);
+  return `<option value="">Empty</option>${players.map((player) => `
+    <option value="${player.id}" ${player.id === selectedId ? "selected" : ""}>${escapeHtml(player.firstName)} ${escapeHtml(player.lastName)} (${escapeHtml(player.skill || "Open")})</option>
+  `).join("")}`;
+}
+
+function handleRoundListClick(event) {
+  const clearButton = event.target.closest("[data-clear-round]");
+  if (!clearButton) return;
+  clearRound(Number(clearButton.dataset.clearRound));
+}
+
+function handleRoundListChange(event) {
+  const select = event.target.closest("[data-round-slot]");
+  if (!select) return;
+  updateRoundSlot({
+    roundNumber: Number(select.dataset.roundSlot),
+    matchIndex: Number(select.dataset.matchIndex),
+    teamKey: select.dataset.teamKey,
+    slotIndex: Number(select.dataset.slotIndex),
+    playerId: select.value,
+  });
+}
+
+function updateRoundSlot({ roundNumber, matchIndex, teamKey, slotIndex, playerId }) {
+  const round = state.rounds.find((item) => item.round === roundNumber);
+  const match = round?.matches?.[matchIndex];
+  if (!round || !match) return;
+
+  match.teamA = [...(match.teamA || [])];
+  match.teamB = [...(match.teamB || [])];
+  match[teamKey][slotIndex] = playerId;
+
+  if (playerId) {
+    round.matches.forEach((item, index) => {
+      ["teamA", "teamB"].forEach((key) => {
+        item[key] = (item[key] || []).map((id, playerIndex) =>
+          index === matchIndex && key === teamKey && playerIndex === slotIndex ? id : id === playerId ? "" : id
+        );
+      });
+    });
+  }
+
+  const roundPool = new Set([
+    ...(round.sitting || []),
+    ...(round.matches || []).flatMap((item) => [...(item.teamA || []), ...(item.teamB || [])]).filter(Boolean),
+  ]);
+  if (playerId) roundPool.add(playerId);
+  const assigned = new Set((round.matches || []).flatMap((item) => [...(item.teamA || []), ...(item.teamB || [])]).filter(Boolean));
+  round.sitting = Array.from(roundPool).filter((id) => !assigned.has(id));
+  round.matches = round.matches.filter((item) => (item.teamA || []).some(Boolean) || (item.teamB || []).some(Boolean));
+
+  saveState();
+  renderRounds();
+}
+
+function clearRound(roundNumber) {
+  const round = state.rounds.find((item) => item.round === roundNumber);
+  if (!round) return;
+  if (!window.confirm(`Clear Round ${roundNumber}?`)) return;
+  state.rounds = state.rounds.filter((item) => item.round !== roundNumber);
+  saveState();
+  renderRounds();
+}
+
+function clearAllRounds() {
+  if (!state.rounds.length) {
+    renderRounds();
+    return;
+  }
+  if (!window.confirm("Clear all generated round-robin assignments?")) return;
+  state.rounds = [];
+  saveState();
+  renderRounds();
 }
 
 function distributeByStrengthAndGender(players) {
@@ -2323,11 +2507,12 @@ function todaySlug() {
 }
 
 function names(ids) {
-  return ids
+  const list = ids
     .map((id) => state.players.find((player) => player.id === id))
     .filter(Boolean)
     .map((player) => `${player.firstName} ${player.lastName}`)
     .join(" / ");
+  return list || "Open slot";
 }
 
 function eventName(id) {

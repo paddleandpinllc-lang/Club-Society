@@ -442,6 +442,7 @@
                 </div>
               </div>
               <form id="playerForm" class="form-grid">
+                <input name="playerId" type="hidden">
                 <div class="full quick-fill">
                   <label>Already RSVP'd?
                     <input id="rsvpLookup" list="rsvpOptions" placeholder="Search name, email, or phone">
@@ -476,6 +477,7 @@
                     <option selected>Checked in</option>
                     <option>Walk-up</option>
                     <option>Waitlist</option>
+                    <option>Left event</option>
                   </select>
                 </label>
                 <label>Paid
@@ -486,7 +488,10 @@
                   </select>
                 </label>
                 <label class="full">Notes<textarea name="notes" rows="2"></textarea></label>
-                <button class="primary full" type="submit">Check In</button>
+                <div class="form-actions full">
+                  <button class="primary" type="submit">Check In</button>
+                  <button id="cancelPlayerEditBtn" type="button">Cancel Edit</button>
+                </div>
               </form>
             </section>
             <section class="panel">
@@ -538,6 +543,7 @@
                     <option value="rotate-two">Rotate 2 players</option>
                   </select>
                 </label>
+                <button id="clearRoundsBtn" type="button">Clear Rounds</button>
                 <button class="primary" id="buildRoundsBtn">Generate</button>
               </div>
             </div>
