@@ -67,6 +67,17 @@ const els = {
   publicRsvpForm: document.querySelector("#publicRsvpForm"),
   societyAccountForm: document.querySelector("#societyAccountForm"),
   societyAccountMessage: document.querySelector("#societyAccountMessage"),
+  golfProfileForm: document.querySelector("#golfProfileForm"),
+  golfProfileMessage: document.querySelector("#golfProfileMessage"),
+  golfTeeTimeForm: document.querySelector("#golfTeeTimeForm"),
+  golfTeeTimeList: document.querySelector("#golfTeeTimeList"),
+  golfGroupForm: document.querySelector("#golfGroupForm"),
+  golfGroupList: document.querySelector("#golfGroupList"),
+  golfMessageForm: document.querySelector("#golfMessageForm"),
+  golfMessageList: document.querySelector("#golfMessageList"),
+  golfMatchDeck: document.querySelector("#golfMatchDeck"),
+  golfPassBtn: document.querySelector("#golfPassBtn"),
+  golfMessageMatchBtn: document.querySelector("#golfMessageMatchBtn"),
   adminForm: document.querySelector("#adminForm"),
   profileForm: document.querySelector("#profileForm"),
   publicViewForm: document.querySelector("#publicViewForm"),
@@ -144,6 +155,12 @@ els.postForm.addEventListener("submit", savePost);
 els.publicRsvpForm.addEventListener("submit", savePublicRsvp);
 els.societyAccountForm.addEventListener("submit", saveSocietyAccount);
 document.querySelector("#societyApp").addEventListener("click", handleSocietyAppClick);
+els.golfProfileForm.addEventListener("submit", saveGolfProfile);
+els.golfTeeTimeForm.addEventListener("submit", saveGolfTeeTime);
+els.golfGroupForm.addEventListener("submit", saveGolfGroup);
+els.golfMessageForm.addEventListener("submit", saveGolfMessage);
+els.golfPassBtn.addEventListener("click", passGolfMatch);
+els.golfMessageMatchBtn.addEventListener("click", messageGolfMatch);
 els.adminForm.addEventListener("submit", saveAdmin);
 els.profileForm.addEventListener("submit", saveProfile);
 els.publicViewForm.addEventListener("submit", savePublicView);
@@ -222,8 +239,13 @@ function loadState() {
     verificationCodes: {},
     admins: [{ id: "owner", name: "Event Owner", email: LOCAL_ADMIN_EMAIL, role: "Host Admin" }],
     profiles: [],
+    golfProfile: {},
+    golfTeeTimes: [],
+    golfGroups: [],
+    golfMessages: [],
+    golfMatchIndex: 0,
     paddlePintImportedIds: [],
-    roundSettings: { selectedPlayerIds: [] },
+    roundSettings: { selectedPlayerIds: [], teams: [] },
     selectedEventRosterId: "",
     sync: { status: "Local only", lastSync: "", pending: 0 },
   };
@@ -249,8 +271,13 @@ function normalizeState(data) {
   }));
   data.events = data.events || [];
   data.players = data.players || [];
+  data.golfProfile = data.golfProfile || {};
+  data.golfTeeTimes = data.golfTeeTimes || [];
+  data.golfGroups = data.golfGroups || [];
+  data.golfMessages = data.golfMessages || [];
+  data.golfMatchIndex = data.golfMatchIndex || 0;
   data.paddlePintImportedIds = data.paddlePintImportedIds || [];
-  data.roundSettings = { selectedPlayerIds: [], ...(data.roundSettings || {}) };
+  data.roundSettings = { selectedPlayerIds: [], teams: [], ...(data.roundSettings || {}) };
   data.selectedEventRosterId = data.selectedEventRosterId || "";
   return data;
 }
@@ -271,7 +298,9 @@ function setMode(mode) {
   render();
 
   if (mode === "golf") {
-    openGolfPreview();
+    closeGolfPreview();
+    setView("societyApp");
+    setSocietyTab("golfHome");
     return;
   }
   closeGolfPreview();
@@ -317,6 +346,7 @@ function render() {
   renderIntegrationEventOptions();
   renderCloudConfig();
   renderCloudStatus();
+  renderGolf();
 }
 
 function applyEventTemplate(key) {
@@ -400,6 +430,17 @@ function savePlayer(event) {
 
   if (existing) Object.assign(existing, player);
   else state.players.unshift(player);
+  if (player.checkedIn) {
+    upsertPlayerDirectoryProfile({
+      firstName: player.firstName,
+      lastName: player.lastName,
+      email: player.email,
+      phone: player.phone,
+      skill: player.skill,
+      interests: ["Played event", "Social round robins"],
+      source: eventName(player.eventId) || "Admin check-in",
+    });
+  }
 
   resetPlayerForm();
   saveState();
@@ -476,6 +517,164 @@ function setSocietyTab(tab) {
   document.querySelectorAll("#societyApp [data-society-tab]").forEach((button) => {
     button.classList.toggle("active", button.dataset.societyTab === tab);
   });
+}
+
+function saveGolfProfile(event) {
+  event.preventDefault();
+  const data = Object.fromEntries(new FormData(els.golfProfileForm).entries());
+  state.golfProfile = {
+    ...data,
+    zip: data.zip || "30677",
+    updatedAt: new Date().toISOString(),
+  };
+  const [firstName = "", ...rest] = data.name.trim().split(/\s+/);
+  upsertPlayerDirectoryProfile({
+    firstName: titleCase(firstName),
+    lastName: titleCase(rest.join(" ")),
+    email: data.email,
+    phone: "",
+    skill: data.handicap ? `Golf handicap ${data.handicap}` : "Golf member",
+    interests: ["Golf groups", "Last-minute tee times"],
+    source: "Golf Society signup",
+    sport: "golf",
+  });
+  saveState();
+  renderGolf();
+  els.golfProfileMessage.textContent = "Golf profile saved. You are ready to match inside the 30677 radius.";
+}
+
+function saveGolfTeeTime(event) {
+  event.preventDefault();
+  const data = Object.fromEntries(new FormData(els.golfTeeTimeForm).entries());
+  state.golfTeeTimes.unshift({
+    ...data,
+    id: newId(),
+    zip: data.zip || "30677",
+    createdAt: new Date().toISOString(),
+  });
+  els.golfTeeTimeForm.reset();
+  els.golfTeeTimeForm.elements.zip.value = "30677";
+  saveState();
+  renderGolf();
+}
+
+function saveGolfGroup(event) {
+  event.preventDefault();
+  const data = Object.fromEntries(new FormData(els.golfGroupForm).entries());
+  state.golfGroups.unshift({ ...data, id: newId(), createdAt: new Date().toISOString() });
+  els.golfGroupForm.reset();
+  saveState();
+  renderGolf();
+}
+
+function saveGolfMessage(event) {
+  event.preventDefault();
+  const data = Object.fromEntries(new FormData(els.golfMessageForm).entries());
+  state.golfMessages.unshift({
+    ...data,
+    id: newId(),
+    from: state.golfProfile.name || "You",
+    createdAt: new Date().toISOString(),
+  });
+  els.golfMessageForm.reset();
+  saveState();
+  renderGolf();
+}
+
+function passGolfMatch() {
+  const cards = golfMatchCards();
+  state.golfMatchIndex = (state.golfMatchIndex + 1) % cards.length;
+  saveState();
+  renderGolfMatchDeck();
+}
+
+function messageGolfMatch() {
+  const card = golfMatchCards()[state.golfMatchIndex % golfMatchCards().length];
+  setSocietyTab("golfMessages");
+  els.golfMessageForm.elements.to.value = card.name;
+  els.golfMessageForm.elements.body.value = `Interested in ${card.cta.toLowerCase()} at ${card.course}.`;
+}
+
+function renderGolf() {
+  renderGolfProfileForm();
+  renderGolfMatchDeck();
+  renderGolfTeeTimes();
+  renderGolfGroups();
+  renderGolfMessages();
+}
+
+function renderGolfProfileForm() {
+  Object.entries(state.golfProfile || {}).forEach(([name, value]) => {
+    const field = els.golfProfileForm.elements[name];
+    if (field) field.value = value || "";
+  });
+  if (!els.golfProfileForm.elements.zip.value) els.golfProfileForm.elements.zip.value = "30677";
+}
+
+function renderGolfMatchDeck() {
+  const cards = golfMatchCards();
+  const card = cards[state.golfMatchIndex % cards.length];
+  els.golfMatchDeck.innerHTML = `
+    <article class="golf-match-card">
+      <span>${escapeHtml(card.distance)} from 30677</span>
+      <strong>${escapeHtml(card.name)}</strong>
+      <p>${escapeHtml(card.course)} | ${escapeHtml(card.time)} | HCP ${escapeHtml(card.handicap)}</p>
+      <div class="golf-card-tags">
+        ${card.tags.map((tag) => `<em>${escapeHtml(tag)}</em>`).join("")}
+      </div>
+      <div class="golf-card-cta">${escapeHtml(card.cta)}</div>
+    </article>
+  `;
+}
+
+function renderGolfTeeTimes() {
+  const demo = [
+    { course: "Lane Creek Golf Club", date: "Today", time: "4:20 PM", spots: "1", note: "Single dropped. Need one more for a relaxed foursome." },
+    { course: "UGA Golf Course", date: "Tomorrow", time: "8:40 AM", spots: "2", note: "Cart booked. Casual pace, 12-20 handicap range." },
+  ];
+  const items = [...state.golfTeeTimes, ...demo];
+  els.golfTeeTimeList.innerHTML = items.map((item) => `
+    <article class="society-list-card">
+      <strong>${escapeHtml(item.course)}</strong>
+      <span>${escapeHtml(item.date)} | ${escapeHtml(item.time)} | ${escapeHtml(item.spots)} open</span>
+      <p>${escapeHtml(item.note || "Open tee time inside the Club Society golf radius.")}</p>
+    </article>
+  `).join("");
+}
+
+function renderGolfGroups() {
+  const demo = [
+    { name: "Oconee After Work 9", vibe: "Casual foursome finder", note: "Weekday nine-hole rounds near Watkinsville." },
+    { name: "Athens Weekend Skins", vibe: "Competitive matches", note: "Friendly matches with a little pressure." },
+  ];
+  const items = [...state.golfGroups, ...demo];
+  els.golfGroupList.innerHTML = items.map((item) => `
+    <article class="society-list-card">
+      <strong>${escapeHtml(item.name)}</strong>
+      <span>${escapeHtml(item.vibe)}</span>
+      <p>${escapeHtml(item.note || "Golf group inside the 30677 radius.")}</p>
+    </article>
+  `).join("");
+}
+
+function renderGolfMessages() {
+  els.golfMessageList.innerHTML = state.golfMessages.length
+    ? state.golfMessages.map((message) => `
+      <article class="society-list-card">
+        <strong>${escapeHtml(message.to)}</strong>
+        <span>${escapeHtml(message.from)} | ${formatDateTime(message.createdAt)}</span>
+        <p>${escapeHtml(message.body)}</p>
+      </article>
+    `).join("")
+    : `<div class="empty">No golf messages yet. Message a match or tee-time host to start the conversation.</div>`;
+}
+
+function golfMatchCards() {
+  return [
+    { name: "Blake M.", course: "Lane Creek Golf Club", time: "Today 4:10 PM", handicap: "11", distance: "9 miles", cta: "Needs one more", tags: ["Fast reply", "Cart booked", "Casual"] },
+    { name: "Jordan K.", course: "UGA Golf Course", time: "Tomorrow 8:40 AM", handicap: "18", distance: "12 miles", cta: "Open twosome", tags: ["Beginner friendly", "Morning", "Social"] },
+    { name: "Taylor R.", course: "Jennings Mill", time: "Friday 2:30 PM", handicap: "6", distance: "14 miles", cta: "Match play invite", tags: ["Competitive", "Member invite", "18 holes"] },
+  ];
 }
 
 function savePublicRsvp(event) {
@@ -785,6 +984,7 @@ function renderPlayers() {
   const query = els.rosterSearch.value.trim().toLowerCase();
   const players = state.players
     .filter((player) => (player.sport || "pickleball") === state.mode)
+    .filter((player) => player.checkedIn)
     .filter((player) => `${player.firstName} ${player.lastName} ${player.email}`.toLowerCase().includes(query))
     .sort((a, b) => a.lastName.localeCompare(b.lastName));
 
@@ -803,7 +1003,7 @@ function renderPlayers() {
         </div>
       </article>
     `).join("")
-    : `<div class="empty">No players checked in yet.</div>`;
+    : `<div class="empty">No players are currently checked in.</div>`;
 }
 
 function handlePlayerListClick(event) {
@@ -1122,7 +1322,8 @@ function checkedPlayers() {
 
 function roundEligiblePlayers() {
   const players = checkedPlayers().sort(skillSort);
-  if (els.roundPlayerSource.value !== "manual") return players;
+  if (!["manual", "teams"].includes(els.roundPlayerSource.value)) return players;
+  if (els.roundPlayerSource.value === "teams") return players;
 
   const selected = new Set(state.roundSettings.selectedPlayerIds || []);
   return players.filter((player) => selected.has(player.id));
@@ -1130,11 +1331,18 @@ function roundEligiblePlayers() {
 
 function renderRoundPlayerPicker() {
   const players = checkedPlayers().sort(skillSort);
-  const manual = els.roundPlayerSource.value === "manual";
-  els.roundPlayerPicker.classList.toggle("is-hidden", !manual);
+  const mode = els.roundPlayerSource.value;
+  const manual = mode === "manual";
+  const teamsMode = mode === "teams";
+  els.roundPlayerPicker.classList.toggle("is-hidden", !manual && !teamsMode);
 
-  if (!manual) {
+  if (!manual && !teamsMode) {
     els.roundPlayerPicker.innerHTML = "";
+    return;
+  }
+
+  if (teamsMode) {
+    renderRoundTeamBuilder(players);
     return;
   }
 
@@ -1160,12 +1368,68 @@ function renderRoundPlayerPicker() {
 }
 
 function saveRoundManualSelection() {
+  if (els.roundPlayerSource.value === "teams") {
+    saveRoundTeams();
+    return;
+  }
   state.roundSettings.selectedPlayerIds = Array.from(els.roundPlayerPicker.querySelectorAll("input[type='checkbox']:checked")).map((input) => input.value);
   saveState();
   renderRoundPlayerPicker();
 }
 
+function renderRoundTeamBuilder(players) {
+  const existingTeams = (state.roundSettings.teams || []).filter((team) => team?.playerA || team?.playerB);
+  const teamCount = Math.max(2, existingTeams.length || Math.floor(players.length / 2));
+  const teams = Array.from({ length: teamCount }, (_, index) => existingTeams[index] || { id: newId(), name: `Team ${index + 1}`, playerA: "", playerB: "" });
+  state.roundSettings.teams = teams;
+
+  els.roundPlayerPicker.innerHTML = players.length >= 4
+    ? `
+      <div class="round-picker-head">
+        <strong>Manual team assignment</strong>
+        <span>${teams.length} teams | Choose two players per team</span>
+      </div>
+      <div class="round-team-list">
+        ${teams.map((team, index) => `
+          <article class="round-team-card">
+            <input data-team-index="${index}" data-team-field="name" value="${escapeHtml(team.name || `Team ${index + 1}`)}" aria-label="Team name">
+            ${roundTeamPlayerSelect(players, team.playerA, index, "playerA")}
+            ${roundTeamPlayerSelect(players, team.playerB, index, "playerB")}
+          </article>
+        `).join("")}
+      </div>
+    `
+    : `<div class="empty">Check in at least 4 players before assigning teams.</div>`;
+}
+
+function roundTeamPlayerSelect(players, selectedId, teamIndex, field) {
+  return `
+    <select data-team-index="${teamIndex}" data-team-field="${field}">
+      <option value="">Select player</option>
+      ${players.map((player) => `
+        <option value="${player.id}" ${player.id === selectedId ? "selected" : ""}>${escapeHtml(player.firstName)} ${escapeHtml(player.lastName)}</option>
+      `).join("")}
+    </select>
+  `;
+}
+
+function saveRoundTeams() {
+  const teamMap = new Map((state.roundSettings.teams || []).map((team, index) => [String(index), { ...team }]));
+  els.roundPlayerPicker.querySelectorAll("[data-team-index]").forEach((field) => {
+    const team = teamMap.get(field.dataset.teamIndex) || { id: newId(), name: `Team ${Number(field.dataset.teamIndex) + 1}`, playerA: "", playerB: "" };
+    team[field.dataset.teamField] = field.value;
+    teamMap.set(field.dataset.teamIndex, team);
+  });
+  state.roundSettings.teams = Array.from(teamMap.values());
+  saveState();
+}
+
 function buildRounds() {
+  if (els.roundPlayerSource.value === "teams") {
+    buildTeamRounds();
+    return;
+  }
+
   const players = roundEligiblePlayers();
   const courts = Math.max(1, Number(els.courtCount.value) || 1);
   const courtCapacity = courts * 4;
@@ -1216,6 +1480,81 @@ function buildRounds() {
 
   saveState();
   renderRounds();
+}
+
+function buildTeamRounds() {
+  saveRoundTeams();
+  const courts = Math.max(1, Number(els.courtCount.value) || 1);
+  const roundCount = Math.max(1, Number(els.roundCount.value) || 1);
+  const teams = getManualRoundTeams();
+  const allTeamPlayerIds = teams.flatMap((team) => team.players.map((player) => player.id));
+  const duplicatePlayers = allTeamPlayerIds.filter((id, index) => allTeamPlayerIds.indexOf(id) !== index);
+
+  if (teams.length < 2) {
+    document.querySelector("#roundList").innerHTML = `<div class="empty">Create at least 2 complete teams before generating team rounds.</div>`;
+    return;
+  }
+  if (duplicatePlayers.length) {
+    document.querySelector("#roundList").innerHTML = `<div class="empty">Each player can only be assigned to one team.</div>`;
+    return;
+  }
+
+  state.rounds = [];
+  let teamBag = shuffle(teams);
+  const drawNextTeam = () => {
+    if (!teamBag.length) teamBag = shuffle(teams);
+    return teamBag.shift();
+  };
+
+  for (let round = 1; round <= roundCount; round += 1) {
+    const roundTeams = [];
+    const teamsThisRound = Math.min(courts * 2, teams.length);
+    while (roundTeams.length < teamsThisRound) {
+      const nextTeam = drawNextTeam();
+      if (!nextTeam) break;
+      roundTeams.push(nextTeam);
+    }
+
+    const availableTeams = [...roundTeams];
+    const matches = [];
+    for (let court = 1; court <= courts && availableTeams.length >= 2; court += 1) {
+      const teamA = availableTeams.shift();
+      const teamB = availableTeams.shift();
+      matches.push({
+        court,
+        teamA: teamA.players.map((player) => player.id),
+        teamB: teamB.players.map((player) => player.id),
+        teamALabel: teamA.name,
+        teamBLabel: teamB.name,
+      });
+    }
+
+    const playingTeamIds = new Set(roundTeams.map((team) => team.id));
+    state.rounds.push({
+      round,
+      rotationStyle: "teams",
+      matches,
+      sitting: teams.filter((team) => !playingTeamIds.has(team.id)).flatMap((team) => team.players.map((player) => player.id)),
+    });
+  }
+
+  saveState();
+  renderRounds();
+}
+
+function getManualRoundTeams() {
+  return (state.roundSettings.teams || [])
+    .map((team, index) => {
+      const players = [team.playerA, team.playerB]
+        .map((id) => state.players.find((player) => player.id === id && player.checkedIn))
+        .filter(Boolean);
+      return {
+        id: team.id || `team-${index + 1}`,
+        name: team.name || `Team ${index + 1}`,
+        players,
+      };
+    })
+    .filter((team) => team.players.length === 2);
 }
 
 function renderRounds() {
@@ -2110,7 +2449,7 @@ function upsertPlayerDirectoryProfile(profile) {
     availability: existing?.availability || "Flexible",
     interests: Array.from(new Set([...(existing?.interests || []), ...(profile.interests || [])])),
     smsSubscriber: existing?.smsSubscriber || false,
-    sport: existing?.sport || "pickleball",
+    sport: profile.sport || existing?.sport || "pickleball",
     verificationStatus: existing?.verificationStatus || "Imported",
     verificationMethod: existing?.verificationMethod || "email",
     source: profile.source || existing?.source || "Club Society",
@@ -2392,7 +2731,13 @@ function normalizeImportedPlayer(row) {
 
 function exportPlayerCsv() {
   const headers = ["First Name", "Last Name", "Email", "Phone", "Event", "Skill", "Waiver", "Status", "Paid", "Checked In", "Notes"];
-  const rows = state.players.map((player) => [
+  const selectedEventId = els.playerEvent.value;
+  const event = state.events.find((item) => item.id === selectedEventId);
+  const attendees = state.players
+    .filter((player) => (player.sport || "pickleball") === state.mode)
+    .filter((player) => player.checkedIn)
+    .filter((player) => !selectedEventId || player.eventId === selectedEventId);
+  const rows = attendees.map((player) => [
     player.firstName,
     player.lastName,
     player.email,
@@ -2405,7 +2750,8 @@ function exportPlayerCsv() {
     player.checkedIn ? "Yes" : "No",
     player.notes,
   ]);
-  downloadText(`club-society-players-${new Date().toISOString().slice(0, 10)}.csv`, [headers, ...rows].map(csvLine).join("\n"), "text/csv");
+  const label = event ? slugify(event.name) : "checked-in-attendees";
+  downloadText(`club-society-${label}-${todaySlug()}.csv`, [headers, ...rows].map(csvLine).join("\n"), "text/csv");
 }
 
 function parseCsv(input) {

@@ -124,7 +124,7 @@
               <p>Pickleball play, partners, courts, instructors, events, and host tools for Athens and the surrounding area.</p>
               <div class="society-sport-switch" aria-label="Sport direction">
                 <button class="active" data-society-tab="home" type="button">Pickleball</button>
-                <button data-society-tab="golfSoonMini" type="button">Golf</button>
+                <button data-society-tab="golfHome" type="button">Golf</button>
               </div>
             </section>
 
@@ -266,11 +266,134 @@
               </section>
             </div>
 
-            <div class="society-tab" data-society-panel="golfSoonMini">
+            <div class="society-tab" data-society-panel="golfHome">
+              <section class="golf-app-hero">
+                <p class="eyebrow">Golf Society</p>
+                <h3>Find a partner before the tee time disappears.</h3>
+                <p>A last-minute golf network for Watkinsville, Athens, Oconee, and nearby courses inside 50 miles of 30677.</p>
+                <div class="golf-radius-pill">50 mile radius | Home ZIP 30677</div>
+              </section>
+              <section class="society-join-card golf-profile-card">
+                <div>
+                  <span class="society-kicker">Golf profile</span>
+                  <h3>Join the golf side</h3>
+                  <p>Save your handicap, favorite courses, and playing style so other members know if the fit is right.</p>
+                </div>
+                <form id="golfProfileForm" class="society-form">
+                  <input name="name" placeholder="Full name" required>
+                  <input name="email" type="email" placeholder="Email" required>
+                  <div class="form-pair">
+                    <input name="zip" inputmode="numeric" value="30677" placeholder="ZIP">
+                    <input name="handicap" placeholder="Handicap">
+                  </div>
+                  <textarea name="favoriteCourses" rows="2" placeholder="Favorite courses: Lane Creek, UGA, Jennings Mill..."></textarea>
+                  <select name="style">
+                    <option>Casual weekend golf</option>
+                    <option>Last-minute tee times</option>
+                    <option>Competitive money game</option>
+                    <option>Beginner-friendly rounds</option>
+                  </select>
+                  <button class="primary" type="submit">Save Golf Profile</button>
+                </form>
+                <div id="golfProfileMessage" class="society-message"></div>
+              </section>
+              <section class="society-quick-grid golf-quick-grid" aria-label="Golf shortcuts">
+                <button data-society-tab="golfFindGame" type="button"><span>Swipe</span><strong>Find Game</strong></button>
+                <button data-society-tab="golfPostTee" type="button"><span>Open slot</span><strong>Post tee time</strong></button>
+                <button data-society-tab="golfCreateGroup" type="button"><span>Crew</span><strong>Create Group</strong></button>
+                <button data-society-tab="golfLessons" type="button"><span>Level up</span><strong>Lessons</strong></button>
+                <button data-society-tab="golfCourses" type="button"><span>Nearby</span><strong>Courses</strong></button>
+                <button data-society-tab="golfMessages" type="button"><span>Chat</span><strong>Messages</strong></button>
+              </section>
+            </div>
+
+            <div class="society-tab" data-society-panel="golfFindGame">
               <section class="society-section">
-                <p class="eyebrow">Golf</p>
-                <h3>Coming soon</h3>
-                <div class="society-action-card"><strong>Golf will become its own side of Club Society.</strong><p>For now, pickleball gets the full buildout. Golf will expand into tee groups, scrambles, outings, and challenges.</p></div>
+                <p class="eyebrow">Find Game</p>
+                <h3>Last-minute partner deck</h3>
+                <div id="golfMatchDeck" class="golf-match-deck"></div>
+                <div class="golf-swipe-actions">
+                  <button id="golfPassBtn" type="button">Pass</button>
+                  <button class="primary" id="golfMessageMatchBtn" type="button">Message</button>
+                </div>
+              </section>
+            </div>
+
+            <div class="society-tab" data-society-panel="golfPostTee">
+              <section class="society-section">
+                <p class="eyebrow">Post tee time</p>
+                <h3>Fill an open slot</h3>
+                <form id="golfTeeTimeForm" class="society-form">
+                  <input name="course" placeholder="Course" required>
+                  <div class="form-pair">
+                    <input name="date" type="date" required>
+                    <input name="time" type="time" required>
+                  </div>
+                  <div class="form-pair">
+                    <input name="spots" inputmode="numeric" placeholder="Open spots" required>
+                    <input name="zip" inputmode="numeric" value="30677" placeholder="ZIP">
+                  </div>
+                  <textarea name="note" rows="2" placeholder="Cancellation, pace, handicap fit, walking/riding..."></textarea>
+                  <button class="primary" type="submit">Post Tee Time</button>
+                </form>
+                <div id="golfTeeTimeList" class="society-stack"></div>
+              </section>
+            </div>
+
+            <div class="society-tab" data-society-panel="golfCreateGroup">
+              <section class="society-section">
+                <p class="eyebrow">Create Group</p>
+                <h3>Build your golf circle</h3>
+                <form id="golfGroupForm" class="society-form">
+                  <input name="name" placeholder="Group name" required>
+                  <select name="vibe">
+                    <option>Casual foursome finder</option>
+                    <option>Early morning crew</option>
+                    <option>Competitive matches</option>
+                    <option>Beginner-friendly golf</option>
+                  </select>
+                  <textarea name="note" rows="2" placeholder="Who should join this group?"></textarea>
+                  <button class="primary" type="submit">Create Group</button>
+                </form>
+                <div id="golfGroupList" class="society-stack"></div>
+              </section>
+            </div>
+
+            <div class="society-tab" data-society-panel="golfLessons">
+              <section class="society-section">
+                <p class="eyebrow">Lessons</p>
+                <h3>Find local help</h3>
+                <div class="society-stack">
+                  <article class="society-list-card"><strong>Driver tune-up</strong><span>Watkinsville | 14 miles</span><p>Fix the big miss before the weekend group.</p></article>
+                  <article class="society-list-card"><strong>Short game scoring clinic</strong><span>Athens | 8 miles</span><p>Wedges, putting, and getting up-and-down more often.</p></article>
+                  <article class="society-list-card"><strong>Beginner playing lesson</strong><span>Oconee area</span><p>Course etiquette, pace, club choice, and confidence.</p></article>
+                </div>
+              </section>
+            </div>
+
+            <div class="society-tab" data-society-panel="golfCourses">
+              <section class="society-section">
+                <p class="eyebrow">Courses</p>
+                <h3>Inside 50 miles of 30677</h3>
+                <div class="society-stack">
+                  <article class="society-list-card"><strong>Lane Creek Golf Club</strong><span>Bishop | Public | Nearby</span><p>Great fit for Oconee and Watkinsville players.</p></article>
+                  <article class="society-list-card"><strong>University of Georgia Golf Course</strong><span>Athens | Public access</span><p>Strong local anchor for Athens-area golfers.</p></article>
+                  <article class="society-list-card"><strong>Jennings Mill Country Club</strong><span>Watkinsville/Athens area</span><p>Private club option for member-hosted invites.</p></article>
+                  <article class="society-list-card"><strong>Hard Labor Creek</strong><span>Social road-trip round</span><p>Worth tracking for weekend groups and outings.</p></article>
+                </div>
+              </section>
+            </div>
+
+            <div class="society-tab" data-society-panel="golfMessages">
+              <section class="society-section">
+                <p class="eyebrow">Messages</p>
+                <h3>Member chat</h3>
+                <form id="golfMessageForm" class="society-form">
+                  <input name="to" placeholder="To: member or group" required>
+                  <textarea name="body" rows="3" placeholder="Can you make 4:10 at Lane Creek?" required></textarea>
+                  <button class="primary" type="submit">Send Message</button>
+                </form>
+                <div id="golfMessageList" class="society-stack"></div>
               </section>
             </div>
 
@@ -744,6 +867,7 @@
                   <select id="roundPlayerSource">
                     <option value="checked" selected>All checked in</option>
                     <option value="manual">Manual select</option>
+                    <option value="teams">Manual teams</option>
                   </select>
                 </label>
                 <button id="clearRoundsBtn" type="button">Clear Rounds</button>
