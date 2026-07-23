@@ -556,7 +556,7 @@ function setAuthPanel(panel) {
 }
 
 function setSocietyTab(tab) {
-  const protectedTabs = new Set(["courts", "learn", "settings"]);
+  const protectedTabs = new Set(["games", "courts", "learn", "settings"]);
   if (protectedTabs.has(tab) && !hasSocietyAccess()) {
     setSocietyTab("home");
     els.societyAccountMessage.textContent = "Sign in or Join to access";
