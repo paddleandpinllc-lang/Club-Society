@@ -67,6 +67,10 @@ const els = {
   publicRsvpForm: document.querySelector("#publicRsvpForm"),
   societyAccountForm: document.querySelector("#societyAccountForm"),
   societyAccountMessage: document.querySelector("#societyAccountMessage"),
+  societyMemberDashboard: document.querySelector("#societyMemberDashboard"),
+  societyMemberName: document.querySelector("#societyMemberName"),
+  societyMemberMeta: document.querySelector("#societyMemberMeta"),
+  societyFavoriteCount: document.querySelector("#societyFavoriteCount"),
   golfProfileForm: document.querySelector("#golfProfileForm"),
   golfProfileMessage: document.querySelector("#golfProfileMessage"),
   golfTeeTimeForm: document.querySelector("#golfTeeTimeForm"),
@@ -245,6 +249,7 @@ function loadState() {
     golfMessages: [],
     golfMatchIndex: 0,
     societySessionEmail: "",
+    societyFavorites: [],
     paddlePintImportedIds: [],
     roundSettings: { selectedPlayerIds: [], teams: [] },
     selectedEventRosterId: "",
@@ -278,6 +283,7 @@ function normalizeState(data) {
   data.golfMessages = data.golfMessages || [];
   data.golfMatchIndex = data.golfMatchIndex || 0;
   data.societySessionEmail = data.societySessionEmail || "";
+  data.societyFavorites = data.societyFavorites || [];
   data.paddlePintImportedIds = data.paddlePintImportedIds || [];
   data.roundSettings = { selectedPlayerIds: [], teams: [], ...(data.roundSettings || {}) };
   data.selectedEventRosterId = data.selectedEventRosterId || "";
@@ -349,6 +355,7 @@ function render() {
   renderCloudConfig();
   renderCloudStatus();
   renderGolf();
+  updateSocietyHome();
 }
 
 function applyEventTemplate(key) {
@@ -504,6 +511,7 @@ function saveSocietyAccount(event) {
   state.societySessionEmail = profile.email;
   saveState();
   renderProfiles();
+  updateSocietyHome();
   els.societyAccountMessage.textContent = existing
     ? "Welcome back. Your Society Pass profile was updated. Watch for your verification email."
     : "You joined the Society. A verification email with next steps will be sent when email delivery is connected.";
@@ -529,8 +537,21 @@ function handleSocietyAppClick(event) {
     }
     state.societySessionEmail = email.toLowerCase();
     saveState();
+    updateSocietyHome();
     els.societyAccountMessage.textContent = "Sign-in email will be sent when authentication is connected. Stay logged in is saved for this device.";
     localStorage.setItem("clubSociety.stayLoggedIn.v1", String(els.societyAccountForm.elements.signinStayLoggedIn.checked));
+    return;
+  }
+
+  const eventTabButton = event.target.closest("[data-society-event-tab]");
+  if (eventTabButton) {
+    setSocietyEventTab(eventTabButton.dataset.societyEventTab);
+    return;
+  }
+
+  const favoriteButton = event.target.closest("[data-society-favorite]");
+  if (favoriteButton) {
+    addSocietyFavorite(favoriteButton.dataset.societyFavorite);
     return;
   }
 
@@ -568,10 +589,49 @@ function setSocietyTab(tab) {
   document.querySelectorAll("#societyApp [data-society-tab]").forEach((button) => {
     button.classList.toggle("active", button.dataset.societyTab === tab);
   });
+  if (tab === "home") updateSocietyHome();
 }
 
 function hasSocietyAccess() {
   return Boolean(state.societySessionEmail || state.profiles.some((profile) => profile.stayLoggedIn));
+}
+
+function currentSocietyProfile() {
+  const email = state.societySessionEmail?.toLowerCase();
+  return state.profiles.find((profile) => profile.email?.toLowerCase() === email)
+    || state.profiles.find((profile) => profile.stayLoggedIn)
+    || null;
+}
+
+function updateSocietyHome() {
+  const hasAccess = hasSocietyAccess();
+  document.querySelector(".society-guest-panel")?.classList.toggle("hidden", hasAccess);
+  els.societyMemberDashboard?.classList.toggle("active", hasAccess);
+  if (!hasAccess) return;
+  const profile = currentSocietyProfile();
+  const name = profile ? `${profile.firstName || ""} ${profile.lastName || ""}`.trim() : "Society Member";
+  els.societyMemberName.textContent = name || "Society Member";
+  els.societyMemberMeta.textContent = profile
+    ? `${profile.city || "Watkinsville"}, ${profile.state || "GA"} | ${profile.preferredSport || "Golf + Pickleball"}`
+    : "Golf + Pickleball | 30677";
+  els.societyFavoriteCount.textContent = String(state.societyFavorites.length);
+}
+
+function setSocietyEventTab(tab) {
+  document.querySelectorAll("[data-society-event-list]").forEach((list) => {
+    list.classList.toggle("active", list.dataset.societyEventList === tab);
+  });
+  document.querySelectorAll("[data-society-event-tab]").forEach((button) => {
+    button.classList.toggle("active", button.dataset.societyEventTab === tab);
+  });
+}
+
+function addSocietyFavorite(label) {
+  if (!label) return;
+  if (!state.societyFavorites.includes(label)) state.societyFavorites.push(label);
+  saveState();
+  updateSocietyHome();
+  els.societyAccountMessage.textContent = `${label} added to favorites and reminders.`;
 }
 
 function saveGolfProfile(event) {

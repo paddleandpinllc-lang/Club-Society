@@ -129,7 +129,7 @@
             </section>
 
             <div class="society-tab active" data-society-panel="home">
-              <section class="society-join-card">
+              <section class="society-join-card society-guest-panel">
                 <div>
                   <span class="society-kicker">Society Pass</span>
                   <h3>Grab your Society Pass</h3>
@@ -199,6 +199,67 @@
                 <div id="societyAccountMessage" class="society-message"></div>
               </section>
 
+              <section class="society-member-dashboard" id="societyMemberDashboard">
+                <article class="society-profile-strip">
+                  <button class="society-avatar" data-society-tab="account" type="button" aria-label="Open profile">CS</button>
+                  <div>
+                    <span class="society-kicker">Member home</span>
+                    <strong id="societyMemberName">Welcome back</strong>
+                    <p id="societyMemberMeta">Your Society profile is ready.</p>
+                  </div>
+                  <button class="mini-icon-button" data-society-tab="account" type="button" aria-label="Edit profile">+</button>
+                </article>
+
+                <div class="society-direction-grid" aria-label="Choose sport">
+                  <button class="pickleball-card" data-society-tab="games" type="button">
+                    <span>Pickleball</span>
+                    <strong>Find courts, games, and partners</strong>
+                  </button>
+                  <button class="golf-card" data-society-tab="golfHome" type="button">
+                    <span>Golf</span>
+                    <strong>Find tee times, groups, and matches</strong>
+                  </button>
+                </div>
+
+                <div class="society-mini-actions" aria-label="Member shortcuts">
+                  <button data-society-tab="partners" type="button"><span>Society contacts</span></button>
+                  <button data-society-tab="golfMessages" type="button"><span>Messages</span></button>
+                  <button data-society-tab="account" type="button"><span>Favorites</span><strong id="societyFavoriteCount">0</strong></button>
+                </div>
+
+                <section class="society-events-dock">
+                  <div class="society-section-head">
+                    <div>
+                      <span class="society-kicker">Next 7 days</span>
+                      <h3>What is happening</h3>
+                    </div>
+                  </div>
+                  <div class="society-filter-row">
+                    <button class="active" data-society-event-tab="pickleball" type="button">Pickleball</button>
+                    <button data-society-event-tab="golf" type="button">Golf</button>
+                  </div>
+                  <div class="society-event-list active" data-society-event-list="pickleball">
+                    <article class="society-event-preview">
+                      <div><span>Tonight</span><strong>Watkinsville Social Mixer</strong><p>Rotating partner games inside the 30677 area.</p></div>
+                      <button class="mini-icon-button" data-society-favorite="Watkinsville Social Mixer" type="button" aria-label="Add Watkinsville Social Mixer">+</button>
+                    </article>
+                    <article class="society-event-preview">
+                      <div><span>Saturday</span><strong>Athens Open Play</strong><p>Drop-in courts, casual games, and partner matching.</p></div>
+                      <button class="mini-icon-button" data-society-favorite="Athens Open Play" type="button" aria-label="Add Athens Open Play">+</button>
+                    </article>
+                  </div>
+                  <div class="society-event-list" data-society-event-list="golf">
+                    <article class="society-event-preview">
+                      <div><span>Tomorrow</span><strong>Lane Creek Twosome Alert</strong><p>One open spot for a late afternoon round.</p></div>
+                      <button class="mini-icon-button" data-society-favorite="Lane Creek Twosome Alert" type="button" aria-label="Add Lane Creek Twosome Alert">+</button>
+                    </article>
+                    <article class="society-event-preview">
+                      <div><span>Sunday</span><strong>UGA Course Social Nine</strong><p>Low-pressure nine-hole group near Athens.</p></div>
+                      <button class="mini-icon-button" data-society-favorite="UGA Course Social Nine" type="button" aria-label="Add UGA Course Social Nine">+</button>
+                    </article>
+                  </div>
+                </section>
+              </section>
             </div>
 
             <div class="society-tab" data-society-panel="games">
