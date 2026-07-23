@@ -1502,9 +1502,27 @@ textarea {
   gap: 9px;
 }
 
+.society-entry-card {
+  display: grid;
+  gap: 7px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.society-entry-card span {
+  color: var(--muted);
+  font-weight: 850;
+}
+
 .society-entry-actions button.active {
   border-color: var(--gold);
   box-shadow: inset 0 0 0 2px rgba(244, 181, 43, 0.28);
+}
+
+.auth-form-collapsed {
+  display: none;
 }
 
 .auth-panel {

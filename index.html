@@ -136,11 +136,17 @@
                   <p>Choose how you want to enter. New members can join the Society today. Returning members can sign in and stay logged in.</p>
                 </div>
                 <div class="society-entry-actions">
-                  <button class="primary" data-auth-panel="signup" type="button">Not a pass holder? Join the Society today</button>
-                  <button data-auth-panel="signin" type="button">Already part of the club? Sign in now</button>
+                  <div class="society-entry-card">
+                    <span>Not a pass holder?</span>
+                    <button class="primary" data-auth-panel="signup" type="button">Join the Society today</button>
+                  </div>
+                  <div class="society-entry-card">
+                    <span>Already part of the club?</span>
+                    <button data-auth-panel="signin" type="button">Sign in now</button>
+                  </div>
                 </div>
-                <form id="societyAccountForm" class="society-form">
-                  <div class="auth-panel active" data-auth-content="signup">
+                <form id="societyAccountForm" class="society-form auth-form-collapsed">
+                  <div class="auth-panel" data-auth-content="signup">
                     <div class="form-pair">
                       <input name="firstName" placeholder="First name" required>
                       <input name="lastName" placeholder="Last name" required>

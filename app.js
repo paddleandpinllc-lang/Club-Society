@@ -540,6 +540,7 @@ function handleSocietyAppClick(event) {
 }
 
 function setAuthPanel(panel) {
+  els.societyAccountForm.classList.remove("auth-form-collapsed");
   document.querySelectorAll("[data-auth-content]").forEach((item) => {
     item.classList.toggle("active", item.dataset.authContent === panel);
   });
