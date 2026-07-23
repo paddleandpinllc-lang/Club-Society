@@ -1478,8 +1478,56 @@ textarea {
 
 .society-join-card {
   display: grid;
-  gap: 14px;
-  padding: 16px;
+  gap: 16px;
+  padding: 18px;
+}
+
+.society-guest-panel {
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 12% 0%, rgba(244, 181, 43, 0.22), transparent 34%),
+    linear-gradient(180deg, #ffffff, rgba(255, 247, 232, 0.78));
+}
+
+.society-pass-intro {
+  display: grid;
+  gap: 8px;
+  justify-items: center;
+  text-align: center;
+}
+
+.society-pass-badge {
+  display: grid;
+  place-items: center;
+  width: 62px;
+  height: 62px;
+  border-radius: 20px;
+  background: var(--navy);
+  box-shadow: 0 14px 30px rgba(11, 34, 49, 0.18);
+}
+
+.society-pass-badge img {
+  width: 45px;
+  height: 45px;
+}
+
+.society-pass-perks {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 7px;
+  margin-top: 4px;
+}
+
+.society-pass-perks span {
+  border: 1px solid rgba(31, 138, 98, 0.18);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.76);
+  color: var(--green);
+  font-size: 0.72rem;
+  font-weight: 900;
+  padding: 6px 9px;
+  text-transform: uppercase;
 }
 
 .society-join-card h3,
@@ -1503,22 +1551,42 @@ textarea {
 
 .society-entry-actions {
   display: grid;
-  gap: 9px;
+  gap: 10px;
 }
 
 .society-entry-card {
   display: grid;
-  gap: 7px;
-  padding: 12px;
-  border: 1px solid var(--line);
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.72);
+  gap: 8px;
+  padding: 14px;
+  border: 1px solid rgba(11, 34, 49, 0.1);
+  border-radius: 18px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(255, 247, 232, 0.76));
   text-align: center;
+  box-shadow: 0 10px 22px rgba(11, 34, 49, 0.08);
 }
 
 .society-entry-card span {
   color: var(--muted);
   font-weight: 850;
+}
+
+.society-entry-card strong {
+  color: var(--navy);
+  font-size: 1.03rem;
+}
+
+.join-entry {
+  border-color: rgba(244, 181, 43, 0.44);
+}
+
+.signin-entry {
+  background: rgba(255, 255, 255, 0.9);
+}
+
+.society-entry-card button {
+  width: 100%;
+  min-height: 44px;
 }
 
 .society-entry-actions button.active {
