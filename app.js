@@ -71,6 +71,10 @@ const els = {
   societyMemberName: document.querySelector("#societyMemberName"),
   societyMemberMeta: document.querySelector("#societyMemberMeta"),
   societyFavoriteCount: document.querySelector("#societyFavoriteCount"),
+  societyFriendCount: document.querySelector("#societyFriendCount"),
+  societyFriendSearch: document.querySelector("#societyFriendSearch"),
+  societyFriendResults: document.querySelector("#societyFriendResults"),
+  societySinglesToggle: document.querySelector("#societySinglesToggle"),
   societyAvatar: document.querySelector(".society-avatar"),
   societyProfileDrawer: document.querySelector("#societyProfileDrawer"),
   societyPhotoPreview: document.querySelector("#societyPhotoPreview"),
@@ -168,6 +172,7 @@ els.societyProfileDrawer.addEventListener("submit", (event) => {
   saveSocietyProfileFromDrawer();
 });
 els.societyPhotoInput.addEventListener("change", previewSocietyPhoto);
+els.societyFriendSearch.addEventListener("input", renderSocietyFriends);
 els.golfProfileForm.addEventListener("submit", saveGolfProfile);
 els.golfTeeTimeForm.addEventListener("submit", saveGolfTeeTime);
 els.golfGroupForm.addEventListener("submit", saveGolfGroup);
@@ -259,6 +264,8 @@ function loadState() {
     golfMatchIndex: 0,
     societySessionEmail: "",
     societyFavorites: [],
+    societyFriends: [],
+    societyFriendFilter: "all",
     paddlePintImportedIds: [],
     roundSettings: { selectedPlayerIds: [], teams: [] },
     selectedEventRosterId: "",
@@ -293,6 +300,8 @@ function normalizeState(data) {
   data.golfMatchIndex = data.golfMatchIndex || 0;
   data.societySessionEmail = data.societySessionEmail || "";
   data.societyFavorites = data.societyFavorites || [];
+  data.societyFriends = data.societyFriends || [];
+  data.societyFriendFilter = data.societyFriendFilter || "all";
   data.paddlePintImportedIds = data.paddlePintImportedIds || [];
   data.roundSettings = { selectedPlayerIds: [], teams: [], ...(data.roundSettings || {}) };
   data.selectedEventRosterId = data.selectedEventRosterId || "";
@@ -582,6 +591,32 @@ function handleSocietyAppClick(event) {
     return;
   }
 
+  const friendFilterButton = event.target.closest("[data-society-friend-filter]");
+  if (friendFilterButton) {
+    state.societyFriendFilter = friendFilterButton.dataset.societyFriendFilter;
+    saveState();
+    renderSocietyFriends();
+    return;
+  }
+
+  const addFriendButton = event.target.closest("[data-friend-add]");
+  if (addFriendButton) {
+    addSocietyFriend(addFriendButton.dataset.friendAdd);
+    return;
+  }
+
+  const messageFriendButton = event.target.closest("[data-friend-message]");
+  if (messageFriendButton) {
+    messageSocietyFriend(messageFriendButton.dataset.friendMessage);
+    return;
+  }
+
+  const singlesToggle = event.target.closest("[data-singles-toggle]");
+  if (singlesToggle) {
+    toggleSocialPlay();
+    return;
+  }
+
   const tabButton = event.target.closest("[data-society-tab]");
   if (tabButton) {
     setSocietyTab(tabButton.dataset.societyTab);
@@ -621,6 +656,7 @@ function setSocietyTab(tab) {
     button.classList.toggle("active", button.dataset.societyTab === tab);
   });
   if (tab === "home") updateSocietyHome();
+  if (tab === "partners") renderSocietyFriends();
 }
 
 function hasSocietyAccess() {
@@ -646,9 +682,11 @@ function updateSocietyHome() {
   els.societyMemberMeta.textContent = profile
     ? `${profile.city || "Watkinsville"}, ${profile.state || "GA"} | ${profile.preferredSport || "Golf + Pickleball"}`
     : "Golf + Pickleball | 30677";
-  els.societyFavoriteCount.textContent = String(state.societyFavorites.length);
+  if (els.societyFavoriteCount) els.societyFavoriteCount.textContent = String(state.societyFavorites.length);
+  if (els.societyFriendCount) els.societyFriendCount.textContent = String(state.societyFriends.length);
   fillSocietyProfileDrawer(profile);
   updateSocietyAvatar(profile);
+  renderSocietyFriends();
 }
 
 function fillSocietyProfileDrawer(profile) {
@@ -762,6 +800,120 @@ function readFileAsDataUrl(file) {
     reader.onerror = reject;
     reader.readAsDataURL(file);
   });
+}
+
+function societyDirectoryCards() {
+  const currentEmail = state.societySessionEmail?.toLowerCase();
+  const savedProfiles = state.profiles
+    .filter((profile) => profile.email?.toLowerCase() !== currentEmail)
+    .map((profile) => ({
+      id: profile.id,
+      name: `${profile.firstName || ""} ${profile.lastName || ""}`.trim() || "Club member",
+      city: profile.city || "Watkinsville",
+      sport: profile.preferredSport || profile.sport || "pickleball",
+      skill: profile.skill || profile.pickleballLevel || (profile.handicap ? `Golf handicap ${profile.handicap}` : "Open play"),
+      vibe: profile.bio || (profile.socialPlay ? "Open to social play and friendly matchups." : "Looking for local games and club friends."),
+      photoDataUrl: profile.photoDataUrl || "",
+      socialPlay: Boolean(profile.socialPlay),
+    }));
+  const demoProfiles = [
+    { id: "demo-maya", name: "Maya Thompson", city: "Watkinsville", sport: "pickleball", skill: "3.5 doubles", vibe: "Weeknight games, mixed doubles, and post-match hangouts.", socialPlay: true },
+    { id: "demo-eli", name: "Eli Parker", city: "Athens", sport: "golf", skill: "12 handicap", vibe: "Last-minute tee times, relaxed pace, good playlists.", socialPlay: true },
+    { id: "demo-jordan", name: "Jordan Reese", city: "Oconee", sport: "both", skill: "Pickleball 3.0 | Golf 18", vibe: "Down for social play, beginner-friendly groups, and club events.", socialPlay: true },
+    { id: "demo-avery", name: "Avery Collins", city: "Athens", sport: "pickleball", skill: "Open play", vibe: "Looking for a steady drill partner and Saturday morning games.", socialPlay: false },
+  ];
+  return [...savedProfiles, ...demoProfiles];
+}
+
+function renderSocietyFriends() {
+  if (!els.societyFriendResults) return;
+  const query = (els.societyFriendSearch?.value || "").trim().toLowerCase();
+  const filter = state.societyFriendFilter || "all";
+  const cards = societyDirectoryCards().filter((card) => {
+    const haystack = `${card.name} ${card.city} ${card.sport} ${card.skill} ${card.vibe}`.toLowerCase();
+    const matchesQuery = !query || haystack.includes(query);
+    const matchesFilter = filter === "all"
+      || (filter === "social" ? card.socialPlay : String(card.sport).toLowerCase().includes(filter) || card.sport === "both");
+    return matchesQuery && matchesFilter;
+  });
+  document.querySelectorAll("[data-society-friend-filter]").forEach((button) => {
+    button.classList.toggle("active", button.dataset.societyFriendFilter === filter);
+  });
+  els.societyFriendResults.innerHTML = cards.length
+    ? cards.map((card) => renderSocietyFriendCard(card)).join("")
+    : `<article class="society-list-card"><strong>No matches yet</strong><p>Try a different name, city, sport, or skill.</p></article>`;
+  updateSinglesToggle();
+}
+
+function renderSocietyFriendCard(card) {
+  const isFriend = state.societyFriends.includes(card.id);
+  const photo = card.photoDataUrl
+    ? `style="background-image:url('${escapeHtml(card.photoDataUrl)}')"`
+    : "";
+  return `
+    <article class="society-friend-card">
+      <div class="society-friend-photo" ${photo}>${card.photoDataUrl ? "" : escapeHtml(initials(card.name))}</div>
+      <div>
+        <span>${escapeHtml(card.city)} | ${escapeHtml(card.sport)}</span>
+        <strong>${escapeHtml(card.name)}</strong>
+        <p>${escapeHtml(card.skill)} - ${escapeHtml(card.vibe)}</p>
+      </div>
+      <div class="society-friend-actions">
+        <button class="${isFriend ? "active" : ""}" data-friend-add="${escapeHtml(card.id)}" type="button">${isFriend ? "Friends" : "Add"}</button>
+        <button data-friend-message="${escapeHtml(card.id)}" type="button">Message</button>
+      </div>
+    </article>
+  `;
+}
+
+function addSocietyFriend(id) {
+  if (!id) return;
+  if (!state.societyFriends.includes(id)) state.societyFriends.push(id);
+  saveState();
+  renderSocietyFriends();
+  updateSocietyHome();
+  els.societyAccountMessage.textContent = "Added to Club Friends.";
+}
+
+function messageSocietyFriend(id) {
+  if (!profileHasPhoto()) {
+    promptForSocietyPhoto();
+    return;
+  }
+  const card = societyDirectoryCards().find((item) => item.id === id);
+  if (!card) return;
+  setSocietyTab("golfMessages");
+  els.golfMessageForm.elements.to.value = card.name;
+  els.golfMessageForm.elements.body.value = `Want to connect for ${String(card.sport).includes("golf") ? "a round" : "a game"} sometime?`;
+}
+
+function toggleSocialPlay() {
+  const profile = currentSocietyProfile();
+  if (!profile) return;
+  profile.socialPlay = !profile.socialPlay;
+  saveState();
+  updateSinglesToggle();
+  renderSocietyFriends();
+  els.societyAccountMessage.textContent = profile.socialPlay
+    ? "Social Play is on. Members can see you are open to friendly meetups."
+    : "Social Play is off.";
+}
+
+function updateSinglesToggle() {
+  const enabled = Boolean(currentSocietyProfile()?.socialPlay);
+  if (!els.societySinglesToggle) return;
+  els.societySinglesToggle.classList.toggle("active", enabled);
+  els.societySinglesToggle.textContent = enabled ? "On" : "Turn On";
+}
+
+function initials(name) {
+  return String(name || "CS")
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join("")
+    .toUpperCase() || "CS";
 }
 
 function setSocietyEventTab(tab) {

@@ -256,7 +256,7 @@
                 <div class="society-mini-actions" aria-label="Member shortcuts">
                   <button data-society-tab="partners" type="button"><span>Society contacts</span></button>
                   <button data-society-tab="golfMessages" type="button"><span>Messages</span></button>
-                  <button data-society-tab="account" type="button"><span>Favorites</span><strong id="societyFavoriteCount">0</strong></button>
+                  <button data-society-tab="partners" type="button"><span>Friends</span><strong id="societyFriendCount">0</strong></button>
                 </div>
 
                 <section class="society-events-dock">
@@ -336,12 +336,30 @@
             <div class="society-tab" data-society-panel="partners">
               <section class="society-section">
                 <button class="society-back-button" data-society-tab="pickleballHome" type="button">Back</button>
-                <p class="eyebrow">Player matching</p>
-                <h3>Find partners</h3>
-                <div class="society-stack">
-                  <article class="society-list-card"><strong>Intermediate doubles partner</strong><span>Athens | Weeknights | 3.0-ish</span><p>Looking for social-but-competitive games near 30605.</p></article>
-                  <article class="society-list-card"><strong>Beginner practice group</strong><span>Watkinsville | Weekends</span><p>Drills, easy games, and patient partners.</p></article>
-                  <article class="society-list-card"><strong>Challenge court crew</strong><span>Oconee / Athens | Advanced</span><p>Small group forming for ladder-style matches.</p></article>
+                <div class="society-social-hero">
+                  <p class="eyebrow">Club Friends</p>
+                  <h3>Find your next teammate, match, or social play connection.</h3>
+                  <p>Search local members, add club friends, and message people who fit your game, schedule, and vibe.</p>
+                </div>
+                <div class="society-search-card">
+                  <input id="societyFriendSearch" type="search" placeholder="Search by name, city, sport, skill, or vibe">
+                  <div class="society-filter-row">
+                    <button class="active" data-society-friend-filter="all" type="button">All</button>
+                    <button data-society-friend-filter="pickleball" type="button">Pickleball</button>
+                    <button data-society-friend-filter="golf" type="button">Golf</button>
+                    <button data-society-friend-filter="social" type="button">Social Play</button>
+                  </div>
+                </div>
+                <div class="society-singles-card">
+                  <div>
+                    <span class="society-kicker">Social Play</span>
+                    <strong>Open to pickleball or golf meetups?</strong>
+                    <p>This adds a subtle signal that you are open to social games, mixed groups, or singles-friendly play.</p>
+                  </div>
+                  <button data-singles-toggle type="button" id="societySinglesToggle">Turn On</button>
+                </div>
+                <div id="societyFriendResults" class="society-friend-stack">
+                  <article class="society-list-card"><strong>Loading friends...</strong><p>Member suggestions will appear here.</p></article>
                 </div>
               </section>
             </div>

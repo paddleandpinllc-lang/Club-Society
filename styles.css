@@ -1940,6 +1940,129 @@ textarea {
   font-size: 0.9rem;
 }
 
+.society-social-hero,
+.society-search-card,
+.society-singles-card,
+.society-friend-card {
+  border: 1px solid rgba(11, 34, 49, 0.1);
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 0 10px 24px rgba(11, 34, 49, 0.08);
+}
+
+.society-social-hero {
+  padding: 15px;
+  margin-bottom: 10px;
+  background:
+    radial-gradient(circle at 8% 0%, rgba(244, 181, 43, 0.22), transparent 32%),
+    linear-gradient(135deg, rgba(11, 34, 49, 0.97), rgba(31, 138, 98, 0.92));
+  color: #fff;
+}
+
+.society-social-hero h3 {
+  margin: 8px 0;
+  line-height: 1.02;
+}
+
+.society-social-hero p {
+  color: rgba(255, 255, 255, 0.78);
+}
+
+.society-search-card,
+.society-singles-card {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 10px;
+  padding: 12px;
+}
+
+.society-singles-card {
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  background: linear-gradient(180deg, #fff, rgba(255, 247, 232, 0.78));
+}
+
+.society-singles-card strong {
+  display: block;
+  margin: 2px 0 4px;
+}
+
+.society-singles-card p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+
+.society-singles-card button.active {
+  border-color: var(--gold);
+  background: var(--gold);
+  color: var(--navy);
+}
+
+.society-friend-stack {
+  display: grid;
+  gap: 10px;
+}
+
+.society-friend-card {
+  display: grid;
+  grid-template-columns: 58px 1fr;
+  gap: 11px;
+  padding: 12px;
+  overflow: hidden;
+}
+
+.society-friend-photo {
+  display: grid;
+  place-items: center;
+  width: 58px;
+  height: 58px;
+  border-radius: 18px;
+  background:
+    linear-gradient(135deg, rgba(11, 34, 49, 0.96), rgba(31, 138, 98, 0.9)),
+    var(--navy);
+  background-position: center;
+  background-size: cover;
+  color: #fff;
+  font-weight: 950;
+}
+
+.society-friend-card span {
+  color: var(--green);
+  font-size: 0.72rem;
+  font-weight: 950;
+  text-transform: uppercase;
+}
+
+.society-friend-card strong {
+  display: block;
+  font-size: 1.06rem;
+  margin: 2px 0 3px;
+}
+
+.society-friend-card p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+
+.society-friend-actions {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.society-friend-actions button {
+  min-height: 38px;
+}
+
+.society-friend-actions button.active {
+  border-color: var(--gold);
+  background: var(--gold);
+  color: var(--navy);
+}
+
 .society-quick-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
