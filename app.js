@@ -253,6 +253,7 @@ if ("serviceWorker" in navigator) {
 }
 
 render();
+initProfileCompletionLink();
 
 function loadState() {
   const fallback = {
@@ -504,6 +505,94 @@ function resetPlayerForm() {
   els.playerForm.querySelector("button[type=submit]").textContent = "Check In";
 }
 
+async function sendSocietySignupConfirmation(profile) {
+  if (!window.location.protocol.startsWith("http")) {
+    return { ok: true, message: "Profile saved locally. Confirmation email sends from the hosted app after Brevo is configured in Cloudflare." };
+  }
+
+  try {
+    const response = await fetch("/api/member-signup", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        firstName: profile.firstName,
+        lastName: profile.lastName,
+        email: profile.email,
+        phone: profile.phone,
+        sport: profile.preferredSport,
+        city: profile.city,
+        state: profile.state,
+        zip: profile.zip,
+      }),
+    });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok || !result.ok) {
+      return { ok: false, message: result.error || "Profile saved, but the confirmation email could not be sent yet." };
+    }
+    if (result.emailSent) {
+      return { ok: true, message: "Welcome to Club Society. Check your email to complete your profile." };
+    }
+    return { ok: true, message: result.emailWarning || "Profile saved. Brevo email is waiting on Cloudflare secret configuration." };
+  } catch {
+    return { ok: false, message: "Profile saved locally. Hosted email confirmation is not reachable from this device yet." };
+  }
+}
+
+async function initProfileCompletionLink() {
+  const url = new URL(window.location.href);
+  const token = url.searchParams.get("completeProfile");
+  if (!token) return;
+
+  setView("societyApp");
+  setSocietyTab("home");
+
+  if (!window.location.protocol.startsWith("http")) {
+    toggleSocietyProfileDrawer(true);
+    els.societyAccountMessage.textContent = "Complete your profile by adding your photo and details.";
+    return;
+  }
+
+  try {
+    const response = await fetch(`/api/member-signup?token=${encodeURIComponent(token)}`);
+    const result = await response.json().catch(() => ({}));
+    if (response.ok && result.ok && result.member) {
+      upsertSocietyProfileFromCompletion(result.member);
+      url.searchParams.delete("completeProfile");
+      window.history.replaceState({}, "", url.toString());
+    }
+  } catch {
+    // The profile drawer still opens even if the lookup is unavailable.
+  }
+
+  toggleSocietyProfileDrawer(true);
+  els.societyAccountMessage.textContent = "Complete your profile by adding your photo and details.";
+}
+
+function upsertSocietyProfileFromCompletion(member) {
+  const existing = state.profiles.find((profile) => profile.email?.toLowerCase() === member.email.toLowerCase());
+  const profile = {
+    ...(existing || {}),
+    id: existing?.id || newId(),
+    firstName: titleCase(member.firstName || existing?.firstName || ""),
+    lastName: titleCase(member.lastName || existing?.lastName || ""),
+    email: member.email.toLowerCase(),
+    phone: member.phone || existing?.phone || "",
+    city: member.city || existing?.city || "Watkinsville",
+    state: member.state || existing?.state || "GA",
+    zip: member.zip || existing?.zip || "30677",
+    preferredSport: member.sport || existing?.preferredSport || "both",
+    sport: member.sport === "golf" ? "golf" : "pickleball",
+    stayLoggedIn: true,
+    source: "Email profile completion",
+    updatedAt: new Date().toISOString(),
+  };
+  if (existing) Object.assign(existing, profile);
+  else state.profiles.unshift(profile);
+  state.societySessionEmail = profile.email;
+  saveState();
+  updateSocietyHome();
+}
+
 function savePost(event) {
   event.preventDefault();
   const data = Object.fromEntries(new FormData(els.postForm).entries());
@@ -513,7 +602,7 @@ function savePost(event) {
   render();
 }
 
-function saveSocietyAccount(event) {
+async function saveSocietyAccount(event) {
   event.preventDefault();
   const data = Object.fromEntries(new FormData(els.societyAccountForm).entries());
   const existing = state.profiles.find((profile) => profile.email?.toLowerCase() === data.email.toLowerCase());
@@ -551,9 +640,10 @@ function saveSocietyAccount(event) {
   saveState();
   renderProfiles();
   updateSocietyHome();
-  els.societyAccountMessage.textContent = existing
-    ? "Welcome back. Your Society Pass profile was updated. Watch for your verification email."
-    : "You joined the Society. A verification email with next steps will be sent when email delivery is connected.";
+  const emailResult = await sendSocietySignupConfirmation(profile);
+  els.societyAccountMessage.textContent = emailResult.message || (existing
+    ? "Welcome back. Your Society Pass profile was updated."
+    : "You joined the Society. Open your email to complete your profile.");
   els.societyAccountForm.reset();
   els.societyAccountForm.elements.city.value = "Watkinsville";
   els.societyAccountForm.elements.state.value = "GA";
