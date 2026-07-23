@@ -71,6 +71,10 @@ const els = {
   societyMemberName: document.querySelector("#societyMemberName"),
   societyMemberMeta: document.querySelector("#societyMemberMeta"),
   societyFavoriteCount: document.querySelector("#societyFavoriteCount"),
+  societyAvatar: document.querySelector(".society-avatar"),
+  societyProfileDrawer: document.querySelector("#societyProfileDrawer"),
+  societyPhotoPreview: document.querySelector("#societyPhotoPreview"),
+  societyPhotoInput: document.querySelector("#societyPhotoInput"),
   golfProfileForm: document.querySelector("#golfProfileForm"),
   golfProfileMessage: document.querySelector("#golfProfileMessage"),
   golfTeeTimeForm: document.querySelector("#golfTeeTimeForm"),
@@ -159,6 +163,11 @@ els.postForm.addEventListener("submit", savePost);
 els.publicRsvpForm.addEventListener("submit", savePublicRsvp);
 els.societyAccountForm.addEventListener("submit", saveSocietyAccount);
 document.querySelector("#societyApp").addEventListener("click", handleSocietyAppClick);
+els.societyProfileDrawer.addEventListener("submit", (event) => {
+  event.preventDefault();
+  saveSocietyProfileFromDrawer();
+});
+els.societyPhotoInput.addEventListener("change", previewSocietyPhoto);
 els.golfProfileForm.addEventListener("submit", saveGolfProfile);
 els.golfTeeTimeForm.addEventListener("submit", saveGolfTeeTime);
 els.golfGroupForm.addEventListener("submit", saveGolfGroup);
@@ -555,6 +564,24 @@ function handleSocietyAppClick(event) {
     return;
   }
 
+  const profileToggle = event.target.closest("[data-profile-toggle]");
+  if (profileToggle) {
+    toggleSocietyProfileDrawer();
+    return;
+  }
+
+  const profileSave = event.target.closest("[data-profile-save]");
+  if (profileSave) {
+    saveSocietyProfileFromDrawer();
+    return;
+  }
+
+  const logoutButton = event.target.closest("[data-logout]");
+  if (logoutButton) {
+    logoutSociety();
+    return;
+  }
+
   const tabButton = event.target.closest("[data-society-tab]");
   if (tabButton) {
     setSocietyTab(tabButton.dataset.societyTab);
@@ -577,10 +604,14 @@ function setAuthPanel(panel) {
 }
 
 function setSocietyTab(tab) {
-  const protectedTabs = new Set(["games", "courts", "learn", "settings"]);
+  const protectedTabs = new Set(["pickleballHome", "games", "courts", "events", "partners", "host", "learn", "settings", "golfMessages"]);
   if (protectedTabs.has(tab) && !hasSocietyAccess()) {
     setSocietyTab("home");
     els.societyAccountMessage.textContent = "Sign in or Join to access";
+    return;
+  }
+  if (["host", "golfMessages"].includes(tab) && !profileHasPhoto()) {
+    promptForSocietyPhoto();
     return;
   }
   document.querySelectorAll("[data-society-panel]").forEach((panel) => {
@@ -606,6 +637,7 @@ function currentSocietyProfile() {
 function updateSocietyHome() {
   const hasAccess = hasSocietyAccess();
   document.querySelector(".society-guest-panel")?.classList.toggle("hidden", hasAccess);
+  document.querySelector(".society-public-hero")?.classList.toggle("hidden", hasAccess);
   els.societyMemberDashboard?.classList.toggle("active", hasAccess);
   if (!hasAccess) return;
   const profile = currentSocietyProfile();
@@ -615,6 +647,121 @@ function updateSocietyHome() {
     ? `${profile.city || "Watkinsville"}, ${profile.state || "GA"} | ${profile.preferredSport || "Golf + Pickleball"}`
     : "Golf + Pickleball | 30677";
   els.societyFavoriteCount.textContent = String(state.societyFavorites.length);
+  fillSocietyProfileDrawer(profile);
+  updateSocietyAvatar(profile);
+}
+
+function fillSocietyProfileDrawer(profile) {
+  if (!els.societyProfileDrawer) return;
+  const fields = els.societyProfileDrawer.elements;
+  fields.firstName.value = profile?.firstName || "";
+  fields.lastName.value = profile?.lastName || "";
+  fields.email.value = profile?.email || state.societySessionEmail || "";
+  fields.phone.value = profile?.phone || "";
+  fields.city.value = profile?.city || "Watkinsville";
+  fields.state.value = profile?.state || "GA";
+  fields.zip.value = profile?.zip || "30677";
+  fields.bio.value = profile?.bio || "";
+}
+
+function updateSocietyAvatar(profile = currentSocietyProfile()) {
+  const photo = profile?.photoDataUrl || "";
+  if (photo) {
+    els.societyAvatar.style.backgroundImage = `url("${photo}")`;
+    els.societyAvatar.textContent = "";
+    els.societyPhotoPreview.style.backgroundImage = `url("${photo}")`;
+    els.societyPhotoPreview.textContent = "Change photo";
+  } else {
+    els.societyAvatar.style.backgroundImage = "";
+    els.societyAvatar.textContent = "CS";
+    els.societyPhotoPreview.style.backgroundImage = "";
+    els.societyPhotoPreview.textContent = "Add photo";
+  }
+}
+
+function toggleSocietyProfileDrawer(forceOpen) {
+  const shouldOpen = forceOpen ?? !els.societyProfileDrawer.classList.contains("active");
+  els.societyProfileDrawer.classList.toggle("active", shouldOpen);
+  if (shouldOpen) fillSocietyProfileDrawer(currentSocietyProfile());
+}
+
+async function previewSocietyPhoto() {
+  const file = els.societyPhotoInput.files?.[0];
+  if (!file) return;
+  const photo = await readFileAsDataUrl(file);
+  els.societyPhotoPreview.style.backgroundImage = `url("${photo}")`;
+  els.societyPhotoPreview.textContent = "Photo selected";
+}
+
+async function saveSocietyProfileFromDrawer() {
+  const data = Object.fromEntries(new FormData(els.societyProfileDrawer).entries());
+  if (!data.email?.trim()) {
+    els.societyAccountMessage.textContent = "Add an email before saving your profile.";
+    return;
+  }
+  let profile = currentSocietyProfile() || state.profiles.find((item) => item.email?.toLowerCase() === data.email.toLowerCase());
+  const photoFile = els.societyPhotoInput.files?.[0];
+  const photoDataUrl = photoFile ? await readFileAsDataUrl(photoFile) : profile?.photoDataUrl || "";
+  const nextProfile = {
+    ...(profile || {}),
+    id: profile?.id || newId(),
+    firstName: titleCase(data.firstName || profile?.firstName || "Society"),
+    lastName: titleCase(data.lastName || profile?.lastName || "Member"),
+    email: data.email.trim().toLowerCase(),
+    phone: data.phone || "",
+    city: data.city || "Watkinsville",
+    state: data.state || "GA",
+    zip: data.zip || "30677",
+    bio: data.bio || "",
+    photoDataUrl,
+    stayLoggedIn: true,
+    preferredSport: profile?.preferredSport || "both",
+    sport: profile?.sport || "pickleball",
+    source: profile?.source || "Society profile",
+    updatedAt: new Date().toISOString(),
+  };
+  if (profile) Object.assign(profile, nextProfile);
+  else state.profiles.unshift(nextProfile);
+  state.societySessionEmail = nextProfile.email;
+  saveState();
+  updateSocietyHome();
+  toggleSocietyProfileDrawer(false);
+  els.societyAccountMessage.textContent = photoDataUrl
+    ? "Profile saved. Messaging and posting are unlocked."
+    : "Profile saved. Add a photo before messaging or posting.";
+}
+
+function profileHasPhoto() {
+  return Boolean(currentSocietyProfile()?.photoDataUrl);
+}
+
+function promptForSocietyPhoto() {
+  setSocietyTab("home");
+  toggleSocietyProfileDrawer(true);
+  els.societyAccountMessage.textContent = "Add a profile photo before messaging or posting an event.";
+}
+
+function logoutSociety() {
+  state.societySessionEmail = "";
+  state.profiles.forEach((profile) => {
+    profile.stayLoggedIn = false;
+  });
+  saveState();
+  els.societyProfileDrawer?.classList.remove("active");
+  els.societyAccountForm.classList.add("auth-form-collapsed");
+  document.querySelector(".society-public-hero")?.classList.remove("hidden");
+  updateSocietyHome();
+  setSocietyTab("home");
+  els.societyAccountMessage.textContent = "You are logged out.";
+}
+
+function readFileAsDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
 }
 
 function setSocietyEventTab(tab) {
@@ -660,6 +807,10 @@ function saveGolfProfile(event) {
 
 function saveGolfTeeTime(event) {
   event.preventDefault();
+  if (!profileHasPhoto()) {
+    promptForSocietyPhoto();
+    return;
+  }
   const data = Object.fromEntries(new FormData(els.golfTeeTimeForm).entries());
   state.golfTeeTimes.unshift({
     ...data,
@@ -684,6 +835,10 @@ function saveGolfGroup(event) {
 
 function saveGolfMessage(event) {
   event.preventDefault();
+  if (!profileHasPhoto()) {
+    promptForSocietyPhoto();
+    return;
+  }
   const data = Object.fromEntries(new FormData(els.golfMessageForm).entries());
   state.golfMessages.unshift({
     ...data,
@@ -704,6 +859,10 @@ function passGolfMatch() {
 }
 
 function messageGolfMatch() {
+  if (!profileHasPhoto()) {
+    promptForSocietyPhoto();
+    return;
+  }
   const card = golfMatchCards()[state.golfMatchIndex % golfMatchCards().length];
   setSocietyTab("golfMessages");
   els.golfMessageForm.elements.to.value = card.name;

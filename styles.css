@@ -1627,12 +1627,16 @@ textarea {
   display: grid;
 }
 
-.society-profile-strip,
+.society-profile-card,
 .society-events-dock {
   border: 1px solid rgba(11, 34, 49, 0.1);
   border-radius: 18px;
   background: #fff;
   box-shadow: 0 10px 24px rgba(11, 34, 49, 0.08);
+}
+
+.society-profile-card {
+  overflow: hidden;
 }
 
 .society-profile-strip {
@@ -1641,6 +1645,20 @@ textarea {
   gap: 10px;
   align-items: center;
   padding: 12px;
+}
+
+.society-profile-name-button {
+  display: grid;
+  justify-items: start;
+  min-height: auto;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  text-align: left;
+}
+
+.society-profile-name-button:hover {
+  background: transparent;
 }
 
 .society-profile-strip strong {
@@ -1667,6 +1685,8 @@ textarea {
   color: #fff;
   background: var(--navy);
   border-color: var(--navy);
+  background-position: center;
+  background-size: cover;
 }
 
 .mini-icon-button {
@@ -1677,6 +1697,41 @@ textarea {
   background: var(--gold);
   border-color: var(--gold);
   font-size: 1.35rem;
+}
+
+.society-profile-drawer {
+  display: none;
+  gap: 9px;
+  padding: 0 12px 14px;
+}
+
+.society-profile-drawer.active {
+  display: grid;
+}
+
+.society-photo-drop {
+  display: grid;
+  min-height: 118px;
+  border: 1px dashed rgba(31, 138, 98, 0.42);
+  border-radius: 16px;
+  background:
+    linear-gradient(180deg, rgba(255, 247, 232, 0.86), rgba(255, 255, 255, 0.92));
+  cursor: pointer;
+  overflow: hidden;
+}
+
+.society-photo-drop span {
+  display: grid;
+  place-items: center;
+  min-height: 118px;
+  color: var(--green);
+  font-weight: 950;
+  background-position: center;
+  background-size: cover;
+}
+
+.society-photo-drop input {
+  display: none;
 }
 
 .society-direction-grid {
@@ -1707,6 +1762,64 @@ textarea {
 .society-direction-grid strong {
   margin-top: 6px;
   line-height: 1.08;
+}
+
+.pickleball-hub {
+  display: grid;
+  gap: 14px;
+  margin: 14px;
+  padding: 16px;
+  border-radius: 22px;
+  background:
+    radial-gradient(circle at 10% 0%, rgba(244, 181, 43, 0.24), transparent 30%),
+    linear-gradient(150deg, rgba(11, 34, 49, 0.98), rgba(31, 138, 98, 0.92));
+  color: #fff;
+  box-shadow: var(--shadow);
+}
+
+.pickleball-hub h3 {
+  margin: 8px 0;
+  font-size: clamp(1.75rem, 8vw, 2.55rem);
+  line-height: 0.98;
+}
+
+.pickleball-hub p {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.78);
+}
+
+.pickleball-hub-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 9px;
+}
+
+.pickleball-hub-grid button {
+  display: grid;
+  gap: 8px;
+  justify-items: start;
+  min-height: 96px;
+  padding: 13px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 17px;
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  text-align: left;
+}
+
+.pickleball-hub-grid button:hover {
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.pickleball-hub-grid span {
+  color: var(--gold);
+  font-size: 0.72rem;
+  font-weight: 950;
+  text-transform: uppercase;
+}
+
+.pickleball-hub-grid strong {
+  line-height: 1.05;
 }
 
 .pickleball-card {

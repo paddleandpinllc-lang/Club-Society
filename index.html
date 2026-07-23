@@ -118,7 +118,7 @@
               <button class="society-icon-button" data-society-tab="settings" type="button" aria-label="Settings">...</button>
             </header>
 
-            <section class="society-hero-card">
+            <section class="society-hero-card society-public-hero">
               <p class="eyebrow">Grab your Society Pass</p>
               <h2>Connect. Create. Play.</h2>
               <p>The Golf & Pickleball Social App designed to connect players, created community and friendship, and having fun on the course, court or wherever the day takes you.</p>
@@ -210,18 +210,40 @@
               </section>
 
               <section class="society-member-dashboard" id="societyMemberDashboard">
-                <article class="society-profile-strip">
-                  <button class="society-avatar" data-society-tab="account" type="button" aria-label="Open profile">CS</button>
-                  <div>
+                <article class="society-profile-card">
+                  <div class="society-profile-strip">
+                    <button class="society-avatar" data-profile-toggle type="button" aria-label="Open profile photo">CS</button>
+                    <button class="society-profile-name-button" data-profile-toggle type="button">
                     <span class="society-kicker">Member home</span>
                     <strong id="societyMemberName">Welcome back</strong>
                     <p id="societyMemberMeta">Your Society profile is ready.</p>
+                    </button>
+                    <button class="mini-icon-button" data-profile-toggle type="button" aria-label="Edit profile">+</button>
                   </div>
-                  <button class="mini-icon-button" data-society-tab="account" type="button" aria-label="Edit profile">+</button>
+                  <form class="society-profile-drawer" id="societyProfileDrawer">
+                    <label class="society-photo-drop">
+                      <span id="societyPhotoPreview">Add photo</span>
+                      <input id="societyPhotoInput" name="photo" type="file" accept="image/*">
+                    </label>
+                    <div class="form-pair">
+                      <input name="firstName" placeholder="First name">
+                      <input name="lastName" placeholder="Last name">
+                    </div>
+                    <input name="email" type="email" placeholder="Email">
+                    <input name="phone" type="tel" placeholder="Phone">
+                    <div class="form-pair">
+                      <input name="city" placeholder="City">
+                      <input name="state" placeholder="State">
+                    </div>
+                    <input name="zip" inputmode="numeric" placeholder="ZIP">
+                    <textarea name="bio" rows="2" placeholder="Short intro, playing style, favorite courts/courses..."></textarea>
+                    <button class="primary" data-profile-save type="button">Save Profile</button>
+                    <p class="meta">A profile photo is required before messaging or posting events.</p>
+                  </form>
                 </article>
 
                 <div class="society-direction-grid" aria-label="Choose sport">
-                  <button class="pickleball-card" data-society-tab="games" type="button">
+                  <button class="pickleball-card" data-society-tab="pickleballHome" type="button">
                     <span>Pickleball</span>
                     <strong>Find courts, games, and partners</strong>
                   </button>
@@ -269,6 +291,26 @@
                     </article>
                   </div>
                 </section>
+              </section>
+            </div>
+
+            <div class="society-tab" data-society-panel="pickleballHome">
+              <section class="pickleball-hub">
+                <div>
+                  <p class="eyebrow">Pickleball Society</p>
+                  <h3>Choose how you want to play today.</h3>
+                  <p>Find a partner, jump into a game, discover courts, post an event, message members, and build your local club circle.</p>
+                </div>
+                <div class="pickleball-hub-grid" aria-label="Pickleball actions">
+                  <button data-society-tab="partners" type="button"><span>Match</span><strong>Find a Match</strong></button>
+                  <button data-society-tab="games" type="button"><span>Play</span><strong>Find Game</strong></button>
+                  <button data-society-tab="courts" type="button"><span>Nearby</span><strong>Find a Court</strong></button>
+                  <button data-society-tab="events" type="button"><span>Events</span><strong>Find an Event</strong></button>
+                  <button data-society-tab="host" type="button"><span>Create</span><strong>Post an Event</strong></button>
+                  <button data-society-tab="golfMessages" type="button"><span>Chat</span><strong>Messages</strong></button>
+                  <button data-society-tab="partners" type="button"><span>People</span><strong>Club Friends</strong></button>
+                  <button data-society-tab="learn" type="button"><span>Level up</span><strong>Lessons</strong></button>
+                </div>
               </section>
             </div>
 
@@ -510,6 +552,7 @@
                   <button type="button">Community Guidelines</button>
                   <button type="button">Liability Waiver</button>
                   <button type="button">Location and Safety Notice</button>
+                  <button data-logout type="button">Log Out</button>
                 </div>
                 <div class="society-legal-copy">
                   <strong>Legal placeholders</strong>
@@ -520,7 +563,7 @@
 
             <nav class="society-bottom-nav" aria-label="Club Society app navigation">
               <button class="active" data-society-tab="home" type="button">Home</button>
-              <button data-society-tab="games" type="button">Play</button>
+              <button data-society-tab="pickleballHome" type="button">Play</button>
               <button data-society-tab="courts" type="button">Nearby</button>
               <button data-society-tab="learn" type="button">Lessons</button>
               <button data-society-tab="settings" type="button">Settings</button>
