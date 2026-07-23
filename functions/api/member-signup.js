@@ -39,8 +39,13 @@ export async function onRequest(context) {
   }
 
   const validationError = validateSignup(payload);
-  if (validationError) return json({ ok: false, error: validationError }, 400, corsHeaders);
+  if (payload.action === "signin") {
+    const signinError = validateSignin(payload);
+    if (signinError) return json({ ok: false, error: signinError }, 400, corsHeaders);
+    return signInMember(payload, env, corsHeaders);
+  }
 
+  if (validationError) return json({ ok: false, error: validationError }, 400, corsHeaders);
   const member = normalizeMember(payload);
   const token = await makeToken(member.email);
   const profileLink = makeProfileLink(request, env, token);
@@ -48,7 +53,7 @@ export async function onRequest(context) {
   try {
     if (env.DB) {
       await ensureMemberTable(env.DB);
-      await upsertMember(env.DB, member, token);
+      await upsertMember(env.DB, member, token, payload.password);
     }
 
     const emailResult = await sendConfirmationEmail(env, member, profileLink);
@@ -82,6 +87,13 @@ async function getMemberByToken(request, env, corsHeaders) {
 
     if (!result) return json({ ok: false, error: "Profile link not found" }, 404, corsHeaders);
 
+    await env.DB.prepare(`
+      UPDATE club_members
+      SET email_verified_at = COALESCE(email_verified_at, CURRENT_TIMESTAMP),
+          updated_at = CURRENT_TIMESTAMP
+      WHERE completion_token = ?
+    `).bind(token).run();
+
     return json({
       ok: true,
       member: {
@@ -101,6 +113,48 @@ async function getMemberByToken(request, env, corsHeaders) {
   }
 }
 
+async function signInMember(payload, env, corsHeaders) {
+  if (!env.DB) return json({ ok: false, error: "Database binding DB is not configured" }, 500, corsHeaders);
+
+  const email = cleanEmail(payload.email);
+  try {
+    await ensureMemberTable(env.DB);
+    const result = await env.DB.prepare(`
+      SELECT first_name, last_name, email, phone, sport, city, state, zip, password_hash, email_verified_at
+      FROM club_members
+      WHERE email = ?
+      LIMIT 1
+    `).bind(email).first();
+
+    if (!result || !result.password_hash) {
+      return json({ ok: false, error: "That email and password did not match." }, 401, corsHeaders);
+    }
+
+    const passwordOk = await verifyPassword(payload.password, result.password_hash);
+    if (!passwordOk) {
+      return json({ ok: false, error: "That email and password did not match." }, 401, corsHeaders);
+    }
+
+    return json({
+      ok: true,
+      emailVerified: Boolean(result.email_verified_at),
+      member: {
+        firstName: result.first_name || "",
+        lastName: result.last_name || "",
+        email: result.email || "",
+        phone: result.phone || "",
+        sport: result.sport || "both",
+        city: result.city || "Watkinsville",
+        state: result.state || "GA",
+        zip: result.zip || "30677",
+      },
+    }, 200, corsHeaders);
+  } catch (error) {
+    console.error("Club Society sign-in failed", error);
+    return json({ ok: false, error: "Server error while signing in" }, 500, corsHeaders);
+  }
+}
+
 async function ensureMemberTable(db) {
   await db.prepare(`
     CREATE TABLE IF NOT EXISTS club_members (
@@ -113,23 +167,34 @@ async function ensureMemberTable(db) {
       city TEXT,
       state TEXT,
       zip TEXT,
+      password_hash TEXT,
       completion_token TEXT NOT NULL UNIQUE,
+      email_verified_at TEXT,
       profile_completed_at TEXT,
       created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
       updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
     )
   `).run();
+  await addColumnIfMissing(db, "club_members", "password_hash", "TEXT");
+  await addColumnIfMissing(db, "club_members", "email_verified_at", "TEXT");
   await db.prepare(`
     CREATE INDEX IF NOT EXISTS idx_club_members_completion_token
     ON club_members (completion_token)
   `).run();
 }
 
-async function upsertMember(db, member, token) {
+async function addColumnIfMissing(db, table, column, type) {
+  const columns = await db.prepare(`PRAGMA table_info(${table})`).all();
+  const exists = (columns.results || []).some((item) => item.name === column);
+  if (!exists) await db.prepare(`ALTER TABLE ${table} ADD COLUMN ${column} ${type}`).run();
+}
+
+async function upsertMember(db, member, token, password) {
+  const passwordHash = await hashPassword(password);
   await db.prepare(`
     INSERT INTO club_members (
-      first_name, last_name, email, phone, sport, city, state, zip, completion_token, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+      first_name, last_name, email, phone, sport, city, state, zip, password_hash, completion_token, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
     ON CONFLICT(email) DO UPDATE SET
       first_name = excluded.first_name,
       last_name = excluded.last_name,
@@ -138,6 +203,7 @@ async function upsertMember(db, member, token) {
       city = excluded.city,
       state = excluded.state,
       zip = excluded.zip,
+      password_hash = excluded.password_hash,
       completion_token = excluded.completion_token,
       updated_at = CURRENT_TIMESTAMP
   `).bind(
@@ -149,6 +215,7 @@ async function upsertMember(db, member, token) {
     member.city,
     member.state,
     member.zip,
+    passwordHash,
     token
   ).run();
 }
@@ -215,6 +282,15 @@ function validateSignup(payload) {
   if (!payload || typeof payload !== "object") return "Invalid JSON body";
   if (!payload.email) return "Missing required field: email";
   if (!isValidEmail(payload.email)) return "Invalid email";
+  if (!payload.password || String(payload.password).length < 8) return "Password must be at least 8 characters";
+  return "";
+}
+
+function validateSignin(payload) {
+  if (!payload || typeof payload !== "object") return "Invalid JSON body";
+  if (!payload.email) return "Missing required field: email";
+  if (!isValidEmail(payload.email)) return "Invalid email";
+  if (!payload.password) return "Missing required field: password";
   return "";
 }
 
@@ -242,6 +318,58 @@ async function makeToken(email) {
   const bytes = new TextEncoder().encode(`${email}:${Date.now()}:${crypto.randomUUID()}`);
   const digest = await crypto.subtle.digest("SHA-256", bytes);
   return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
+async function hashPassword(password) {
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const iterations = 120000;
+  const derived = await derivePasswordBits(password, salt, iterations);
+  return `pbkdf2$${iterations}$${toBase64(salt)}$${toBase64(derived)}`;
+}
+
+async function verifyPassword(password, stored) {
+  const [method, iterationText, saltText, hashText] = String(stored || "").split("$");
+  if (method !== "pbkdf2" || !iterationText || !saltText || !hashText) return false;
+  const salt = fromBase64(saltText);
+  const iterations = Number(iterationText);
+  const derived = await derivePasswordBits(password, salt, iterations);
+  return timingSafeEqual(toBase64(derived), hashText);
+}
+
+async function derivePasswordBits(password, salt, iterations) {
+  const key = await crypto.subtle.importKey(
+    "raw",
+    new TextEncoder().encode(String(password)),
+    "PBKDF2",
+    false,
+    ["deriveBits"]
+  );
+  const bits = await crypto.subtle.deriveBits(
+    { name: "PBKDF2", hash: "SHA-256", salt, iterations },
+    key,
+    256
+  );
+  return new Uint8Array(bits);
+}
+
+function timingSafeEqual(a, b) {
+  if (a.length !== b.length) return false;
+  let mismatch = 0;
+  for (let index = 0; index < a.length; index += 1) {
+    mismatch |= a.charCodeAt(index) ^ b.charCodeAt(index);
+  }
+  return mismatch === 0;
+}
+
+function toBase64(bytes) {
+  let binary = "";
+  bytes.forEach((byte) => { binary += String.fromCharCode(byte); });
+  return btoa(binary);
+}
+
+function fromBase64(value) {
+  const binary = atob(value);
+  return Uint8Array.from(binary, (char) => char.charCodeAt(0));
 }
 
 function fullName(member) {

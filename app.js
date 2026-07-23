@@ -518,6 +518,7 @@ async function sendSocietySignupConfirmation(profile) {
         firstName: profile.firstName,
         lastName: profile.lastName,
         email: profile.email,
+        password: profile.password,
         phone: profile.phone,
         sport: profile.preferredSport,
         city: profile.city,
@@ -530,7 +531,7 @@ async function sendSocietySignupConfirmation(profile) {
       return { ok: false, message: result.error || "Profile saved, but the confirmation email could not be sent yet." };
     }
     if (result.emailSent) {
-      return { ok: true, message: "Welcome to Club Society. Check your email to complete your profile." };
+      return { ok: true, message: "Welcome to Club Society. Check your email to verify your account and finish your profile." };
     }
     return { ok: true, message: result.emailWarning || "Profile saved. Brevo email is waiting on Cloudflare secret configuration." };
   } catch {
@@ -584,6 +585,7 @@ function upsertSocietyProfileFromCompletion(member) {
     sport: member.sport === "golf" ? "golf" : "pickleball",
     stayLoggedIn: true,
     source: "Email profile completion",
+    verificationStatus: "Verified",
     updatedAt: new Date().toISOString(),
   };
   if (existing) Object.assign(existing, profile);
@@ -591,6 +593,71 @@ function upsertSocietyProfileFromCompletion(member) {
   state.societySessionEmail = profile.email;
   saveState();
   updateSocietyHome();
+}
+
+function validateSocietyPassword(password, confirmPassword) {
+  if (!password) return { ok: false, message: "Create a password to join Club Society." };
+  if (password.length < 8) return { ok: false, message: "Password must be at least 8 characters." };
+  if (password !== confirmPassword) return { ok: false, message: "Passwords do not match." };
+  return { ok: true };
+}
+
+function showSocietyAccountMessage(message, type = "notice") {
+  if (!els.societyAccountMessage) return;
+  els.societyAccountMessage.className = `society-message ${type}`;
+  if (type === "success" && /check your email|verify/i.test(message)) {
+    els.societyAccountMessage.innerHTML = `
+      <div class="society-welcome-confirmation">
+        <span class="society-confirmation-icon">CS</span>
+        <div>
+          <strong>Welcome to Club Society.</strong>
+          <p>${escapeHtml(message)}</p>
+        </div>
+      </div>
+    `;
+    return;
+  }
+  els.societyAccountMessage.textContent = message;
+}
+
+async function signInSocietyMember(email, password) {
+  const normalizedEmail = email.trim().toLowerCase();
+  if (window.location.protocol.startsWith("http")) {
+    try {
+      const response = await fetch("/api/member-signup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "signin", email: normalizedEmail, password }),
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok || !result.ok) {
+        showSocietyAccountMessage(result.error || "That email and password did not match.", "error");
+        return;
+      }
+      if (result.member) upsertSocietyProfileFromCompletion(result.member);
+      state.societySessionEmail = normalizedEmail;
+      saveState();
+      updateSocietyHome();
+      localStorage.setItem("clubSociety.stayLoggedIn.v1", String(els.societyAccountForm.elements.signinStayLoggedIn.checked));
+      showSocietyAccountMessage(result.emailVerified
+        ? "Welcome back. You are signed in."
+        : "Welcome back. Please verify your email from your Club Society welcome email.", "success");
+      return;
+    } catch {
+      showSocietyAccountMessage("Sign-in is not reachable from this device yet. Try the hosted app.", "error");
+      return;
+    }
+  }
+
+  const profile = state.profiles.find((item) => item.email?.toLowerCase() === normalizedEmail);
+  if (!profile) {
+    showSocietyAccountMessage("That member profile was not found on this device.", "error");
+    return;
+  }
+  state.societySessionEmail = normalizedEmail;
+  saveState();
+  updateSocietyHome();
+  showSocietyAccountMessage("Welcome back. Local sign-in is active on this device.", "success");
 }
 
 function savePost(event) {
@@ -605,9 +672,15 @@ function savePost(event) {
 async function saveSocietyAccount(event) {
   event.preventDefault();
   const data = Object.fromEntries(new FormData(els.societyAccountForm).entries());
+  const passwordValidation = validateSocietyPassword(data.password, data.confirmPassword);
+  if (!passwordValidation.ok) {
+    showSocietyAccountMessage(passwordValidation.message, "error");
+    return;
+  }
   const existing = state.profiles.find((profile) => profile.email?.toLowerCase() === data.email.toLowerCase());
   const sport = data.sport === "both" ? "pickleball" : data.sport || "pickleball";
   const level = data.sport === "golf" ? (data.handicap ? `Golf handicap ${data.handicap}` : "Golf member") : (data.pickleballLevel || "Open");
+  const password = data.password;
   const profile = {
     id: existing?.id || newId(),
     firstName: titleCase(data.firstName),
@@ -621,6 +694,7 @@ async function saveSocietyAccount(event) {
     age: data.age || existing?.age || "",
     gender: data.gender || existing?.gender || "",
     preferredSport: data.sport || "both",
+    passwordSet: true,
     pickleballLevel: data.pickleballLevel || existing?.pickleballLevel || "",
     handicap: data.handicap || existing?.handicap || "",
     skill: level,
@@ -640,10 +714,10 @@ async function saveSocietyAccount(event) {
   saveState();
   renderProfiles();
   updateSocietyHome();
-  const emailResult = await sendSocietySignupConfirmation(profile);
-  els.societyAccountMessage.textContent = emailResult.message || (existing
+  const emailResult = await sendSocietySignupConfirmation({ ...profile, password });
+  showSocietyAccountMessage(emailResult.message || (existing
     ? "Welcome back. Your Society Pass profile was updated."
-    : "You joined the Society. Open your email to complete your profile.");
+    : "Welcome to Club Society. Check your email to verify your account and finish your profile."), emailResult.ok ? "success" : "error");
   els.societyAccountForm.reset();
   els.societyAccountForm.elements.city.value = "Watkinsville";
   els.societyAccountForm.elements.state.value = "GA";
@@ -660,15 +734,16 @@ function handleSocietyAppClick(event) {
   const signinButton = event.target.closest("[data-signin-submit]");
   if (signinButton) {
     const email = els.societyAccountForm.elements.signinEmail.value.trim();
+    const password = els.societyAccountForm.elements.signinPassword.value;
     if (!email) {
-      els.societyAccountMessage.textContent = "Enter your email address to sign in.";
+      showSocietyAccountMessage("Enter your email address to sign in.", "error");
       return;
     }
-    state.societySessionEmail = email.toLowerCase();
-    saveState();
-    updateSocietyHome();
-    els.societyAccountMessage.textContent = "Sign-in email will be sent when authentication is connected. Stay logged in is saved for this device.";
-    localStorage.setItem("clubSociety.stayLoggedIn.v1", String(els.societyAccountForm.elements.signinStayLoggedIn.checked));
+    if (!password) {
+      showSocietyAccountMessage("Enter your password to sign in.", "error");
+      return;
+    }
+    signInSocietyMember(email, password);
     return;
   }
 

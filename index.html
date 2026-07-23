@@ -162,6 +162,10 @@
                       <input name="lastName" placeholder="Last name" required>
                     </div>
                     <input name="email" type="email" placeholder="Email address" required>
+                    <div class="form-pair">
+                      <input name="password" type="password" placeholder="Create password" minlength="8" autocomplete="new-password" required>
+                      <input name="confirmPassword" type="password" placeholder="Confirm password" minlength="8" autocomplete="new-password" required>
+                    </div>
                     <input name="phone" type="tel" placeholder="Phone number">
                     <div class="form-pair">
                       <input name="age" inputmode="numeric" placeholder="Age">
@@ -198,6 +202,7 @@
                   </div>
                   <div class="auth-panel" data-auth-content="signin">
                     <input name="signinEmail" type="email" placeholder="Email address">
+                    <input name="signinPassword" type="password" placeholder="Password" autocomplete="current-password">
                     <label class="checkbox-line society-check">
                       <input name="signinStayLoggedIn" type="checkbox" checked>
                       Stay logged in.
