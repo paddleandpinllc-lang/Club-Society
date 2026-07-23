@@ -75,6 +75,12 @@ const els = {
   societyFriendSearch: document.querySelector("#societyFriendSearch"),
   societyFriendResults: document.querySelector("#societyFriendResults"),
   societySinglesToggle: document.querySelector("#societySinglesToggle"),
+  casualMatchForm: document.querySelector("#casualMatchForm"),
+  casualMatchList: document.querySelector("#casualMatchList"),
+  quickGameForm: document.querySelector("#quickGameForm"),
+  quickGameList: document.querySelector("#quickGameList"),
+  courtSearch: document.querySelector("#courtSearch"),
+  courtDirectoryList: document.querySelector("#courtDirectoryList"),
   societyAvatar: document.querySelector(".society-avatar"),
   societyProfileDrawer: document.querySelector("#societyProfileDrawer"),
   societyPhotoPreview: document.querySelector("#societyPhotoPreview"),
@@ -173,6 +179,9 @@ els.societyProfileDrawer.addEventListener("submit", (event) => {
 });
 els.societyPhotoInput.addEventListener("change", previewSocietyPhoto);
 els.societyFriendSearch.addEventListener("input", renderSocietyFriends);
+els.casualMatchForm.addEventListener("submit", saveCasualMatch);
+els.quickGameForm.addEventListener("submit", saveQuickGame);
+els.courtSearch.addEventListener("input", renderCourtDirectory);
 els.golfProfileForm.addEventListener("submit", saveGolfProfile);
 els.golfTeeTimeForm.addEventListener("submit", saveGolfTeeTime);
 els.golfGroupForm.addEventListener("submit", saveGolfGroup);
@@ -266,6 +275,11 @@ function loadState() {
     societyFavorites: [],
     societyFriends: [],
     societyFriendFilter: "all",
+    casualMatches: [],
+    casualMatchFilter: "all",
+    quickGames: [],
+    quickGameFilter: "all",
+    courtFilter: "all",
     paddlePintImportedIds: [],
     roundSettings: { selectedPlayerIds: [], teams: [] },
     selectedEventRosterId: "",
@@ -302,6 +316,11 @@ function normalizeState(data) {
   data.societyFavorites = data.societyFavorites || [];
   data.societyFriends = data.societyFriends || [];
   data.societyFriendFilter = data.societyFriendFilter || "all";
+  data.casualMatches = data.casualMatches || [];
+  data.casualMatchFilter = data.casualMatchFilter || "all";
+  data.quickGames = data.quickGames || [];
+  data.quickGameFilter = data.quickGameFilter || "all";
+  data.courtFilter = data.courtFilter || "all";
   data.paddlePintImportedIds = data.paddlePintImportedIds || [];
   data.roundSettings = { selectedPlayerIds: [], teams: [], ...(data.roundSettings || {}) };
   data.selectedEventRosterId = data.selectedEventRosterId || "";
@@ -617,6 +636,42 @@ function handleSocietyAppClick(event) {
     return;
   }
 
+  const matchFilterButton = event.target.closest("[data-match-filter]");
+  if (matchFilterButton) {
+    state.casualMatchFilter = matchFilterButton.dataset.matchFilter;
+    saveState();
+    renderCasualMatches();
+    return;
+  }
+
+  const matchRsvpButton = event.target.closest("[data-match-rsvp]");
+  if (matchRsvpButton) {
+    rsvpToCasualMatch(matchRsvpButton.dataset.matchRsvp);
+    return;
+  }
+
+  const quickGameFilterButton = event.target.closest("[data-quick-game-filter]");
+  if (quickGameFilterButton) {
+    state.quickGameFilter = quickGameFilterButton.dataset.quickGameFilter;
+    saveState();
+    renderQuickGames();
+    return;
+  }
+
+  const quickGameRsvpButton = event.target.closest("[data-quick-game-rsvp]");
+  if (quickGameRsvpButton) {
+    rsvpToQuickGame(quickGameRsvpButton.dataset.quickGameRsvp);
+    return;
+  }
+
+  const courtFilterButton = event.target.closest("[data-court-filter]");
+  if (courtFilterButton) {
+    state.courtFilter = courtFilterButton.dataset.courtFilter;
+    saveState();
+    renderCourtDirectory();
+    return;
+  }
+
   const tabButton = event.target.closest("[data-society-tab]");
   if (tabButton) {
     setSocietyTab(tabButton.dataset.societyTab);
@@ -656,7 +711,12 @@ function setSocietyTab(tab) {
     button.classList.toggle("active", button.dataset.societyTab === tab);
   });
   if (tab === "home") updateSocietyHome();
-  if (tab === "partners") renderSocietyFriends();
+  if (tab === "partners") {
+    renderCasualMatches();
+    renderSocietyFriends();
+  }
+  if (tab === "games") renderQuickGames();
+  if (tab === "courts") renderCourtDirectory();
 }
 
 function hasSocietyAccess() {
@@ -825,6 +885,44 @@ function societyDirectoryCards() {
   return [...savedProfiles, ...demoProfiles];
 }
 
+function defaultCasualMatches() {
+  return [
+    { id: "match-sat-doubles", title: "Need 2 for social doubles", day: "Today", time: "18:00", playersNeeded: "2", skill: "3.0-3.5", location: "Southeast Clarke Park", note: "Rotating partners, friendly but competitive.", rsvps: [] },
+    { id: "match-mixed-oconee", title: "Mixed doubles practice group", day: "Tomorrow", time: "09:00", playersNeeded: "1", skill: "Open", location: "Herman C. Michael Park", note: "Easy pace, drill a little then play.", rsvps: [] },
+    { id: "match-ladder-preview", title: "Next 7 days ladder warmup", day: "Next 7 days", time: "17:30", playersNeeded: "4", skill: "3.5+", location: "Bishop Park", note: "Looking for players who want challenge style games.", rsvps: [] },
+  ];
+}
+
+function defaultQuickGames() {
+  return [
+    { id: "quick-today-singles", title: "Singles hit around", day: "Today", time: "16:30", location: "Satterfield Park", note: "One player, 45 minutes, any level.", rsvps: [] },
+    { id: "quick-tomorrow-open", title: "Need 1 for doubles", day: "Tomorrow", time: "07:45", location: "Southeast Clarke Park", note: "Casual doubles before work.", rsvps: [] },
+  ];
+}
+
+function courtDirectory() {
+  return [
+    { name: "Southeast Clarke Park", city: "Athens", address: "4440 Lexington Road, Athens, GA 30605", access: "Public city/county", surface: "Outdoor", courts: "6 dedicated", note: "Free; permanent nets; dawn to dusk; no lights." },
+    { name: "Satterfield Park", city: "Athens", address: "2950 Cherokee Road, Athens, GA 30605", access: "Public city/county", surface: "Outdoor", courts: "6 shared/lined", note: "Lighted courts lined on tennis courts; first come when not reserved." },
+    { name: "Bishop Park", city: "Athens", address: "705 Sunset Drive, Athens, GA 30606", access: "Public city/county", surface: "Outdoor", courts: "6 shared/lined", note: "Lighted; lined on tennis/jr tennis courts." },
+    { name: "UGA Intramural Fields", city: "Athens", address: "5 Lake Herrick Drive, Athens, GA 30602", access: "College/public access varies", surface: "Outdoor", courts: "18 dedicated", note: "Large outdoor bank; check parking and access rules." },
+    { name: "Thomas Lay Community Center", city: "Athens", address: "297 Hoyt Street, Athens, GA 30601", access: "Public city/county", surface: "Indoor", courts: "3", note: "Weekday morning indoor play listed by AAPA." },
+    { name: "Aaron Heard Park and Community Center", city: "Athens", address: "400 McKinley Drive, Athens, GA 30601", access: "Public city/county", surface: "Indoor/outdoor", courts: "3 indoor / 4 outdoor", note: "Beginner-friendly sessions; outdoor times can vary by season." },
+    { name: "Athens First United Methodist Church", city: "Athens", address: "327 N Lumpkin Street, Athens, GA 30601", access: "Church/community", surface: "Indoor", courts: "3", note: "Tuesday/Thursday afternoon play listed by AAPA." },
+    { name: "Herman C. Michael Park", city: "Bishop", address: "1051 Elder Road, Bishop, GA 30621", access: "Oconee County public", surface: "Indoor/outdoor", courts: "3 indoor / 2 outdoor", note: "Indoor fee may apply for non-residents; outdoor free during park hours." },
+    { name: "YWCO", city: "Athens", address: "562 Research Drive, Athens, GA 30605", access: "Membership/day fee", surface: "Indoor", courts: "3", note: "Members/Silver Sneakers free; non-member day fee listed by AAPA." },
+    { name: "Mars Hill Baptist Church", city: "Watkinsville", address: "2661 Mars Hill Road, Watkinsville, GA 30677", access: "Church/community", surface: "Indoor", courts: "2 dedicated", note: "Tuesday sessions listed by AAPA; free to play." },
+    { name: "Oconee Veterans Park", city: "Watkinsville", address: "3500A Hog Mountain Road, Watkinsville, GA 30677", access: "Oconee County public", surface: "Indoor", courts: "2+", note: "County facility; check current schedule and resident/non-resident fees." },
+    { name: "Ramsey Student Center", city: "Athens", address: "330 River Road, Athens, GA 30602", access: "UGA students/faculty", surface: "Indoor", courts: "3", note: "UGA access only per AAPA listing." },
+    { name: "Jennings Mill Country Club", city: "Bogart", address: "Bogart, GA 30622", access: "Club/private", surface: "Outdoor", courts: "8", note: "Country club members only; pickleball memberships may be available." },
+    { name: "Athens Country Club", city: "Athens", address: "2700 Jefferson Road, Athens, GA 30607", access: "Club/private", surface: "Outdoor", courts: "6 dedicated / 12 shared", note: "Member or member guest access." },
+    { name: "The Georgia Club", city: "Statham", address: "1050 Chancellors Drive, Statham, GA 30666", access: "Club/private", surface: "Outdoor", courts: "4 dedicated / 4 shared", note: "Member or member guest access." },
+    { name: "Winder-Barrow / Victor Lord Park", city: "Winder", address: "175 2nd Street, Winder, GA 30680", access: "Public", surface: "Indoor/outdoor", courts: "7 total", note: "Indoor gym plus outdoor courts; schedule listed by AAPA." },
+    { name: "Jefferson Parks and Recreation", city: "Jefferson", address: "2495 Old Pendergrass Road, Jefferson, GA 30549", access: "Public", surface: "Indoor", courts: "4", note: "Indoor schedule listed by AAPA; call to confirm." },
+    { name: "Bethlehem First United Methodist Church", city: "Bethlehem", address: "709 Christmas Avenue, Bethlehem, GA 30620", access: "Church/community", surface: "Indoor", courts: "3", note: "Wednesday afternoon play listed by AAPA." },
+  ];
+}
+
 function renderSocietyFriends() {
   if (!els.societyFriendResults) return;
   const query = (els.societyFriendSearch?.value || "").trim().toLowerCase();
@@ -843,6 +941,128 @@ function renderSocietyFriends() {
     ? cards.map((card) => renderSocietyFriendCard(card)).join("")
     : `<article class="society-list-card"><strong>No matches yet</strong><p>Try a different name, city, sport, or skill.</p></article>`;
   updateSinglesToggle();
+}
+
+function saveCasualMatch(event) {
+  event.preventDefault();
+  if (!profileHasPhoto()) {
+    promptForSocietyPhoto();
+    return;
+  }
+  const data = Object.fromEntries(new FormData(els.casualMatchForm).entries());
+  state.casualMatches.unshift({ ...data, id: newId(), rsvps: [], createdAt: new Date().toISOString() });
+  els.casualMatchForm.reset();
+  saveState();
+  renderCasualMatches();
+}
+
+function renderCasualMatches() {
+  if (!els.casualMatchList) return;
+  const filter = state.casualMatchFilter || "all";
+  document.querySelectorAll("[data-match-filter]").forEach((button) => {
+    button.classList.toggle("active", button.dataset.matchFilter === filter);
+  });
+  const posts = [...state.casualMatches, ...defaultCasualMatches()].filter((post) => matchesDayFilter(post.day, filter));
+  els.casualMatchList.innerHTML = posts.map((post) => renderPostCard(post, "match")).join("");
+}
+
+function saveQuickGame(event) {
+  event.preventDefault();
+  if (!profileHasPhoto()) {
+    promptForSocietyPhoto();
+    return;
+  }
+  const data = Object.fromEntries(new FormData(els.quickGameForm).entries());
+  state.quickGames.unshift({ ...data, id: newId(), rsvps: [], createdAt: new Date().toISOString() });
+  els.quickGameForm.reset();
+  saveState();
+  renderQuickGames();
+}
+
+function renderQuickGames() {
+  if (!els.quickGameList) return;
+  const filter = state.quickGameFilter || "all";
+  document.querySelectorAll("[data-quick-game-filter]").forEach((button) => {
+    button.classList.toggle("active", button.dataset.quickGameFilter === filter);
+  });
+  const posts = [...state.quickGames, ...defaultQuickGames()].filter((post) => matchesDayFilter(post.day, filter));
+  els.quickGameList.innerHTML = posts.map((post) => renderPostCard(post, "quick")).join("");
+}
+
+function renderPostCard(post, type) {
+  const rsvps = post.rsvps || [];
+  const action = type === "match" ? "data-match-rsvp" : "data-quick-game-rsvp";
+  const needed = post.playersNeeded ? `${post.playersNeeded} needed | ` : "";
+  return `
+    <article class="society-post-card">
+      <div>
+        <span>${escapeHtml(post.day)} | ${escapeHtml(post.time || "Time TBD")}</span>
+        <strong>${escapeHtml(post.title)}</strong>
+        <p>${needed}${escapeHtml(post.location || "Location TBD")} ${post.skill ? `| ${escapeHtml(post.skill)}` : ""}</p>
+        <p>${escapeHtml(post.note || "RSVP if you can play.")}</p>
+      </div>
+      <div class="society-post-actions">
+        <span>${rsvps.length} RSVP${rsvps.length === 1 ? "" : "s"}</span>
+        <button ${action}="${escapeHtml(post.id)}" type="button">RSVP</button>
+      </div>
+    </article>
+  `;
+}
+
+function rsvpToCasualMatch(id) {
+  rsvpToPost(state.casualMatches, id);
+  renderCasualMatches();
+}
+
+function rsvpToQuickGame(id) {
+  rsvpToPost(state.quickGames, id);
+  renderQuickGames();
+}
+
+function rsvpToPost(collection, id) {
+  let post = collection.find((item) => item.id === id);
+  if (!post) {
+    const seed = [...defaultCasualMatches(), ...defaultQuickGames()].find((item) => item.id === id);
+    if (!seed) return;
+    post = { ...seed, rsvps: [] };
+    collection.unshift(post);
+  }
+  const profile = currentSocietyProfile();
+  const name = profile ? `${profile.firstName || ""} ${profile.lastName || ""}`.trim() : "Society Member";
+  post.rsvps = post.rsvps || [];
+  if (!post.rsvps.includes(name)) post.rsvps.push(name);
+  saveState();
+  els.societyAccountMessage.textContent = "RSVP saved.";
+}
+
+function matchesDayFilter(day, filter) {
+  const normalized = String(day || "").toLowerCase();
+  if (filter === "all") return true;
+  if (filter === "next7") return normalized.includes("next 7");
+  return normalized === filter;
+}
+
+function renderCourtDirectory() {
+  if (!els.courtDirectoryList) return;
+  const query = (els.courtSearch?.value || "").trim().toLowerCase();
+  const filter = state.courtFilter || "all";
+  document.querySelectorAll("[data-court-filter]").forEach((button) => {
+    button.classList.toggle("active", button.dataset.courtFilter === filter);
+  });
+  const courts = courtDirectory().filter((court) => {
+    const text = `${court.name} ${court.city} ${court.address} ${court.access} ${court.surface} ${court.courts} ${court.note}`.toLowerCase();
+    const filterMatch = filter === "all"
+      || (filter === "club" ? court.access.toLowerCase().includes("club") || court.access.toLowerCase().includes("private") : text.includes(filter));
+    return filterMatch && (!query || text.includes(query));
+  });
+  els.courtDirectoryList.innerHTML = courts.map((court) => `
+    <article class="society-court-card">
+      <span>${escapeHtml(court.city)} | ${escapeHtml(court.surface)} | ${escapeHtml(court.access)}</span>
+      <strong>${escapeHtml(court.name)}</strong>
+      <p>${escapeHtml(court.address)}</p>
+      <p>${escapeHtml(court.courts)} - ${escapeHtml(court.note)}</p>
+    </article>
+  `).join("");
 }
 
 function renderSocietyFriendCard(card) {

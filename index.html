@@ -318,18 +318,28 @@
             <div class="society-tab" data-society-panel="games">
               <section class="society-section">
                 <button class="society-back-button" data-society-tab="pickleballHome" type="button">Back</button>
-                <p class="eyebrow">Athens + 50 miles</p>
-                <h3>Find games</h3>
+                <p class="eyebrow">Last-minute play</p>
+                <h3>Find a Game</h3>
+                <p class="section-copy">Quick posts for today or tomorrow: singles, doubles, open spots, or “who can play right now?”</p>
+                <form id="quickGameForm" class="society-form society-post-form">
+                  <input name="title" placeholder="Game title, ex: Need 1 for doubles" required>
+                  <div class="form-pair">
+                    <select name="day">
+                      <option>Today</option>
+                      <option>Tomorrow</option>
+                    </select>
+                    <input name="time" type="time" required>
+                  </div>
+                  <input name="location" placeholder="Court or area" required>
+                  <textarea name="note" rows="2" placeholder="Skill level, singles/doubles, how many needed..."></textarea>
+                  <button class="primary" type="submit">Post Quick Game</button>
+                </form>
                 <div class="society-filter-row">
-                  <button class="active" type="button">Next 7 days</button>
-                  <button type="button">Open play</button>
-                  <button type="button">Round robins</button>
+                  <button class="active" data-quick-game-filter="all" type="button">All</button>
+                  <button data-quick-game-filter="today" type="button">Today</button>
+                  <button data-quick-game-filter="tomorrow" type="button">Tomorrow</button>
                 </div>
-                <div class="society-stack">
-                  <article class="society-list-card"><strong>Watkinsville Social Mixer</strong><span>Watkinsville | 30677 | 12 miles</span><p>Intermediate social play with rotating partners.</p></article>
-                  <article class="society-list-card"><strong>UGA Area Morning Open Play</strong><span>Athens | 30605 | 3 miles</span><p>Drop-in games, all levels welcome before lunch.</p></article>
-                  <article class="society-list-card"><strong>Madison County Evening Games</strong><span>Danielsville | 30633 | 18 miles</span><p>Casual courts and partner matching.</p></article>
-                </div>
+                <div id="quickGameList" class="society-stack"></div>
               </section>
             </div>
 
@@ -337,17 +347,34 @@
               <section class="society-section">
                 <button class="society-back-button" data-society-tab="pickleballHome" type="button">Back</button>
                 <div class="society-social-hero">
-                  <p class="eyebrow">Club Friends</p>
-                  <h3>Find your next teammate, match, or social play connection.</h3>
-                  <p>Search local members, add club friends, and message people who fit your game, schedule, and vibe.</p>
+                  <p class="eyebrow">Casual matches</p>
+                  <h3>Find a Match</h3>
+                  <p>Post a casual match seeking 1+ players, or RSVP when someone else has a court and needs players.</p>
                 </div>
+                <form id="casualMatchForm" class="society-form society-post-form">
+                  <input name="title" placeholder="Match title, ex: Need 2 for social doubles" required>
+                  <div class="form-pair">
+                    <select name="day">
+                      <option>Today</option>
+                      <option>Tomorrow</option>
+                      <option>Next 7 days</option>
+                    </select>
+                    <input name="time" type="time" required>
+                  </div>
+                  <div class="form-pair">
+                    <input name="playersNeeded" inputmode="numeric" placeholder="Players needed" required>
+                    <input name="skill" placeholder="Skill level">
+                  </div>
+                  <input name="location" placeholder="Court/location" required>
+                  <textarea name="note" rows="2" placeholder="Casual, competitive, mixed doubles, singles-friendly, etc."></textarea>
+                  <button class="primary" type="submit">Post Match</button>
+                </form>
                 <div class="society-search-card">
-                  <input id="societyFriendSearch" type="search" placeholder="Search by name, city, sport, skill, or vibe">
                   <div class="society-filter-row">
-                    <button class="active" data-society-friend-filter="all" type="button">All</button>
-                    <button data-society-friend-filter="pickleball" type="button">Pickleball</button>
-                    <button data-society-friend-filter="golf" type="button">Golf</button>
-                    <button data-society-friend-filter="social" type="button">Social Play</button>
+                    <button class="active" data-match-filter="all" type="button">All</button>
+                    <button data-match-filter="today" type="button">Today</button>
+                    <button data-match-filter="tomorrow" type="button">Tomorrow</button>
+                    <button data-match-filter="next7" type="button">Next 7 days</button>
                   </div>
                 </div>
                 <div class="society-singles-card">
@@ -358,9 +385,17 @@
                   </div>
                   <button data-singles-toggle type="button" id="societySinglesToggle">Turn On</button>
                 </div>
-                <div id="societyFriendResults" class="society-friend-stack">
-                  <article class="society-list-card"><strong>Loading friends...</strong><p>Member suggestions will appear here.</p></article>
+                <div id="casualMatchList" class="society-friend-stack"></div>
+                <div class="society-search-card">
+                  <input id="societyFriendSearch" type="search" placeholder="Search players by name, city, sport, skill, or vibe">
+                  <div class="society-filter-row">
+                    <button class="active" data-society-friend-filter="all" type="button">Players</button>
+                    <button data-society-friend-filter="pickleball" type="button">Pickleball</button>
+                    <button data-society-friend-filter="golf" type="button">Golf</button>
+                    <button data-society-friend-filter="social" type="button">Social Play</button>
+                  </div>
                 </div>
+                <div id="societyFriendResults" class="society-friend-stack"></div>
               </section>
             </div>
 
@@ -402,12 +437,17 @@
               <section class="society-section">
                 <button class="society-back-button" data-society-tab="pickleballHome" type="button">Back</button>
                 <p class="eyebrow">Nearby courts</p>
-                <h3>Pickleball courts near 30605</h3>
-                <div class="society-stack">
-                  <article class="society-list-card"><strong>Southeast Clarke Park</strong><span>Athens | Public courts</span><p>Good starting point for Athens-area open play.</p></article>
-                  <article class="society-list-card"><strong>Herman C. Michael Park</strong><span>Watkinsville | Oconee County</span><p>Popular Oconee-area court option inside the 50-mile zone.</p></article>
-                  <article class="society-list-card"><strong>Bishop Park area</strong><span>Athens | Community play</span><p>Useful central location for partner matching and meetups.</p></article>
+                <h3>Find a Court</h3>
+                <p class="section-copy">A growing 50-mile directory around your ZIP. Public, city/county, church, college, country club, and private-access courts are tagged separately.</p>
+                <input id="courtSearch" type="search" placeholder="Search courts, city, access, indoor/outdoor">
+                <div class="society-filter-row court-filter-row">
+                  <button class="active" data-court-filter="all" type="button">All</button>
+                  <button data-court-filter="public" type="button">Public</button>
+                  <button data-court-filter="indoor" type="button">Indoor</button>
+                  <button data-court-filter="outdoor" type="button">Outdoor</button>
+                  <button data-court-filter="club" type="button">Club/private</button>
                 </div>
+                <div id="courtDirectoryList" class="society-stack"></div>
               </section>
             </div>
 
