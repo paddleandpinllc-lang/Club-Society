@@ -2078,6 +2078,68 @@ textarea {
   color: var(--navy);
 }
 
+.society-profile-activity-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.society-activity-card {
+  display: grid;
+  gap: 9px;
+  min-height: 148px;
+  padding: 12px;
+  border: 1px solid rgba(11, 34, 49, 0.1);
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 0 10px 24px rgba(11, 34, 49, 0.08);
+}
+
+.society-section-head.compact {
+  margin-bottom: 0;
+}
+
+.society-section-head.compact h3 {
+  font-size: 1rem;
+  margin: 2px 0 0;
+}
+
+.society-mini-list {
+  display: grid;
+  gap: 7px;
+}
+
+.society-activity-item {
+  padding: 9px;
+  border-radius: 13px;
+  background: rgba(255, 247, 232, 0.7);
+}
+
+.society-activity-item span {
+  color: var(--green);
+  font-size: 0.68rem;
+  font-weight: 950;
+  text-transform: uppercase;
+}
+
+.society-activity-item strong {
+  display: block;
+  font-size: 0.9rem;
+  margin: 2px 0;
+}
+
+.society-activity-item p,
+.empty-mini {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.society-friend-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.62;
+}
+
 .society-post-card,
 .society-court-card {
   display: grid;

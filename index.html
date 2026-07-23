@@ -237,10 +237,35 @@
                     </div>
                     <input name="zip" inputmode="numeric" placeholder="ZIP">
                     <textarea name="bio" rows="2" placeholder="Short intro, playing style, favorite courts/courses..."></textarea>
+                    <label class="checkbox-line society-check">
+                      <input name="allowMessages" type="checkbox" checked>
+                      Allow other members to message me.
+                    </label>
                     <button class="primary" data-profile-save type="button">Save Profile</button>
                     <p class="meta">A profile photo is required before messaging or posting events.</p>
                   </form>
                 </article>
+
+                <section class="society-profile-activity-grid">
+                  <article class="society-activity-card">
+                    <div class="society-section-head compact">
+                      <div>
+                        <span class="society-kicker">My RSVPs</span>
+                        <h3>Where I am in</h3>
+                      </div>
+                    </div>
+                    <div id="myRsvpList" class="society-mini-list"></div>
+                  </article>
+                  <article class="society-activity-card">
+                    <div class="society-section-head compact">
+                      <div>
+                        <span class="society-kicker">My Posts</span>
+                        <h3>Responses</h3>
+                      </div>
+                    </div>
+                    <div id="myPostList" class="society-mini-list"></div>
+                  </article>
+                </section>
 
                 <div class="society-direction-grid" aria-label="Choose sport">
                   <button class="pickleball-card" data-society-tab="pickleballHome" type="button">

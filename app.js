@@ -75,6 +75,8 @@ const els = {
   societyFriendSearch: document.querySelector("#societyFriendSearch"),
   societyFriendResults: document.querySelector("#societyFriendResults"),
   societySinglesToggle: document.querySelector("#societySinglesToggle"),
+  myRsvpList: document.querySelector("#myRsvpList"),
+  myPostList: document.querySelector("#myPostList"),
   casualMatchForm: document.querySelector("#casualMatchForm"),
   casualMatchList: document.querySelector("#casualMatchList"),
   quickGameForm: document.querySelector("#quickGameForm"),
@@ -747,6 +749,7 @@ function updateSocietyHome() {
   fillSocietyProfileDrawer(profile);
   updateSocietyAvatar(profile);
   renderSocietyFriends();
+  renderProfileActivity();
 }
 
 function fillSocietyProfileDrawer(profile) {
@@ -760,6 +763,7 @@ function fillSocietyProfileDrawer(profile) {
   fields.state.value = profile?.state || "GA";
   fields.zip.value = profile?.zip || "30677";
   fields.bio.value = profile?.bio || "";
+  fields.allowMessages.checked = profile?.allowMessages !== false;
 }
 
 function updateSocietyAvatar(profile = currentSocietyProfile()) {
@@ -812,6 +816,7 @@ async function saveSocietyProfileFromDrawer() {
     zip: data.zip || "30677",
     bio: data.bio || "",
     photoDataUrl,
+    allowMessages: data.allowMessages === "on",
     stayLoggedIn: true,
     preferredSport: profile?.preferredSport || "both",
     sport: profile?.sport || "pickleball",
@@ -875,12 +880,13 @@ function societyDirectoryCards() {
       vibe: profile.bio || (profile.socialPlay ? "Open to social play and friendly matchups." : "Looking for local games and club friends."),
       photoDataUrl: profile.photoDataUrl || "",
       socialPlay: Boolean(profile.socialPlay),
+      allowMessages: profile.allowMessages !== false,
     }));
   const demoProfiles = [
-    { id: "demo-maya", name: "Maya Thompson", city: "Watkinsville", sport: "pickleball", skill: "3.5 doubles", vibe: "Weeknight games, mixed doubles, and post-match hangouts.", socialPlay: true },
-    { id: "demo-eli", name: "Eli Parker", city: "Athens", sport: "golf", skill: "12 handicap", vibe: "Last-minute tee times, relaxed pace, good playlists.", socialPlay: true },
-    { id: "demo-jordan", name: "Jordan Reese", city: "Oconee", sport: "both", skill: "Pickleball 3.0 | Golf 18", vibe: "Down for social play, beginner-friendly groups, and club events.", socialPlay: true },
-    { id: "demo-avery", name: "Avery Collins", city: "Athens", sport: "pickleball", skill: "Open play", vibe: "Looking for a steady drill partner and Saturday morning games.", socialPlay: false },
+    { id: "demo-maya", name: "Maya Thompson", city: "Watkinsville", sport: "pickleball", skill: "3.5 doubles", vibe: "Weeknight games, mixed doubles, and post-match hangouts.", socialPlay: true, allowMessages: true },
+    { id: "demo-eli", name: "Eli Parker", city: "Athens", sport: "golf", skill: "12 handicap", vibe: "Last-minute tee times, relaxed pace, good playlists.", socialPlay: true, allowMessages: true },
+    { id: "demo-jordan", name: "Jordan Reese", city: "Oconee", sport: "both", skill: "Pickleball 3.0 | Golf 18", vibe: "Down for social play, beginner-friendly groups, and club events.", socialPlay: true, allowMessages: true },
+    { id: "demo-avery", name: "Avery Collins", city: "Athens", sport: "pickleball", skill: "Open play", vibe: "Looking for a steady drill partner and Saturday morning games.", socialPlay: false, allowMessages: false },
   ];
   return [...savedProfiles, ...demoProfiles];
 }
@@ -950,10 +956,11 @@ function saveCasualMatch(event) {
     return;
   }
   const data = Object.fromEntries(new FormData(els.casualMatchForm).entries());
-  state.casualMatches.unshift({ ...data, id: newId(), rsvps: [], createdAt: new Date().toISOString() });
+  state.casualMatches.unshift({ ...data, ...currentPostOwner(), id: newId(), rsvps: [], createdAt: new Date().toISOString() });
   els.casualMatchForm.reset();
   saveState();
   renderCasualMatches();
+  renderProfileActivity();
 }
 
 function renderCasualMatches() {
@@ -973,10 +980,11 @@ function saveQuickGame(event) {
     return;
   }
   const data = Object.fromEntries(new FormData(els.quickGameForm).entries());
-  state.quickGames.unshift({ ...data, id: newId(), rsvps: [], createdAt: new Date().toISOString() });
+  state.quickGames.unshift({ ...data, ...currentPostOwner(), id: newId(), rsvps: [], createdAt: new Date().toISOString() });
   els.quickGameForm.reset();
   saveState();
   renderQuickGames();
+  renderProfileActivity();
 }
 
 function renderQuickGames() {
@@ -1009,6 +1017,46 @@ function renderPostCard(post, type) {
   `;
 }
 
+function currentPostOwner() {
+  const profile = currentSocietyProfile();
+  return {
+    ownerEmail: profile?.email || state.societySessionEmail || "",
+    ownerName: profile ? `${profile.firstName || ""} ${profile.lastName || ""}`.trim() : "Society Member",
+  };
+}
+
+function renderProfileActivity() {
+  if (!els.myRsvpList || !els.myPostList) return;
+  const profile = currentSocietyProfile();
+  const email = (profile?.email || state.societySessionEmail || "").toLowerCase();
+  const allPosts = [
+    ...state.casualMatches.map((post) => ({ ...post, typeLabel: "Match" })),
+    ...state.quickGames.map((post) => ({ ...post, typeLabel: "Quick Game" })),
+  ];
+  const myRsvps = allPosts.filter((post) => (post.rsvps || []).some((rsvp) => String(rsvp.email || rsvp).toLowerCase() === email));
+  const myPosts = allPosts.filter((post) => String(post.ownerEmail || "").toLowerCase() === email);
+  els.myRsvpList.innerHTML = myRsvps.length
+    ? myRsvps.map((post) => renderActivityItem(post, `${post.typeLabel} RSVP`)).join("")
+    : `<p class="empty-mini">No RSVPs yet.</p>`;
+  els.myPostList.innerHTML = myPosts.length
+    ? myPosts.map((post) => {
+      const responders = (post.rsvps || []).map((rsvp) => rsvp.name || rsvp).filter(Boolean);
+      return renderActivityItem(post, `${responders.length} response${responders.length === 1 ? "" : "s"}`, responders.join(", ") || "No responses yet");
+    }).join("")
+    : `<p class="empty-mini">No posts yet.</p>`;
+}
+
+function renderActivityItem(post, label, detail = "") {
+  return `
+    <article class="society-activity-item">
+      <span>${escapeHtml(label)}</span>
+      <strong>${escapeHtml(post.title || "Untitled")}</strong>
+      <p>${escapeHtml(post.day || "Any day")} | ${escapeHtml(post.time || "Time TBD")} | ${escapeHtml(post.location || "Location TBD")}</p>
+      ${detail ? `<p>${escapeHtml(detail)}</p>` : ""}
+    </article>
+  `;
+}
+
 function rsvpToCasualMatch(id) {
   rsvpToPost(state.casualMatches, id);
   renderCasualMatches();
@@ -1030,8 +1078,12 @@ function rsvpToPost(collection, id) {
   const profile = currentSocietyProfile();
   const name = profile ? `${profile.firstName || ""} ${profile.lastName || ""}`.trim() : "Society Member";
   post.rsvps = post.rsvps || [];
-  if (!post.rsvps.includes(name)) post.rsvps.push(name);
+  const email = profile?.email || state.societySessionEmail || "";
+  if (!post.rsvps.some((rsvp) => String(rsvp.email || rsvp).toLowerCase() === email.toLowerCase())) {
+    post.rsvps.push({ name, email, at: new Date().toISOString() });
+  }
   saveState();
+  renderProfileActivity();
   els.societyAccountMessage.textContent = "RSVP saved.";
 }
 
@@ -1080,7 +1132,7 @@ function renderSocietyFriendCard(card) {
       </div>
       <div class="society-friend-actions">
         <button class="${isFriend ? "active" : ""}" data-friend-add="${escapeHtml(card.id)}" type="button">${isFriend ? "Friends" : "Add"}</button>
-        <button data-friend-message="${escapeHtml(card.id)}" type="button">Message</button>
+        <button ${card.allowMessages === false ? "disabled" : `data-friend-message="${escapeHtml(card.id)}"`} type="button">${card.allowMessages === false ? "No messages" : "Message"}</button>
       </div>
     </article>
   `;
@@ -1102,6 +1154,10 @@ function messageSocietyFriend(id) {
   }
   const card = societyDirectoryCards().find((item) => item.id === id);
   if (!card) return;
+  if (card.allowMessages === false) {
+    els.societyAccountMessage.textContent = "That member is not accepting messages right now.";
+    return;
+  }
   setSocietyTab("golfMessages");
   els.golfMessageForm.elements.to.value = card.name;
   els.golfMessageForm.elements.body.value = `Want to connect for ${String(card.sport).includes("golf") ? "a round" : "a game"} sometime?`;
