@@ -244,6 +244,7 @@ function loadState() {
     golfGroups: [],
     golfMessages: [],
     golfMatchIndex: 0,
+    societySessionEmail: "",
     paddlePintImportedIds: [],
     roundSettings: { selectedPlayerIds: [], teams: [] },
     selectedEventRosterId: "",
@@ -276,6 +277,7 @@ function normalizeState(data) {
   data.golfGroups = data.golfGroups || [];
   data.golfMessages = data.golfMessages || [];
   data.golfMatchIndex = data.golfMatchIndex || 0;
+  data.societySessionEmail = data.societySessionEmail || "";
   data.paddlePintImportedIds = data.paddlePintImportedIds || [];
   data.roundSettings = { selectedPlayerIds: [], teams: [], ...(data.roundSettings || {}) };
   data.selectedEventRosterId = data.selectedEventRosterId || "";
@@ -499,6 +501,7 @@ function saveSocietyAccount(event) {
   };
   if (existing) Object.assign(existing, profile);
   else state.profiles.unshift(profile);
+  state.societySessionEmail = profile.email;
   saveState();
   renderProfiles();
   els.societyAccountMessage.textContent = existing
@@ -524,6 +527,8 @@ function handleSocietyAppClick(event) {
       els.societyAccountMessage.textContent = "Enter your email address to sign in.";
       return;
     }
+    state.societySessionEmail = email.toLowerCase();
+    saveState();
     els.societyAccountMessage.textContent = "Sign-in email will be sent when authentication is connected. Stay logged in is saved for this device.";
     localStorage.setItem("clubSociety.stayLoggedIn.v1", String(els.societyAccountForm.elements.signinStayLoggedIn.checked));
     return;
@@ -551,12 +556,22 @@ function setAuthPanel(panel) {
 }
 
 function setSocietyTab(tab) {
+  const protectedTabs = new Set(["courts", "learn", "settings"]);
+  if (protectedTabs.has(tab) && !hasSocietyAccess()) {
+    setSocietyTab("home");
+    els.societyAccountMessage.textContent = "Sign in or Join to access";
+    return;
+  }
   document.querySelectorAll("[data-society-panel]").forEach((panel) => {
     panel.classList.toggle("active", panel.dataset.societyPanel === tab);
   });
   document.querySelectorAll("#societyApp [data-society-tab]").forEach((button) => {
     button.classList.toggle("active", button.dataset.societyTab === tab);
   });
+}
+
+function hasSocietyAccess() {
+  return Boolean(state.societySessionEmail || state.profiles.some((profile) => profile.stayLoggedIn));
 }
 
 function saveGolfProfile(event) {
