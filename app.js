@@ -468,38 +468,67 @@ function savePost(event) {
 function saveSocietyAccount(event) {
   event.preventDefault();
   const data = Object.fromEntries(new FormData(els.societyAccountForm).entries());
-  const [firstName = "", ...rest] = data.name.trim().split(/\s+/);
-  const lastName = rest.join(" ");
   const existing = state.profiles.find((profile) => profile.email?.toLowerCase() === data.email.toLowerCase());
+  const sport = data.sport === "both" ? "pickleball" : data.sport || "pickleball";
+  const level = data.sport === "golf" ? (data.handicap ? `Golf handicap ${data.handicap}` : "Golf member") : (data.pickleballLevel || "Open");
   const profile = {
     id: existing?.id || newId(),
-    firstName: titleCase(firstName),
-    lastName: titleCase(lastName),
+    firstName: titleCase(data.firstName),
+    lastName: titleCase(data.lastName),
     email: data.email.trim().toLowerCase(),
-    phone: existing?.phone || "",
+    phone: data.phone || existing?.phone || "",
     street: existing?.street || "",
-    city: existing?.city || "Athens",
-    state: existing?.state || "GA",
-    zip: existing?.zip || "30605",
-    skill: data.skill,
+    city: data.city || existing?.city || "Watkinsville",
+    state: data.state || existing?.state || "GA",
+    zip: data.zip || existing?.zip || "30677",
+    age: data.age || existing?.age || "",
+    gender: data.gender || existing?.gender || "",
+    preferredSport: data.sport || "both",
+    pickleballLevel: data.pickleballLevel || existing?.pickleballLevel || "",
+    handicap: data.handicap || existing?.handicap || "",
+    skill: level,
     availability: existing?.availability || "Flexible",
-    interests: Array.from(new Set([...(existing?.interests || []), "Find local games", "Social round robins"])),
+    interests: Array.from(new Set([...(existing?.interests || []), "Find local games", "Social round robins", "Golf groups"])),
     smsSubscriber: existing?.smsSubscriber || false,
-    sport: "pickleball",
+    stayLoggedIn: data.stayLoggedIn === "on",
+    sport,
     verificationStatus: existing?.verificationStatus || "Unverified",
     verificationMethod: existing?.verificationMethod || "email",
-    source: "Society app signup",
+    source: "Society Pass signup",
     updatedAt: new Date().toISOString(),
   };
   if (existing) Object.assign(existing, profile);
   else state.profiles.unshift(profile);
   saveState();
   renderProfiles();
-  els.societyAccountMessage.textContent = existing ? "Welcome back. Your Society profile was updated." : "You are on the Society list. Profile saved locally for this build.";
+  els.societyAccountMessage.textContent = existing
+    ? "Welcome back. Your Society Pass profile was updated. Watch for your verification email."
+    : "You joined the Society. A verification email with next steps will be sent when email delivery is connected.";
   els.societyAccountForm.reset();
+  els.societyAccountForm.elements.city.value = "Watkinsville";
+  els.societyAccountForm.elements.state.value = "GA";
+  els.societyAccountForm.elements.zip.value = "30677";
 }
 
 function handleSocietyAppClick(event) {
+  const authButton = event.target.closest("[data-auth-panel]");
+  if (authButton) {
+    setAuthPanel(authButton.dataset.authPanel);
+    return;
+  }
+
+  const signinButton = event.target.closest("[data-signin-submit]");
+  if (signinButton) {
+    const email = els.societyAccountForm.elements.signinEmail.value.trim();
+    if (!email) {
+      els.societyAccountMessage.textContent = "Enter your email address to sign in.";
+      return;
+    }
+    els.societyAccountMessage.textContent = "Sign-in email will be sent when authentication is connected. Stay logged in is saved for this device.";
+    localStorage.setItem("clubSociety.stayLoggedIn.v1", String(els.societyAccountForm.elements.signinStayLoggedIn.checked));
+    return;
+  }
+
   const tabButton = event.target.closest("[data-society-tab]");
   if (tabButton) {
     setSocietyTab(tabButton.dataset.societyTab);
@@ -508,6 +537,16 @@ function handleSocietyAppClick(event) {
 
   const jumpButton = event.target.closest("[data-jump]");
   if (jumpButton) setView(jumpButton.dataset.jump);
+}
+
+function setAuthPanel(panel) {
+  document.querySelectorAll("[data-auth-content]").forEach((item) => {
+    item.classList.toggle("active", item.dataset.authContent === panel);
+  });
+  document.querySelectorAll("[data-auth-panel]").forEach((button) => {
+    button.classList.toggle("active", button.dataset.authPanel === panel);
+  });
+  els.societyAccountMessage.textContent = "";
 }
 
 function setSocietyTab(tab) {

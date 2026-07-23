@@ -113,15 +113,15 @@
               <div class="society-wordmark">
                 <img src="club-society-mark.svg" alt="">
                 <strong>Club Society</strong>
-                <span>Athens Pickleball</span>
+                <span>Connect. Create. Play</span>
               </div>
               <button class="society-icon-button" data-society-tab="settings" type="button" aria-label="Settings">...</button>
             </header>
 
             <section class="society-hero-card">
-              <p class="eyebrow">Join the Society</p>
-              <h2>Find your game inside 50 miles of 30605.</h2>
-              <p>Pickleball play, partners, courts, instructors, events, and host tools for Athens and the surrounding area.</p>
+              <p class="eyebrow">Grab your Society Pass</p>
+              <h2>Connect. Create. Play.</h2>
+              <p>The golf & pickleball social app created to connect players to one another, create community and friendship, and connect on the course or court or wherever the day takes you.</p>
               <div class="society-sport-switch" aria-label="Sport direction">
                 <button class="active" data-society-tab="home" type="button">Pickleball</button>
                 <button data-society-tab="golfHome" type="button">Golf</button>
@@ -132,53 +132,67 @@
               <section class="society-join-card">
                 <div>
                   <span class="society-kicker">Society Pass</span>
-                  <h3>Sign up or log in</h3>
-                  <p>Save your profile, get matched faster, and join local play without retyping everything.</p>
+                  <h3>Grab your Society Pass</h3>
+                  <p>Choose how you want to enter. New members can join the Society today. Returning members can sign in and stay logged in.</p>
+                </div>
+                <div class="society-entry-actions">
+                  <button class="primary" data-auth-panel="signup" type="button">Not a pass holder? Join the Society today</button>
+                  <button data-auth-panel="signin" type="button">Already part of the club? Sign in now</button>
                 </div>
                 <form id="societyAccountForm" class="society-form">
-                  <input name="name" placeholder="Full name" required>
-                  <input name="email" type="email" placeholder="Email" required>
-                  <select name="skill">
-                    <option>Beginner</option>
-                    <option selected>Intermediate</option>
-                    <option>Advanced</option>
-                    <option>Open</option>
-                  </select>
-                  <button class="primary" type="submit">Join the Society</button>
+                  <div class="auth-panel active" data-auth-content="signup">
+                    <div class="form-pair">
+                      <input name="firstName" placeholder="First name" required>
+                      <input name="lastName" placeholder="Last name" required>
+                    </div>
+                    <input name="email" type="email" placeholder="Email address" required>
+                    <input name="phone" type="tel" placeholder="Phone number">
+                    <div class="form-pair">
+                      <input name="age" inputmode="numeric" placeholder="Age">
+                      <select name="gender">
+                        <option value="">Gender</option>
+                        <option>Female</option>
+                        <option>Male</option>
+                        <option>Prefer not to say</option>
+                      </select>
+                    </div>
+                    <select name="sport">
+                      <option value="both">Your sport: Golf + Pickleball</option>
+                      <option value="pickleball">Your sport: Pickleball</option>
+                      <option value="golf">Your sport: Golf</option>
+                    </select>
+                    <select name="pickleballLevel">
+                      <option value="">Pickleball level</option>
+                      <option>2.5 Beginner</option>
+                      <option>3.0 Novice</option>
+                      <option>3.5 Intermediate</option>
+                      <option>4.0+ Advanced</option>
+                    </select>
+                    <input name="handicap" placeholder="Golf handicap (optional)">
+                    <div class="form-pair">
+                      <input name="city" value="Watkinsville" placeholder="City">
+                      <input name="state" value="GA" placeholder="State">
+                    </div>
+                    <input name="zip" inputmode="numeric" value="30677" placeholder="ZIP code">
+                    <label class="checkbox-line society-check">
+                      <input name="stayLoggedIn" type="checkbox" checked>
+                      Keep me signed in on this device.
+                    </label>
+                    <button class="primary" type="submit">Join the Society</button>
+                  </div>
+                  <div class="auth-panel" data-auth-content="signin">
+                    <input name="signinEmail" type="email" placeholder="Email address">
+                    <label class="checkbox-line society-check">
+                      <input name="signinStayLoggedIn" type="checkbox" checked>
+                      Stay logged in.
+                    </label>
+                    <button class="primary" data-signin-submit type="button">Sign In</button>
+                  </div>
+                  <p class="meta">After sign up, members receive a verification email with instructions on what to do next.</p>
                 </form>
                 <div id="societyAccountMessage" class="society-message"></div>
               </section>
 
-              <section class="society-quick-grid" aria-label="Pickleball shortcuts">
-                <button data-society-tab="games" type="button"><span>Play</span><strong>Find games</strong></button>
-                <button data-society-tab="partners" type="button"><span>Connect</span><strong>Find partners</strong></button>
-                <button data-society-tab="host" type="button"><span>Host</span><strong>Run an event</strong></button>
-                <button data-society-tab="learn" type="button"><span>Learn</span><strong>Instructors</strong></button>
-                <button data-society-tab="courts" type="button"><span>Nearby</span><strong>Courts</strong></button>
-                <button data-society-tab="events" type="button"><span>Challenge</span><strong>Tournaments</strong></button>
-              </section>
-
-              <section class="society-section">
-                <div class="society-section-head">
-                  <div>
-                    <p class="eyebrow">Next up</p>
-                    <h3>Athens area play</h3>
-                  </div>
-                  <button data-society-tab="games" type="button">View all</button>
-                </div>
-                <div class="society-stack">
-                  <article class="society-list-card">
-                    <strong>Paddle + Pint Round Robin</strong>
-                    <span>Tonight | South Main Brewing | Social 2.5-4.0</span>
-                    <p>Rotating partners, post-play hang, host-managed check-in.</p>
-                  </article>
-                  <article class="society-list-card">
-                    <strong>Beginner Friendly Open Play</strong>
-                    <span>Tomorrow | Southeast Clarke Park | 8 spots</span>
-                    <p>Low-pressure games for newer players and returning players.</p>
-                  </article>
-                </div>
-              </section>
             </div>
 
             <div class="society-tab" data-society-panel="games">

@@ -1497,6 +1497,30 @@ textarea {
   gap: 9px;
 }
 
+.society-entry-actions {
+  display: grid;
+  gap: 9px;
+}
+
+.society-entry-actions button.active {
+  border-color: var(--gold);
+  box-shadow: inset 0 0 0 2px rgba(244, 181, 43, 0.28);
+}
+
+.auth-panel {
+  display: none;
+  gap: 9px;
+}
+
+.auth-panel.active {
+  display: grid;
+}
+
+.society-check {
+  min-height: auto;
+  padding: 10px 0;
+}
+
 .society-message {
   color: var(--green);
   font-weight: 850;
