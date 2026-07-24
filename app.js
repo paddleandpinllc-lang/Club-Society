@@ -87,8 +87,6 @@ const els = {
   societyProfileDrawer: document.querySelector("#societyProfileDrawer"),
   societyPhotoPreview: document.querySelector("#societyPhotoPreview"),
   societyPhotoInput: document.querySelector("#societyPhotoInput"),
-  golfProfileForm: document.querySelector("#golfProfileForm"),
-  golfProfileMessage: document.querySelector("#golfProfileMessage"),
   golfTeeTimeForm: document.querySelector("#golfTeeTimeForm"),
   golfTeeTimeList: document.querySelector("#golfTeeTimeList"),
   golfGroupForm: document.querySelector("#golfGroupForm"),
@@ -184,7 +182,6 @@ els.societyFriendSearch.addEventListener("input", renderSocietyFriends);
 els.casualMatchForm.addEventListener("submit", saveCasualMatch);
 els.quickGameForm.addEventListener("submit", saveQuickGame);
 els.courtSearch.addEventListener("input", renderCourtDirectory);
-els.golfProfileForm.addEventListener("submit", saveGolfProfile);
 els.golfTeeTimeForm.addEventListener("submit", saveGolfTeeTime);
 els.golfGroupForm.addEventListener("submit", saveGolfGroup);
 els.golfMessageForm.addEventListener("submit", saveGolfMessage);
@@ -1374,30 +1371,6 @@ function addSocietyFavorite(label) {
   els.societyAccountMessage.textContent = `${label} added to favorites and reminders.`;
 }
 
-function saveGolfProfile(event) {
-  event.preventDefault();
-  const data = Object.fromEntries(new FormData(els.golfProfileForm).entries());
-  state.golfProfile = {
-    ...data,
-    zip: data.zip || "30677",
-    updatedAt: new Date().toISOString(),
-  };
-  const [firstName = "", ...rest] = data.name.trim().split(/\s+/);
-  upsertPlayerDirectoryProfile({
-    firstName: titleCase(firstName),
-    lastName: titleCase(rest.join(" ")),
-    email: data.email,
-    phone: "",
-    skill: data.handicap ? `Golf handicap ${data.handicap}` : "Golf member",
-    interests: ["Golf groups", "Last-minute tee times"],
-    source: "Golf Society signup",
-    sport: "golf",
-  });
-  saveState();
-  renderGolf();
-  els.golfProfileMessage.textContent = "Golf profile saved. You are ready to match inside the 30677 radius.";
-}
-
 function saveGolfTeeTime(event) {
   event.preventDefault();
   if (!profileHasPhoto()) {
@@ -1463,19 +1436,10 @@ function messageGolfMatch() {
 }
 
 function renderGolf() {
-  renderGolfProfileForm();
   renderGolfMatchDeck();
   renderGolfTeeTimes();
   renderGolfGroups();
   renderGolfMessages();
-}
-
-function renderGolfProfileForm() {
-  Object.entries(state.golfProfile || {}).forEach(([name, value]) => {
-    const field = els.golfProfileForm.elements[name];
-    if (field) field.value = value || "";
-  });
-  if (!els.golfProfileForm.elements.zip.value) els.golfProfileForm.elements.zip.value = "30677";
 }
 
 function renderGolfMatchDeck() {

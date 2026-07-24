@@ -498,33 +498,12 @@
               <button class="society-back-button society-hub-back" data-society-tab="home" type="button">Back</button>
               <section class="golf-app-hero">
                 <p class="eyebrow">Golf Society</p>
-                <h3>Find a partner before the tee time disappears.</h3>
-                <p>A last-minute golf network for Watkinsville, Athens, Oconee, and nearby courses inside 50 miles of 30677.</p>
-                <div class="golf-radius-pill">50 mile radius | Home ZIP 30677</div>
-              </section>
-              <section class="society-join-card golf-profile-card">
-                <div>
-                  <span class="society-kicker">Golf profile</span>
-                  <h3>Join the golf side</h3>
-                  <p>Save your handicap, favorite courses, and playing style so other members know if the fit is right.</p>
+                <h3>Your next round starts with the Society.</h3>
+                <p>Post an open tee time, join a group, message members, compare local courses, and keep the golf side of your club moving.</p>
+                <div class="golf-hero-actions">
+                  <button data-society-tab="golfFindGame" type="button">Find Game</button>
+                  <button data-society-tab="golfPostTee" type="button">Post tee time</button>
                 </div>
-                <form id="golfProfileForm" class="society-form">
-                  <input name="name" placeholder="Full name" required>
-                  <input name="email" type="email" placeholder="Email" required>
-                  <div class="form-pair">
-                    <input name="zip" inputmode="numeric" value="30677" placeholder="ZIP">
-                    <input name="handicap" placeholder="Handicap">
-                  </div>
-                  <textarea name="favoriteCourses" rows="2" placeholder="Favorite courses: Lane Creek, UGA, Jennings Mill..."></textarea>
-                  <select name="style">
-                    <option>Casual weekend golf</option>
-                    <option>Last-minute tee times</option>
-                    <option>Competitive money game</option>
-                    <option>Beginner-friendly rounds</option>
-                  </select>
-                  <button class="primary" type="submit">Save Golf Profile</button>
-                </form>
-                <div id="golfProfileMessage" class="society-message"></div>
               </section>
               <section class="society-quick-grid golf-quick-grid" aria-label="Golf shortcuts">
                 <button data-society-tab="golfFindGame" type="button"><span>Swipe</span><strong>Find Game</strong></button>
@@ -533,6 +512,39 @@
                 <button data-society-tab="golfLessons" type="button"><span>Level up</span><strong>Lessons</strong></button>
                 <button data-society-tab="golfCourses" type="button"><span>Nearby</span><strong>Courses</strong></button>
                 <button data-society-tab="golfMessages" type="button"><span>Chat</span><strong>Messages</strong></button>
+              </section>
+              <section class="society-section golf-feed-section">
+                <p class="eyebrow">Member posts</p>
+                <h3>From the clubhouse</h3>
+                <div class="golf-member-feed">
+                  <article class="golf-feed-post">
+                    <div class="feed-avatar">BC</div>
+                    <div>
+                      <strong>Blake C.</strong>
+                      <span>Today | Lane Creek</span>
+                      <p>Have one spot open around 4:20. Easy pace, cart booked, grabbing a bite after.</p>
+                      <button data-society-tab="golfMessages" type="button">Reply</button>
+                    </div>
+                  </article>
+                  <article class="golf-feed-post">
+                    <div class="feed-avatar">JM</div>
+                    <div>
+                      <strong>Jordan M.</strong>
+                      <span>Tomorrow morning | UGA Golf Course</span>
+                      <p>Looking for two more for a social round. New members welcome.</p>
+                      <button data-society-tab="golfMessages" type="button">Reply</button>
+                    </div>
+                  </article>
+                  <article class="golf-feed-post">
+                    <div class="feed-avatar">TR</div>
+                    <div>
+                      <strong>Taylor R.</strong>
+                      <span>This weekend | Golf Society</span>
+                      <p>Building a regular Sunday group. Casual but competitive enough to keep it interesting.</p>
+                      <button data-society-tab="golfCreateGroup" type="button">View group</button>
+                    </div>
+                  </article>
+                </div>
               </section>
             </div>
 
