@@ -339,7 +339,7 @@
                 </div>
                 <div class="pickleball-hub-grid" aria-label="Pickleball actions">
                   <button data-society-tab="partners" type="button"><span>Match</span><strong>Find a Match</strong></button>
-                  <button data-society-tab="games" type="button"><span>Play</span><strong>Find Game</strong></button>
+                  <button data-society-tab="games" type="button"><span>Create</span><strong>Play</strong></button>
                   <button data-society-tab="courts" type="button"><span>Nearby</span><strong>Find a Court</strong></button>
                   <button data-society-tab="events" type="button"><span>Events</span><strong>Find an Event</strong></button>
                   <button data-society-tab="host" type="button"><span>Create</span><strong>Post an Event</strong></button>
@@ -354,26 +354,28 @@
             <div class="society-tab" data-society-panel="games">
               <section class="society-section">
                 <button class="society-back-button" data-society-tab="pickleballHome" type="button">Back</button>
-                <p class="eyebrow">Last-minute play</p>
-                <h3>Find a Game</h3>
-                <p class="section-copy">Quick posts for today or tomorrow: singles, doubles, open spots, or “who can play right now?”</p>
+                <p class="eyebrow">Play</p>
+                <h3>Post a last-minute game</h3>
+                <p class="section-copy">Create a quick game for today, tomorrow, or this weekend so other members can RSVP.</p>
                 <form id="quickGameForm" class="society-form society-post-form">
-                  <input name="title" placeholder="Game title, ex: Need 1 for doubles" required>
+                  <input name="title" placeholder="Game title, ex: Need 1 for doubles today" required>
                   <div class="form-pair">
                     <select name="day">
                       <option>Today</option>
                       <option>Tomorrow</option>
+                      <option>This weekend</option>
                     </select>
                     <input name="time" type="time" required>
                   </div>
                   <input name="location" placeholder="Court or area" required>
                   <textarea name="note" rows="2" placeholder="Skill level, singles/doubles, how many needed..."></textarea>
-                  <button class="primary" type="submit">Post Quick Game</button>
+                  <button class="primary" type="submit">Post Game</button>
                 </form>
                 <div class="society-filter-row">
                   <button class="active" data-quick-game-filter="all" type="button">All</button>
                   <button data-quick-game-filter="today" type="button">Today</button>
                   <button data-quick-game-filter="tomorrow" type="button">Tomorrow</button>
+                  <button data-quick-game-filter="weekend" type="button">Weekend</button>
                 </div>
                 <div id="quickGameList" class="society-stack"></div>
               </section>
@@ -385,32 +387,14 @@
                 <div class="society-social-hero">
                   <p class="eyebrow">Casual matches</p>
                   <h3>Find a Match</h3>
-                  <p>Post a casual match seeking 1+ players, or RSVP when someone else has a court and needs players.</p>
+                  <p>Browse posts from other members who are looking to play today, tomorrow, or this weekend. RSVP when a match fits.</p>
                 </div>
-                <form id="casualMatchForm" class="society-form society-post-form">
-                  <input name="title" placeholder="Match title, ex: Need 2 for social doubles" required>
-                  <div class="form-pair">
-                    <select name="day">
-                      <option>Today</option>
-                      <option>Tomorrow</option>
-                      <option>Next 7 days</option>
-                    </select>
-                    <input name="time" type="time" required>
-                  </div>
-                  <div class="form-pair">
-                    <input name="playersNeeded" inputmode="numeric" placeholder="Players needed" required>
-                    <input name="skill" placeholder="Skill level">
-                  </div>
-                  <input name="location" placeholder="Court/location" required>
-                  <textarea name="note" rows="2" placeholder="Casual, competitive, mixed doubles, singles-friendly, etc."></textarea>
-                  <button class="primary" type="submit">Post Match</button>
-                </form>
                 <div class="society-search-card">
                   <div class="society-filter-row">
                     <button class="active" data-match-filter="all" type="button">All</button>
                     <button data-match-filter="today" type="button">Today</button>
                     <button data-match-filter="tomorrow" type="button">Tomorrow</button>
-                    <button data-match-filter="next7" type="button">Next 7 days</button>
+                    <button data-match-filter="weekend" type="button">Weekend</button>
                   </div>
                 </div>
                 <div class="society-singles-card">

@@ -183,7 +183,7 @@ els.societyProfileDrawer.addEventListener("submit", (event) => {
 });
 els.societyPhotoInput.addEventListener("change", previewSocietyPhoto);
 els.societyFriendSearch.addEventListener("input", renderSocietyFriends);
-els.casualMatchForm.addEventListener("submit", saveCasualMatch);
+els.casualMatchForm?.addEventListener("submit", saveCasualMatch);
 els.clubGroupForm.addEventListener("submit", saveClubGroup);
 els.quickGameForm.addEventListener("submit", saveQuickGame);
 els.courtSearch.addEventListener("input", renderCourtDirectory);
@@ -1150,16 +1150,17 @@ function societyDirectoryCards() {
 
 function defaultCasualMatches() {
   return [
-    { id: "match-sat-doubles", title: "Need 2 for social doubles", day: "Today", time: "18:00", playersNeeded: "2", skill: "3.0-3.5", location: "Southeast Clarke Park", note: "Rotating partners, friendly but competitive.", rsvps: [] },
-    { id: "match-mixed-oconee", title: "Mixed doubles practice group", day: "Tomorrow", time: "09:00", playersNeeded: "1", skill: "Open", location: "Herman C. Michael Park", note: "Easy pace, drill a little then play.", rsvps: [] },
-    { id: "match-ladder-preview", title: "Next 7 days ladder warmup", day: "Next 7 days", time: "17:30", playersNeeded: "4", skill: "3.5+", location: "Bishop Park", note: "Looking for players who want challenge style games.", rsvps: [] },
+    { id: "match-sat-doubles", title: "Need 2 for social doubles", day: "Today", time: "18:00", playersNeeded: "2", skill: "3.0-3.5", location: "Southeast Clarke Park", note: "Rotating partners, friendly but competitive.", ownerName: "Maya T.", ownerEmail: "demo-maya@example.com", rsvps: [] },
+    { id: "match-mixed-oconee", title: "Mixed doubles practice group", day: "Tomorrow", time: "09:00", playersNeeded: "1", skill: "Open", location: "Herman C. Michael Park", note: "Easy pace, drill a little then play.", ownerName: "Jordan R.", ownerEmail: "demo-jordan@example.com", rsvps: [] },
+    { id: "match-weekend-open", title: "Weekend open play group", day: "This weekend", time: "10:00", playersNeeded: "4", skill: "All levels", location: "Bishop Park", note: "Looking for a relaxed rotation Saturday morning.", ownerName: "Avery C.", ownerEmail: "demo-avery@example.com", rsvps: [] },
   ];
 }
 
 function defaultQuickGames() {
   return [
-    { id: "quick-today-singles", title: "Singles hit around", day: "Today", time: "16:30", location: "Satterfield Park", note: "One player, 45 minutes, any level.", rsvps: [] },
-    { id: "quick-tomorrow-open", title: "Need 1 for doubles", day: "Tomorrow", time: "07:45", location: "Southeast Clarke Park", note: "Casual doubles before work.", rsvps: [] },
+    { id: "quick-today-singles", title: "Singles hit around", day: "Today", time: "16:30", location: "Satterfield Park", note: "One player, 45 minutes, any level.", ownerName: "Maya T.", ownerEmail: "demo-maya@example.com", rsvps: [] },
+    { id: "quick-tomorrow-open", title: "Need 1 for doubles", day: "Tomorrow", time: "07:45", location: "Southeast Clarke Park", note: "Casual doubles before work.", ownerName: "Jordan R.", ownerEmail: "demo-jordan@example.com", rsvps: [] },
+    { id: "quick-weekend-rotation", title: "Weekend rotation", day: "This weekend", time: "09:30", location: "Bishop Park", note: "Trying to get 6-8 players for rotating games.", ownerName: "Taylor R.", ownerEmail: "demo-taylor@example.com", rsvps: [] },
   ];
 }
 
@@ -1257,8 +1258,13 @@ function renderCasualMatches() {
   document.querySelectorAll("[data-match-filter]").forEach((button) => {
     button.classList.toggle("active", button.dataset.matchFilter === filter);
   });
-  const posts = [...state.casualMatches, ...defaultCasualMatches()].filter((post) => matchesDayFilter(post.day, filter));
-  els.casualMatchList.innerHTML = posts.map((post) => renderPostCard(post, "match")).join("");
+  const currentEmail = (currentSocietyProfile()?.email || state.societySessionEmail || "").toLowerCase();
+  const posts = [...state.quickGames, ...state.casualMatches, ...defaultQuickGames(), ...defaultCasualMatches()]
+    .filter((post) => String(post.ownerEmail || "").toLowerCase() !== currentEmail)
+    .filter((post) => matchesDayFilter(post.day, filter));
+  els.casualMatchList.innerHTML = posts.length
+    ? posts.map((post) => renderPostCard(post, "match")).join("")
+    : `<article class="society-list-card"><strong>No member matches yet</strong><p>Check another day or ask members to post from Play.</p></article>`;
 }
 
 function saveQuickGame(event) {
@@ -1281,8 +1287,13 @@ function renderQuickGames() {
   document.querySelectorAll("[data-quick-game-filter]").forEach((button) => {
     button.classList.toggle("active", button.dataset.quickGameFilter === filter);
   });
-  const posts = [...state.quickGames, ...defaultQuickGames()].filter((post) => matchesDayFilter(post.day, filter));
-  els.quickGameList.innerHTML = posts.map((post) => renderPostCard(post, "quick")).join("");
+  const currentEmail = (currentSocietyProfile()?.email || state.societySessionEmail || "").toLowerCase();
+  const posts = state.quickGames
+    .filter((post) => !currentEmail || String(post.ownerEmail || "").toLowerCase() === currentEmail)
+    .filter((post) => matchesDayFilter(post.day, filter));
+  els.quickGameList.innerHTML = posts.length
+    ? posts.map((post) => renderPostCard(post, "quick")).join("")
+    : `<article class="society-list-card"><strong>No games posted yet</strong><p>Post a last-minute game above for today, tomorrow, or this weekend.</p></article>`;
 }
 
 function renderPostCard(post, type) {
@@ -1347,7 +1358,8 @@ function renderActivityItem(post, label, detail = "") {
 }
 
 function rsvpToCasualMatch(id) {
-  rsvpToPost(state.casualMatches, id);
+  const collection = state.quickGames.some((item) => item.id === id) ? state.quickGames : state.casualMatches;
+  rsvpToPost(collection, id);
   renderCasualMatches();
 }
 
@@ -1379,7 +1391,7 @@ function rsvpToPost(collection, id) {
 function matchesDayFilter(day, filter) {
   const normalized = String(day || "").toLowerCase();
   if (filter === "all") return true;
-  if (filter === "next7") return normalized.includes("next 7");
+  if (filter === "weekend") return normalized.includes("weekend");
   return normalized === filter;
 }
 
