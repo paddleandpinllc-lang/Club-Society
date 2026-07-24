@@ -210,6 +210,7 @@ els.cloudConfigForm.addEventListener("submit", saveCloudConfig);
 els.rosterSearch.addEventListener("input", renderPlayers);
 document.querySelector("#playerList").addEventListener("click", handlePlayerListClick);
 document.querySelector("#eventList").addEventListener("click", handleEventListClick);
+document.querySelector("#publicEventList").addEventListener("click", handlePublicEventListClick);
 document.querySelector("#profileList").addEventListener("click", handleProfileListClick);
 document.querySelector("#shopCollections").addEventListener("click", handleShopListClick);
 document.querySelector("#archiveList").addEventListener("click", handleArchiveListClick);
@@ -934,6 +935,12 @@ function handleSocietyAppClick(event) {
     return;
   }
 
+  const matchMessageButton = event.target.closest("[data-match-message]");
+  if (matchMessageButton) {
+    messagePostCreator(matchMessageButton.dataset.matchMessage);
+    return;
+  }
+
   const quickGameFilterButton = event.target.closest("[data-quick-game-filter]");
   if (quickGameFilterButton) {
     state.quickGameFilter = quickGameFilterButton.dataset.quickGameFilter;
@@ -945,6 +952,30 @@ function handleSocietyAppClick(event) {
   const quickGameRsvpButton = event.target.closest("[data-quick-game-rsvp]");
   if (quickGameRsvpButton) {
     rsvpToQuickGame(quickGameRsvpButton.dataset.quickGameRsvp);
+    return;
+  }
+
+  const quickGameMessageButton = event.target.closest("[data-quick-game-message]");
+  if (quickGameMessageButton) {
+    messagePostCreator(quickGameMessageButton.dataset.quickGameMessage);
+    return;
+  }
+
+  const societyEventRsvpButton = event.target.closest("[data-society-event-rsvp]");
+  if (societyEventRsvpButton) {
+    openEventRsvp(societyEventRsvpButton.dataset.societyEventRsvp);
+    return;
+  }
+
+  const societyEventMessageButton = event.target.closest("[data-society-event-message]");
+  if (societyEventMessageButton) {
+    messageEventHost(societyEventMessageButton.dataset.societyEventMessage);
+    return;
+  }
+
+  const staticEventMessageButton = event.target.closest("[data-static-event-message]");
+  if (staticEventMessageButton) {
+    messageStaticEventHost(staticEventMessageButton.dataset.staticEventMessage);
     return;
   }
 
@@ -1330,6 +1361,7 @@ function renderQuickGames() {
 function renderPostCard(post, type) {
   const rsvps = post.rsvps || [];
   const action = type === "match" ? "data-match-rsvp" : "data-quick-game-rsvp";
+  const messageAction = type === "match" ? "data-match-message" : "data-quick-game-message";
   const needed = post.playersNeeded ? `${post.playersNeeded} needed | ` : "";
   return `
     <article class="society-post-card">
@@ -1343,6 +1375,7 @@ function renderPostCard(post, type) {
       <div class="society-post-actions">
         <span>${rsvps.length} RSVP${rsvps.length === 1 ? "" : "s"}</span>
         <button ${action}="${escapeHtml(post.id)}" type="button">RSVP</button>
+        <button ${messageAction}="${escapeHtml(post.id)}" type="button">Message</button>
       </div>
     </article>
   `;
@@ -1417,6 +1450,28 @@ function rsvpToPost(collection, id) {
   saveState();
   renderProfileActivity();
   els.societyAccountMessage.textContent = "RSVP saved.";
+}
+
+function allPlayablePosts() {
+  return [
+    ...state.casualMatches,
+    ...state.quickGames,
+    ...defaultCasualMatches(),
+    ...defaultQuickGames(),
+  ];
+}
+
+function findPlayablePost(id) {
+  return allPlayablePosts().find((post) => post.id === id);
+}
+
+function messagePostCreator(id) {
+  const post = findPlayablePost(id);
+  if (!post) return;
+  openPrefilledMessage(
+    post.ownerName || "Society Member",
+    `Hey ${post.ownerName || "there"}, I saw your post for ${post.title || "a game"} and wanted to connect.`
+  );
 }
 
 function matchesDayFilter(day, filter) {
@@ -1863,8 +1918,22 @@ function messageSuggestionCards() {
     email: "",
     type: item.visibility === "private" ? "Private group" : "Group",
   }));
+  const postOwnerCards = allPlayablePosts()
+    .filter((item) => item.ownerName)
+    .map((item) => ({
+      id: item.ownerEmail || item.ownerName,
+      name: item.ownerName,
+      email: item.ownerEmail || "",
+      type: "Post creator",
+    }));
+  const hostCards = state.events.map((item) => ({
+    id: item.id,
+    name: item.ownerName || item.hostName || "Club Society Host",
+    email: item.ownerEmail || item.hostEmail || "",
+    type: "Event host",
+  }));
   const byName = new Map();
-  [...profileCards, ...demoCards, ...groupCards]
+  [...profileCards, ...demoCards, ...groupCards, ...postOwnerCards, ...hostCards, { id: "club-society-host", name: "Club Society Host", email: "", type: "Event host" }]
     .filter((item) => item.name)
     .forEach((item) => {
       const key = item.name.toLowerCase();
@@ -1891,6 +1960,13 @@ function resolveMessageRecipient(value) {
   if (partial.length === 1) return { ok: true, ...partial[0] };
   if (partial.length > 1) return { ok: false, message: "Pick one matching member from the suggestions." };
   return { ok: false, message: "No matching member or group found. Try a different name." };
+}
+
+function openPrefilledMessage(to, body) {
+  setSocietyTab("golfMessages");
+  els.golfMessageForm.elements.to.value = to || "Club Society Host";
+  els.golfMessageForm.elements.body.value = body || "Wanted to connect about this post.";
+  els.golfMessageForm.elements.body.focus();
 }
 
 function golfMatchCards() {
@@ -2007,6 +2083,10 @@ function renderPublicEvents() {
           <p class="meta">${escapeHtml(event.format)} | ${escapeHtml(event.venue)} | ${escapeHtml(event.date)}</p>
           <p>${escapeHtml(event.note || "")}</p>
           <p class="meta">${count}/${capacity || "No"} spots reserved | /events/${escapeHtml(event.slug || event.id)}</p>
+          <div class="card-actions">
+            <button type="button" data-society-event-rsvp="${escapeHtml(event.id)}">${full ? "Join Waitlist" : "RSVP"}</button>
+            <button type="button" data-society-event-message="${escapeHtml(event.id)}">Message Host</button>
+          </div>
         </article>
       `;
     }).join("")
@@ -2015,6 +2095,36 @@ function renderPublicEvents() {
   els.publicRsvpEvent.innerHTML = published.length
     ? published.map((event) => `<option value="${event.id}">${escapeHtml(event.name)} - ${escapeHtml(event.date)}</option>`).join("")
     : `<option value="">No published events yet</option>`;
+}
+
+function handlePublicEventListClick(event) {
+  const rsvpButton = event.target.closest("[data-society-event-rsvp]");
+  if (rsvpButton) {
+    openEventRsvp(rsvpButton.dataset.societyEventRsvp);
+    return;
+  }
+
+  const messageButton = event.target.closest("[data-society-event-message]");
+  if (messageButton) messageEventHost(messageButton.dataset.societyEventMessage);
+}
+
+function openEventRsvp(id) {
+  const item = state.events.find((event) => event.id === id);
+  if (!item) return;
+  setView("publicEvents");
+  if (els.publicRsvpEvent) els.publicRsvpEvent.value = item.id;
+  document.querySelector(".public-rsvp-panel")?.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function messageEventHost(id) {
+  const item = state.events.find((event) => event.id === id);
+  if (!item) return;
+  const host = item.ownerName || item.hostName || "Club Society Host";
+  openPrefilledMessage(host, `I wanted to ask about ${item.name} on ${item.date || "the event date"}.`);
+}
+
+function messageStaticEventHost(label) {
+  openPrefilledMessage("Club Society Host", `I wanted to ask about ${label || "this event"}.`);
 }
 
 function renderPublicViewControls() {

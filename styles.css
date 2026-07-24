@@ -2380,7 +2380,7 @@ textarea {
 
 .society-post-actions {
   display: grid;
-  grid-template-columns: 1fr auto;
+  grid-template-columns: 1fr auto auto;
   gap: 10px;
   align-items: center;
   padding-top: 2px;
