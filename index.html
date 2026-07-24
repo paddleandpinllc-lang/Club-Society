@@ -194,6 +194,10 @@
                       <input name="stayLoggedIn" type="checkbox" checked>
                       Keep me signed in on this device.
                     </label>
+                    <label class="checkbox-line society-check">
+                      <input name="discoverableSignup" type="checkbox">
+                      List me in Connect Players so members can find me.
+                    </label>
                     <button class="primary" type="submit">Join the Society</button>
                   </div>
                   <div class="auth-panel" data-auth-content="signin">
@@ -243,6 +247,10 @@
                       <input name="allowMessages" type="checkbox" checked>
                       Allow other members to message me.
                     </label>
+                    <label class="checkbox-line society-check">
+                      <input name="discoverable" type="checkbox">
+                      Make my profile discoverable to other members.
+                    </label>
                     <button class="primary" data-profile-save type="button">Save Profile</button>
                     <p class="meta">A profile photo is required before messaging or posting events.</p>
                   </form>
@@ -281,9 +289,9 @@
                 </div>
 
                 <div class="society-mini-actions" aria-label="Member shortcuts">
-                  <button data-society-tab="partners" type="button"><span>Society contacts</span></button>
+                  <button data-society-tab="connectPlayers" type="button"><span>Connect Players</span></button>
                   <button data-society-tab="golfMessages" type="button"><span>Messages</span></button>
-                  <button data-society-tab="partners" type="button"><span>Friends</span><strong id="societyFriendCount">0</strong></button>
+                  <button data-society-tab="clubGroups" type="button"><span>Groups</span><strong id="societyGroupCount">0</strong></button>
                 </div>
 
                 <section class="society-events-dock">
@@ -336,7 +344,8 @@
                   <button data-society-tab="events" type="button"><span>Events</span><strong>Find an Event</strong></button>
                   <button data-society-tab="host" type="button"><span>Create</span><strong>Post an Event</strong></button>
                   <button data-society-tab="golfMessages" type="button"><span>Chat</span><strong>Messages</strong></button>
-                  <button data-society-tab="partners" type="button"><span>People</span><strong>Club Friends</strong></button>
+                  <button data-society-tab="connectPlayers" type="button"><span>People</span><strong>Connect Players</strong></button>
+                  <button data-society-tab="clubGroups" type="button"><span>Groups</span><strong>Club Groups</strong></button>
                   <button data-society-tab="learn" type="button"><span>Level up</span><strong>Lessons</strong></button>
                 </div>
               </section>
@@ -413,6 +422,17 @@
                   <button data-singles-toggle type="button" id="societySinglesToggle">Turn On</button>
                 </div>
                 <div id="casualMatchList" class="society-friend-stack"></div>
+              </section>
+            </div>
+
+            <div class="society-tab" data-society-panel="connectPlayers">
+              <section class="society-section">
+                <button class="society-back-button" data-society-tab="pickleballHome" type="button">Back</button>
+                <div class="society-social-hero">
+                  <p class="eyebrow">Connect Players</p>
+                  <h3>Find members who want to be found.</h3>
+                  <p>Only discoverable members appear here. Tap a photo or name to preview the profile, add them as a friend, or start a message.</p>
+                </div>
                 <div class="society-search-card">
                   <input id="societyFriendSearch" type="search" placeholder="Search players by name, city, sport, skill, or vibe">
                   <div class="society-filter-row">
@@ -422,7 +442,34 @@
                     <button data-society-friend-filter="social" type="button">Social Play</button>
                   </div>
                 </div>
+                <div id="societyProfilePreview" class="society-profile-preview"></div>
                 <div id="societyFriendResults" class="society-friend-stack"></div>
+              </section>
+            </div>
+
+            <div class="society-tab" data-society-panel="clubGroups">
+              <section class="society-section">
+                <button class="society-back-button" data-society-tab="pickleballHome" type="button">Back</button>
+                <p class="eyebrow">Club Groups</p>
+                <h3>Create a crew, private event, or recurring play.</h3>
+                <form id="clubGroupForm" class="society-form society-post-form">
+                  <input name="name" placeholder="Group name" required>
+                  <div class="form-pair">
+                    <select name="visibility">
+                      <option value="public">Public group</option>
+                      <option value="private">Private group</option>
+                    </select>
+                    <select name="sport">
+                      <option>Pickleball</option>
+                      <option>Golf</option>
+                      <option>Both</option>
+                    </select>
+                  </div>
+                  <textarea name="description" rows="2" placeholder="Who is this group for?"></textarea>
+                  <input name="invitees" placeholder="Invite members by name or email, separated by commas">
+                  <button class="primary" type="submit">Create Group</button>
+                </form>
+                <div id="clubGroupList" class="society-stack"></div>
               </section>
             </div>
 

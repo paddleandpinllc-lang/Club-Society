@@ -72,13 +72,17 @@ const els = {
   societyMemberMeta: document.querySelector("#societyMemberMeta"),
   societyFavoriteCount: document.querySelector("#societyFavoriteCount"),
   societyFriendCount: document.querySelector("#societyFriendCount"),
+  societyGroupCount: document.querySelector("#societyGroupCount"),
   societyFriendSearch: document.querySelector("#societyFriendSearch"),
   societyFriendResults: document.querySelector("#societyFriendResults"),
+  societyProfilePreview: document.querySelector("#societyProfilePreview"),
   societySinglesToggle: document.querySelector("#societySinglesToggle"),
   myRsvpList: document.querySelector("#myRsvpList"),
   myPostList: document.querySelector("#myPostList"),
   casualMatchForm: document.querySelector("#casualMatchForm"),
   casualMatchList: document.querySelector("#casualMatchList"),
+  clubGroupForm: document.querySelector("#clubGroupForm"),
+  clubGroupList: document.querySelector("#clubGroupList"),
   quickGameForm: document.querySelector("#quickGameForm"),
   quickGameList: document.querySelector("#quickGameList"),
   courtSearch: document.querySelector("#courtSearch"),
@@ -180,6 +184,7 @@ els.societyProfileDrawer.addEventListener("submit", (event) => {
 els.societyPhotoInput.addEventListener("change", previewSocietyPhoto);
 els.societyFriendSearch.addEventListener("input", renderSocietyFriends);
 els.casualMatchForm.addEventListener("submit", saveCasualMatch);
+els.clubGroupForm.addEventListener("submit", saveClubGroup);
 els.quickGameForm.addEventListener("submit", saveQuickGame);
 els.courtSearch.addEventListener("input", renderCourtDirectory);
 els.golfTeeTimeForm.addEventListener("submit", saveGolfTeeTime);
@@ -275,6 +280,8 @@ function loadState() {
     societyFavorites: [],
     societyFriends: [],
     societyFriendFilter: "all",
+    selectedSocietyProfileId: "",
+    clubGroups: [],
     casualMatches: [],
     casualMatchFilter: "all",
     quickGames: [],
@@ -303,6 +310,7 @@ function normalizeState(data) {
     ...DEFAULT_LOCATION,
     verificationStatus: profile.verificationStatus || "Unverified",
     verificationMethod: profile.verificationMethod || "email",
+    discoverable: profile.discoverable === true,
     ...profile,
   }));
   data.events = data.events || [];
@@ -316,6 +324,8 @@ function normalizeState(data) {
   data.societyFavorites = data.societyFavorites || [];
   data.societyFriends = data.societyFriends || [];
   data.societyFriendFilter = data.societyFriendFilter || "all";
+  data.selectedSocietyProfileId = data.selectedSocietyProfileId || "";
+  data.clubGroups = data.clubGroups || [];
   data.casualMatches = data.casualMatches || [];
   data.casualMatchFilter = data.casualMatchFilter || "all";
   data.quickGames = data.quickGames || [];
@@ -392,6 +402,7 @@ function render() {
   renderCloudConfig();
   renderCloudStatus();
   renderGolf();
+  renderClubGroups();
   updateSocietyHome();
 }
 
@@ -740,6 +751,7 @@ async function saveSocietyAccount(event) {
     availability: existing?.availability || "Flexible",
     interests: Array.from(new Set([...(existing?.interests || []), "Find local games", "Social round robins", "Golf groups"])),
     smsSubscriber: existing?.smsSubscriber || false,
+    discoverable: data.discoverableSignup === "on" || existing?.discoverable === true,
     stayLoggedIn: data.stayLoggedIn === "on",
     sport,
     verificationStatus: existing?.verificationStatus || "Unverified",
@@ -842,9 +854,33 @@ function handleSocietyAppClick(event) {
     return;
   }
 
+  const profileViewButton = event.target.closest("[data-profile-view]");
+  if (profileViewButton) {
+    showSocietyProfilePreview(profileViewButton.dataset.profileView);
+    return;
+  }
+
   const messageFriendButton = event.target.closest("[data-friend-message]");
   if (messageFriendButton) {
     messageSocietyFriend(messageFriendButton.dataset.friendMessage);
+    return;
+  }
+
+  const groupMessageButton = event.target.closest("[data-group-message]");
+  if (groupMessageButton) {
+    messageClubGroup(groupMessageButton.dataset.groupMessage);
+    return;
+  }
+
+  const groupDeleteButton = event.target.closest("[data-group-delete]");
+  if (groupDeleteButton) {
+    deleteClubGroup(groupDeleteButton.dataset.groupDelete);
+    return;
+  }
+
+  const groupEventButton = event.target.closest("[data-group-add-event]");
+  if (groupEventButton) {
+    addClubGroupEvent(groupEventButton.dataset.groupAddEvent);
     return;
   }
 
@@ -912,7 +948,7 @@ function setAuthPanel(panel) {
 }
 
 function setSocietyTab(tab) {
-  const protectedTabs = new Set(["pickleballHome", "games", "courts", "events", "partners", "host", "learn", "settings", "golfMessages"]);
+  const protectedTabs = new Set(["pickleballHome", "games", "courts", "events", "partners", "connectPlayers", "clubGroups", "host", "learn", "settings", "golfMessages"]);
   if (protectedTabs.has(tab) && !hasSocietyAccess()) {
     setSocietyTab("home");
     els.societyAccountMessage.textContent = "Sign in or Join to access";
@@ -929,10 +965,9 @@ function setSocietyTab(tab) {
     button.classList.toggle("active", button.dataset.societyTab === tab);
   });
   if (tab === "home") updateSocietyHome();
-  if (tab === "partners") {
-    renderCasualMatches();
-    renderSocietyFriends();
-  }
+  if (tab === "partners") renderCasualMatches();
+  if (tab === "connectPlayers") renderSocietyFriends();
+  if (tab === "clubGroups") renderClubGroups();
   if (tab === "games") renderQuickGames();
   if (tab === "courts") renderCourtDirectory();
 }
@@ -962,6 +997,7 @@ function updateSocietyHome() {
     : "Golf + Pickleball | 30677";
   if (els.societyFavoriteCount) els.societyFavoriteCount.textContent = String(state.societyFavorites.length);
   if (els.societyFriendCount) els.societyFriendCount.textContent = String(state.societyFriends.length);
+  if (els.societyGroupCount) els.societyGroupCount.textContent = String(state.clubGroups.length);
   fillSocietyProfileDrawer(profile);
   updateSocietyAvatar(profile);
   renderSocietyFriends();
@@ -980,6 +1016,7 @@ function fillSocietyProfileDrawer(profile) {
   fields.zip.value = profile?.zip || "30677";
   fields.bio.value = profile?.bio || "";
   fields.allowMessages.checked = profile?.allowMessages !== false;
+  fields.discoverable.checked = profile?.discoverable === true;
 }
 
 function updateSocietyAvatar(profile = currentSocietyProfile()) {
@@ -1033,6 +1070,7 @@ async function saveSocietyProfileFromDrawer() {
     bio: data.bio || "",
     photoDataUrl,
     allowMessages: data.allowMessages === "on",
+    discoverable: data.discoverable === "on",
     stayLoggedIn: true,
     preferredSport: profile?.preferredSport || "both",
     sport: profile?.sport || "pickleball",
@@ -1086,7 +1124,7 @@ function readFileAsDataUrl(file) {
 function societyDirectoryCards() {
   const currentEmail = state.societySessionEmail?.toLowerCase();
   const savedProfiles = state.profiles
-    .filter((profile) => profile.email?.toLowerCase() !== currentEmail)
+    .filter((profile) => profile.email?.toLowerCase() !== currentEmail && profile.discoverable === true)
     .map((profile) => ({
       id: profile.id,
       name: `${profile.firstName || ""} ${profile.lastName || ""}`.trim() || "Club member",
@@ -1097,12 +1135,15 @@ function societyDirectoryCards() {
       photoDataUrl: profile.photoDataUrl || "",
       socialPlay: Boolean(profile.socialPlay),
       allowMessages: profile.allowMessages !== false,
+      bio: profile.bio || "",
+      email: profile.email || "",
+      phone: profile.phone || "",
+      discoverable: true,
     }));
   const demoProfiles = [
-    { id: "demo-maya", name: "Maya Thompson", city: "Watkinsville", sport: "pickleball", skill: "3.5 doubles", vibe: "Weeknight games, mixed doubles, and post-match hangouts.", socialPlay: true, allowMessages: true },
-    { id: "demo-eli", name: "Eli Parker", city: "Athens", sport: "golf", skill: "12 handicap", vibe: "Last-minute tee times, relaxed pace, good playlists.", socialPlay: true, allowMessages: true },
-    { id: "demo-jordan", name: "Jordan Reese", city: "Oconee", sport: "both", skill: "Pickleball 3.0 | Golf 18", vibe: "Down for social play, beginner-friendly groups, and club events.", socialPlay: true, allowMessages: true },
-    { id: "demo-avery", name: "Avery Collins", city: "Athens", sport: "pickleball", skill: "Open play", vibe: "Looking for a steady drill partner and Saturday morning games.", socialPlay: false, allowMessages: false },
+    { id: "demo-maya", name: "Maya Thompson", city: "Watkinsville", sport: "pickleball", skill: "3.5 doubles", vibe: "Weeknight games, mixed doubles, and post-match hangouts.", socialPlay: true, allowMessages: true, discoverable: true },
+    { id: "demo-eli", name: "Eli Parker", city: "Athens", sport: "golf", skill: "12 handicap", vibe: "Last-minute tee times, relaxed pace, good playlists.", socialPlay: true, allowMessages: true, discoverable: true },
+    { id: "demo-jordan", name: "Jordan Reese", city: "Oconee", sport: "both", skill: "Pickleball 3.0 | Golf 18", vibe: "Down for social play, beginner-friendly groups, and club events.", socialPlay: true, allowMessages: true, discoverable: true },
   ];
   return [...savedProfiles, ...demoProfiles];
 }
@@ -1161,8 +1202,39 @@ function renderSocietyFriends() {
   });
   els.societyFriendResults.innerHTML = cards.length
     ? cards.map((card) => renderSocietyFriendCard(card)).join("")
-    : `<article class="society-list-card"><strong>No matches yet</strong><p>Try a different name, city, sport, or skill.</p></article>`;
+    : `<article class="society-list-card"><strong>No discoverable members yet</strong><p>Members appear here only after they turn on discoverability in their profile.</p></article>`;
+  if (els.societyProfilePreview && state.selectedSocietyProfileId && cards.some((card) => card.id === state.selectedSocietyProfileId)) {
+    showSocietyProfilePreview(state.selectedSocietyProfileId);
+  } else if (els.societyProfilePreview) {
+    state.selectedSocietyProfileId = "";
+    els.societyProfilePreview.innerHTML = `<article class="society-list-card"><strong>Tap a member</strong><p>Click a profile photo or name to preview details and connection options.</p></article>`;
+  }
   updateSinglesToggle();
+}
+
+function showSocietyProfilePreview(id) {
+  const card = societyDirectoryCards().find((item) => item.id === id);
+  if (!card || !els.societyProfilePreview) return;
+  state.selectedSocietyProfileId = id;
+  saveState();
+  const photo = card.photoDataUrl
+    ? `style="background-image:url('${escapeHtml(card.photoDataUrl)}')"`
+    : "";
+  els.societyProfilePreview.innerHTML = `
+    <article class="society-profile-preview-card">
+      <button class="society-friend-photo large" data-profile-view="${escapeHtml(card.id)}" ${photo} type="button">${card.photoDataUrl ? "" : escapeHtml(initials(card.name))}</button>
+      <div>
+        <span>${escapeHtml(card.city)} | ${escapeHtml(card.sport)}</span>
+        <strong>${escapeHtml(card.name)}</strong>
+        <p>${escapeHtml(card.skill)}</p>
+        <p>${escapeHtml(card.bio || card.vibe || "Open to club play.")}</p>
+      </div>
+      <div class="society-friend-actions">
+        <button data-friend-add="${escapeHtml(card.id)}" type="button">Add Friend</button>
+        <button ${card.allowMessages === false ? "disabled" : `data-friend-message="${escapeHtml(card.id)}"`} type="button">${card.allowMessages === false ? "No messages" : "Message"}</button>
+      </div>
+    </article>
+  `;
 }
 
 function saveCasualMatch(event) {
@@ -1222,6 +1294,7 @@ function renderPostCard(post, type) {
       <div>
         <span>${escapeHtml(post.day)} | ${escapeHtml(post.time || "Time TBD")}</span>
         <strong>${escapeHtml(post.title)}</strong>
+        ${post.ownerName ? `<em class="post-owner">Posted by ${escapeHtml(post.ownerName)}</em>` : ""}
         <p>${needed}${escapeHtml(post.location || "Location TBD")} ${post.skill ? `| ${escapeHtml(post.skill)}` : ""}</p>
         <p>${escapeHtml(post.note || "RSVP if you can play.")}</p>
       </div>
@@ -1340,10 +1413,10 @@ function renderSocietyFriendCard(card) {
     : "";
   return `
     <article class="society-friend-card">
-      <div class="society-friend-photo" ${photo}>${card.photoDataUrl ? "" : escapeHtml(initials(card.name))}</div>
+      <button class="society-friend-photo" data-profile-view="${escapeHtml(card.id)}" ${photo} type="button" aria-label="View ${escapeHtml(card.name)}">${card.photoDataUrl ? "" : escapeHtml(initials(card.name))}</button>
       <div>
         <span>${escapeHtml(card.city)} | ${escapeHtml(card.sport)}</span>
-        <strong>${escapeHtml(card.name)}</strong>
+        <button class="profile-name-link" data-profile-view="${escapeHtml(card.id)}" type="button">${escapeHtml(card.name)}</button>
         <p>${escapeHtml(card.skill)} - ${escapeHtml(card.vibe)}</p>
       </div>
       <div class="society-friend-actions">
@@ -1389,6 +1462,119 @@ function toggleSocialPlay() {
   els.societyAccountMessage.textContent = profile.socialPlay
     ? "Social Play is on. Members can see you are open to friendly meetups."
     : "Social Play is off.";
+}
+
+function saveClubGroup(event) {
+  event.preventDefault();
+  if (!profileHasPhoto()) {
+    promptForSocietyPhoto();
+    return;
+  }
+  const data = Object.fromEntries(new FormData(els.clubGroupForm).entries());
+  const owner = currentPostOwner();
+  state.clubGroups.unshift({
+    ...data,
+    ...owner,
+    id: newId(),
+    invitees: splitInvitees(data.invitees),
+    messages: [],
+    events: [],
+    createdAt: new Date().toISOString(),
+  });
+  els.clubGroupForm.reset();
+  saveState();
+  renderClubGroups();
+  els.societyAccountMessage.textContent = `${data.name} created.`;
+}
+
+function renderClubGroups() {
+  if (!els.clubGroupList) return;
+  const profile = currentSocietyProfile();
+  const currentEmail = (profile?.email || state.societySessionEmail || "").toLowerCase();
+  const currentName = profile ? `${profile.firstName || ""} ${profile.lastName || ""}`.trim().toLowerCase() : "";
+  const groups = state.clubGroups.filter((group) => {
+    const isOwner = String(group.ownerEmail || "").toLowerCase() === currentEmail;
+    const isInvited = (group.invitees || []).some((invite) => {
+      const value = invite.toLowerCase();
+      return value === currentEmail || (currentName && value === currentName);
+    });
+    return group.visibility === "public" || isOwner || isInvited;
+  });
+  if (els.societyGroupCount) els.societyGroupCount.textContent = String(state.clubGroups.length);
+  els.clubGroupList.innerHTML = groups.length
+    ? groups.map((group) => renderClubGroupCard(group, currentEmail)).join("")
+    : `<article class="society-list-card"><strong>No groups yet</strong><p>Create a public group for the club or a private crew for invited players.</p></article>`;
+}
+
+function renderClubGroupCard(group, currentEmail) {
+  const isOwner = String(group.ownerEmail || "").toLowerCase() === currentEmail;
+  const invitees = (group.invitees || []).join(", ") || "No invitees yet";
+  const events = (group.events || []).map((item) => `
+    <li><strong>${escapeHtml(item.title)}</strong> ${escapeHtml(item.date || "Date TBD")} ${escapeHtml(item.time || "")} | ${escapeHtml(item.repeats || "One-time")}</li>
+  `).join("") || "<li>No scheduled events yet.</li>";
+  const messages = (group.messages || []).slice(0, 3).map((item) => `
+    <p><strong>${escapeHtml(item.from || "Member")}:</strong> ${escapeHtml(item.body)}</p>
+  `).join("") || "<p>No group messages yet.</p>";
+  return `
+    <article class="club-group-card">
+      <div class="club-group-head">
+        <div>
+          <span>${escapeHtml(group.visibility)} | ${escapeHtml(group.sport)}</span>
+          <strong>${escapeHtml(group.name)}</strong>
+          <p>${escapeHtml(group.description || "A Club Society group.")}</p>
+        </div>
+        <span class="status-pill">${escapeHtml(group.ownerName || "Organizer")}</span>
+      </div>
+      <p class="meta">Invited: ${escapeHtml(invitees)}</p>
+      <div class="club-group-events"><span>Schedule</span><ul>${events}</ul></div>
+      <div class="club-group-messages"><span>Group chat</span>${messages}</div>
+      <div class="society-friend-actions">
+        <button data-group-message="${escapeHtml(group.id)}" type="button">Message Group</button>
+        ${isOwner ? `<button data-group-add-event="${escapeHtml(group.id)}" type="button">Schedule Event</button><button class="danger" data-group-delete="${escapeHtml(group.id)}" type="button">Delete</button>` : ""}
+      </div>
+    </article>
+  `;
+}
+
+function messageClubGroup(id) {
+  const group = state.clubGroups.find((item) => item.id === id);
+  if (!group) return;
+  const body = window.prompt(`Message ${group.name}`);
+  if (!body?.trim()) return;
+  group.messages = group.messages || [];
+  group.messages.unshift({ from: currentPostOwner().ownerName, body: body.trim(), at: new Date().toISOString() });
+  saveState();
+  renderClubGroups();
+}
+
+function addClubGroupEvent(id) {
+  const group = state.clubGroups.find((item) => item.id === id);
+  if (!group) return;
+  const title = window.prompt("Event name");
+  if (!title?.trim()) return;
+  const date = window.prompt("Event date, ex: Friday or 2026-08-01") || "";
+  const time = window.prompt("Start time, ex: 6:00 PM") || "";
+  const repeats = window.prompt("Repeat schedule: One-time, Weekly, Monthly") || "One-time";
+  group.events = group.events || [];
+  group.events.unshift({ id: newId(), title: title.trim(), date, time, repeats, createdAt: new Date().toISOString() });
+  saveState();
+  renderClubGroups();
+}
+
+function deleteClubGroup(id) {
+  const group = state.clubGroups.find((item) => item.id === id);
+  if (!group) return;
+  if (!window.confirm(`Delete ${group.name}?`)) return;
+  state.clubGroups = state.clubGroups.filter((item) => item.id !== id);
+  saveState();
+  renderClubGroups();
+}
+
+function splitInvitees(value) {
+  return String(value || "")
+    .split(",")
+    .map((item) => item.trim().toLowerCase())
+    .filter(Boolean);
 }
 
 function updateSinglesToggle() {

@@ -2093,6 +2093,7 @@ textarea {
   place-items: center;
   width: 58px;
   height: 58px;
+  border: 0;
   border-radius: 18px;
   background:
     linear-gradient(135deg, rgba(11, 34, 49, 0.96), rgba(31, 138, 98, 0.9)),
@@ -2101,6 +2102,24 @@ textarea {
   background-size: cover;
   color: #fff;
   font-weight: 950;
+}
+
+.society-friend-photo.large {
+  width: 74px;
+  height: 74px;
+  border-radius: 22px;
+}
+
+.profile-name-link {
+  min-height: auto;
+  border: 0;
+  background: transparent;
+  color: var(--navy);
+  font-size: 1.06rem;
+  font-weight: 950;
+  line-height: 1.1;
+  padding: 0;
+  text-align: left;
 }
 
 .society-friend-card span {
@@ -2137,6 +2156,96 @@ textarea {
   border-color: var(--gold);
   background: var(--gold);
   color: var(--navy);
+}
+
+.society-profile-preview {
+  display: grid;
+  gap: 10px;
+}
+
+.society-profile-preview-card,
+.club-group-card {
+  border: 1px solid rgba(31, 138, 98, 0.16);
+  border-radius: 20px;
+  background:
+    radial-gradient(circle at 10% 0%, rgba(244, 181, 43, 0.18), transparent 34%),
+    linear-gradient(180deg, #fff, rgba(255, 247, 232, 0.78));
+  box-shadow: 0 14px 32px rgba(11, 34, 49, 0.1);
+  padding: 14px;
+}
+
+.society-profile-preview-card {
+  display: grid;
+  grid-template-columns: 74px 1fr;
+  gap: 12px;
+}
+
+.society-profile-preview-card .society-friend-actions {
+  grid-column: 1 / -1;
+}
+
+.society-profile-preview-card span,
+.club-group-head span,
+.club-group-events span,
+.club-group-messages span {
+  color: var(--green);
+  font-size: 0.72rem;
+  font-weight: 950;
+  text-transform: uppercase;
+}
+
+.society-profile-preview-card strong,
+.club-group-head strong {
+  display: block;
+  color: var(--navy);
+  font-size: 1.18rem;
+  margin: 2px 0 4px;
+}
+
+.society-profile-preview-card p,
+.club-group-card p {
+  margin: 0;
+  color: var(--muted);
+}
+
+.post-owner {
+  display: block;
+  color: var(--green);
+  font-size: 0.78rem;
+  font-style: normal;
+  font-weight: 900;
+  margin-top: 4px;
+}
+
+.club-group-card {
+  display: grid;
+  gap: 12px;
+}
+
+.club-group-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.club-group-events,
+.club-group-messages {
+  border: 1px solid rgba(11, 34, 49, 0.08);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.72);
+  padding: 10px;
+}
+
+.club-group-events ul {
+  margin: 8px 0 0;
+  padding-left: 18px;
+}
+
+.club-group-events li,
+.club-group-messages p {
+  color: #315263;
+  font-size: 0.88rem;
+  margin: 6px 0 0;
 }
 
 .society-profile-activity-grid {
