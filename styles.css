@@ -183,6 +183,42 @@ button:hover,
   padding: 26px;
 }
 
+.standalone-member-app {
+  min-height: 100vh;
+  background: #fff7e8;
+}
+
+.standalone-member-app .sidebar,
+.standalone-member-app .topbar {
+  display: none;
+}
+
+.standalone-member-app .app {
+  margin-left: 0;
+  padding: 0;
+}
+
+.standalone-member-app main {
+  min-height: 100vh;
+}
+
+.standalone-member-app .view {
+  display: none;
+}
+
+.standalone-member-app #societyApp.view {
+  display: block;
+}
+
+.standalone-member-app .society-phone-shell {
+  width: 100%;
+  max-width: none;
+  min-height: 100vh;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
 .topbar {
   display: flex;
   align-items: end;

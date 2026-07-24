@@ -4,6 +4,10 @@ const INTEGRATION_CONFIG_KEY = "clubSociety.integrationConfig.v1";
 const PADDLE_PINT_SYNC_CONFIG_KEY = "clubSociety.paddlePintSync.v1";
 const PADDLE_PINT_ENDPOINT_URL = "https://clubsociety.app/api/paddle-pint";
 const APP_VERSION = document.querySelector('meta[name="app-version"]')?.content || "local-dev";
+const urlParams = new URLSearchParams(window.location.search);
+const isStandaloneLaunch = urlParams.get("app") === "1"
+  || window.matchMedia("(display-mode: standalone)").matches
+  || window.navigator.standalone === true;
 const DEFAULT_LOCATION = { street: "", city: "Watkinsville", state: "GA", zip: "30677" };
 const DEFAULT_PUBLIC_VIEW = {
   headline: "Find your next game",
@@ -254,6 +258,7 @@ if ("serviceWorker" in navigator) {
   }).catch(() => {});
 }
 
+applyLaunchMode();
 render();
 initProfileCompletionLink();
 
@@ -344,6 +349,20 @@ function saveState() {
 function setView(id) {
   els.navItems.forEach((item) => item.classList.toggle("active", item.dataset.view === id));
   els.views.forEach((view) => view.classList.toggle("active", view.id === id));
+}
+
+function applyLaunchMode() {
+  if (urlParams.get("admin") === "1") {
+    document.body.classList.add("admin-mode");
+    setView("command");
+    return;
+  }
+
+  if (isStandaloneLaunch) {
+    document.body.classList.add("standalone-member-app");
+    setView("societyApp");
+    setSocietyTab("home");
+  }
 }
 
 function setMode(mode) {
