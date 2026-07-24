@@ -291,7 +291,7 @@
                 <div class="society-mini-actions" aria-label="Member shortcuts">
                   <button data-society-tab="connectPlayers" type="button"><span>Connect Players</span></button>
                   <button data-society-tab="golfMessages" type="button"><span>Messages</span></button>
-                  <button data-society-tab="clubGroups" type="button"><span>Groups</span><strong id="societyGroupCount">0</strong></button>
+                  <button data-society-tab="myGroups" type="button"><span>My Groups</span><strong id="societyGroupCount">0</strong></button>
                 </div>
 
                 <section class="society-events-dock">
@@ -346,6 +346,7 @@
                   <button data-society-tab="golfMessages" type="button"><span>Chat</span><strong>Messages</strong></button>
                   <button data-society-tab="connectPlayers" type="button"><span>People</span><strong>Connect Players</strong></button>
                   <button data-society-tab="clubGroups" type="button"><span>Groups</span><strong>Club Groups</strong></button>
+                  <button data-society-tab="myGroups" type="button"><span>Mine</span><strong>My Groups</strong></button>
                   <button data-society-tab="learn" type="button"><span>Level up</span><strong>Lessons</strong></button>
                 </div>
               </section>
@@ -435,7 +436,17 @@
               <section class="society-section">
                 <button class="society-back-button" data-society-tab="pickleballHome" type="button">Back</button>
                 <p class="eyebrow">Club Groups</p>
-                <h3>Create a crew, private event, or recurring play.</h3>
+                <h3>Public groups posted by members.</h3>
+                <p class="section-copy">Browse open groups and join the ones that fit how you like to play.</p>
+                <div id="clubGroupList" class="society-stack"></div>
+              </section>
+            </div>
+
+            <div class="society-tab" data-society-panel="myGroups">
+              <section class="society-section">
+                <button class="society-back-button" data-society-tab="pickleballHome" type="button">Back</button>
+                <p class="eyebrow">My Groups</p>
+                <h3>Groups you created or joined.</h3>
                 <form id="clubGroupForm" class="society-form society-post-form">
                   <input name="name" placeholder="Group name" required>
                   <div class="form-pair">
@@ -453,7 +464,7 @@
                   <input name="invitees" placeholder="Invite members by name or email, separated by commas">
                   <button class="primary" type="submit">Create Group</button>
                 </form>
-                <div id="clubGroupList" class="society-stack"></div>
+                <div id="myGroupList" class="society-stack"></div>
               </section>
             </div>
 
