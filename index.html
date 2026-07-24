@@ -664,7 +664,8 @@
                 <p class="eyebrow">Messages</p>
                 <h3>Member chat</h3>
                 <form id="golfMessageForm" class="society-form">
-                  <input name="to" placeholder="To: member or group" required>
+                  <input name="to" list="memberSuggestionList" placeholder="To: start typing a member name" autocomplete="off" required>
+                  <datalist id="memberSuggestionList"></datalist>
                   <textarea name="body" rows="3" placeholder="Can you make 4:10 at Lane Creek?" required></textarea>
                   <button class="primary" type="submit">Send Message</button>
                 </form>

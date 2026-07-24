@@ -101,6 +101,7 @@ const els = {
   golfGroupList: document.querySelector("#golfGroupList"),
   golfMessageForm: document.querySelector("#golfMessageForm"),
   golfMessageList: document.querySelector("#golfMessageList"),
+  memberSuggestionList: document.querySelector("#memberSuggestionList"),
   golfMatchDeck: document.querySelector("#golfMatchDeck"),
   golfPassBtn: document.querySelector("#golfPassBtn"),
   golfMessageMatchBtn: document.querySelector("#golfMessageMatchBtn"),
@@ -194,6 +195,7 @@ els.courtSearch.addEventListener("input", renderCourtDirectory);
 els.golfTeeTimeForm.addEventListener("submit", saveGolfTeeTime);
 els.golfGroupForm.addEventListener("submit", saveGolfGroup);
 els.golfMessageForm.addEventListener("submit", saveGolfMessage);
+els.golfMessageForm.elements.to.addEventListener("input", updateMemberSuggestions);
 els.golfPassBtn.addEventListener("click", passGolfMatch);
 els.golfMessageMatchBtn.addEventListener("click", messageGolfMatch);
 els.adminForm.addEventListener("submit", saveAdmin);
@@ -422,6 +424,7 @@ function render() {
   renderCloudStatus();
   renderGolf();
   renderClubGroups();
+  updateMemberSuggestions();
   updateSocietyHome();
 }
 
@@ -1322,7 +1325,7 @@ function renderPostCard(post, type) {
   return `
     <article class="society-post-card">
       <div>
-        <span>${escapeHtml(post.day)} | ${escapeHtml(post.time || "Time TBD")}</span>
+        <span>${escapeHtml(post.day)} | ${escapeHtml(formatDisplayTime(post.time) || "Time TBD")}</span>
         <strong>${escapeHtml(post.title)}</strong>
         ${post.ownerName ? `<em class="post-owner">Posted by ${escapeHtml(post.ownerName)}</em>` : ""}
         <p>${needed}${escapeHtml(post.location || "Location TBD")} ${post.skill ? `| ${escapeHtml(post.skill)}` : ""}</p>
@@ -1370,7 +1373,7 @@ function renderActivityItem(post, label, detail = "") {
     <article class="society-activity-item">
       <span>${escapeHtml(label)}</span>
       <strong>${escapeHtml(post.title || "Untitled")}</strong>
-      <p>${escapeHtml(post.day || "Any day")} | ${escapeHtml(post.time || "Time TBD")} | ${escapeHtml(post.location || "Location TBD")}</p>
+      <p>${escapeHtml(post.day || "Any day")} | ${escapeHtml(formatDisplayTime(post.time) || "Time TBD")} | ${escapeHtml(post.location || "Location TBD")}</p>
       ${detail ? `<p>${escapeHtml(detail)}</p>` : ""}
     </article>
   `;
@@ -1468,10 +1471,6 @@ function addSocietyFriend(id) {
 }
 
 function messageSocietyFriend(id) {
-  if (!profileHasPhoto()) {
-    promptForSocietyPhoto();
-    return;
-  }
   const card = societyDirectoryCards().find((item) => item.id === id);
   if (!card) return;
   if (card.allowMessages === false) {
@@ -1541,7 +1540,7 @@ function renderClubGroupCard(group, currentEmail) {
   const isOwner = String(group.ownerEmail || "").toLowerCase() === currentEmail;
   const invitees = (group.invitees || []).join(", ") || "No invitees yet";
   const events = (group.events || []).map((item) => `
-    <li><strong>${escapeHtml(item.title)}</strong> ${escapeHtml(item.date || "Date TBD")} ${escapeHtml(item.time || "")} | ${escapeHtml(item.repeats || "One-time")}</li>
+    <li><strong>${escapeHtml(item.title)}</strong> ${escapeHtml(item.date || "Date TBD")} ${escapeHtml(formatDisplayTime(item.time) || "")} | ${escapeHtml(item.repeats || "One-time")}</li>
   `).join("") || "<li>No scheduled events yet.</li>";
   const messages = (group.messages || []).slice(0, 3).map((item) => `
     <p><strong>${escapeHtml(item.from || "Member")}:</strong> ${escapeHtml(item.body)}</p>
@@ -1672,20 +1671,25 @@ function saveGolfGroup(event) {
 
 function saveGolfMessage(event) {
   event.preventDefault();
-  if (!profileHasPhoto()) {
-    promptForSocietyPhoto();
+  const data = Object.fromEntries(new FormData(els.golfMessageForm).entries());
+  const recipient = resolveMessageRecipient(data.to);
+  if (!recipient.ok) {
+    els.societyAccountMessage.textContent = recipient.message;
+    els.golfMessageForm.elements.to.focus();
     return;
   }
-  const data = Object.fromEntries(new FormData(els.golfMessageForm).entries());
   state.golfMessages.unshift({
     ...data,
+    to: recipient.name,
+    toId: recipient.id || "",
     id: newId(),
-    from: state.golfProfile.name || "You",
+    from: currentPostOwner().ownerName || "You",
     createdAt: new Date().toISOString(),
   });
   els.golfMessageForm.reset();
   saveState();
   renderGolf();
+  els.societyAccountMessage.textContent = `Message sent to ${recipient.name}.`;
 }
 
 function passGolfMatch() {
@@ -1738,7 +1742,7 @@ function renderGolfTeeTimes() {
   els.golfTeeTimeList.innerHTML = items.map((item) => `
     <article class="society-list-card">
       <strong>${escapeHtml(item.course)}</strong>
-      <span>${escapeHtml(item.date)} | ${escapeHtml(item.time)} | ${escapeHtml(item.spots)} open</span>
+      <span>${escapeHtml(item.date)} | ${escapeHtml(formatDisplayTime(item.time))} | ${escapeHtml(item.spots)} open</span>
       <p>${escapeHtml(item.note || "Open tee time inside the Club Society golf radius.")}</p>
     </article>
   `).join("");
@@ -1769,6 +1773,60 @@ function renderGolfMessages() {
       </article>
     `).join("")
     : `<div class="empty">No golf messages yet. Message a match or tee-time host to start the conversation.</div>`;
+}
+
+function messageSuggestionCards() {
+  const profile = currentSocietyProfile();
+  const currentEmail = (profile?.email || state.societySessionEmail || "").toLowerCase();
+  const profileCards = state.profiles
+    .filter((item) => item.email?.toLowerCase() !== currentEmail)
+    .filter((item) => item.discoverable === true || item.allowMessages === true)
+    .map((item) => ({
+      id: item.id,
+      name: `${item.firstName || ""} ${item.lastName || ""}`.trim() || item.email,
+      email: item.email || "",
+      type: "Member",
+    }));
+  const demoCards = societyDirectoryCards().map((item) => ({
+    id: item.id,
+    name: item.name,
+    email: item.email || "",
+    type: "Member",
+  }));
+  const groupCards = state.clubGroups.map((item) => ({
+    id: item.id,
+    name: item.name,
+    email: "",
+    type: item.visibility === "private" ? "Private group" : "Group",
+  }));
+  const byName = new Map();
+  [...profileCards, ...demoCards, ...groupCards]
+    .filter((item) => item.name)
+    .forEach((item) => {
+      const key = item.name.toLowerCase();
+      if (!byName.has(key)) byName.set(key, item);
+    });
+  return [...byName.values()].sort((a, b) => a.name.localeCompare(b.name));
+}
+
+function updateMemberSuggestions() {
+  if (!els.memberSuggestionList) return;
+  els.memberSuggestionList.innerHTML = messageSuggestionCards().map((item) => `
+    <option value="${escapeHtml(item.name)}" label="${escapeHtml([item.type, item.email].filter(Boolean).join(" | "))}"></option>
+  `).join("");
+}
+
+function resolveMessageRecipient(value) {
+  const input = String(value || "").trim();
+  if (!input) return { ok: false, message: "Type a member or group name first." };
+  const normalized = input.toLowerCase();
+  const cards = messageSuggestionCards();
+  const exact = cards.find((item) => item.name.toLowerCase() === normalized || item.email.toLowerCase() === normalized);
+  if (exact) return { ok: true, ...exact };
+  const partial = cards.filter((item) => item.name.toLowerCase().includes(normalized));
+  if (partial.length === 1) return { ok: true, ...partial[0] };
+  if (partial.length > 1) return { ok: false, message: "Pick one matching member from the suggestions." };
+  return { ok: false, message: "No matching member or group found. Try a different name." };
 }
 
 function golfMatchCards() {
@@ -4001,6 +4059,19 @@ function slugify(value) {
 
 function formatDateTime(value) {
   return new Date(value).toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+}
+
+function formatDisplayTime(value) {
+  const text = String(value || "").trim();
+  if (!text) return "";
+  const match = text.match(/^(\d{1,2}):(\d{2})(?::\d{2})?$/);
+  if (!match) return text;
+  let hour = Number(match[1]);
+  const minute = match[2];
+  const period = hour >= 12 ? "PM" : "AM";
+  hour %= 12;
+  if (hour === 0) hour = 12;
+  return `${hour}:${minute} ${period}`;
 }
 
 function estimateRevenue() {
