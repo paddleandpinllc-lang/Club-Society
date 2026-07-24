@@ -536,8 +536,50 @@ async function sendSocietySignupConfirmation(profile) {
   }
 }
 
+async function sendForgotPasswordEmail(email) {
+  const normalizedEmail = email.trim().toLowerCase();
+  if (!isValidEmail(normalizedEmail)) {
+    showSocietyAccountMessage("Enter a valid email address first.", "error");
+    return;
+  }
+
+  if (!window.location.protocol.startsWith("http")) {
+    showSocietyAccountMessage("Password reset emails send from the hosted app.", "notice");
+    return;
+  }
+
+  try {
+    const response = await fetch("/api/member-signup", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "forgot_password", email: normalizedEmail }),
+    });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok || !result.ok) {
+      showSocietyAccountMessage(result.error || "Password reset could not be started yet.", "error");
+      return;
+    }
+    showSocietyAccountMessage("If that email is in Club Society, a password reset link is on the way.", "success");
+  } catch {
+    showSocietyAccountMessage("Password reset is not reachable from this device yet. Try the hosted app.", "error");
+  }
+}
+
 async function initProfileCompletionLink() {
   const url = new URL(window.location.href);
+  const resetEmail = url.searchParams.get("resetPassword");
+  if (resetEmail) {
+    setView("societyApp");
+    setSocietyTab("home");
+    setAuthPanel("signup");
+    els.societyAccountForm.elements.email.value = resetEmail;
+    els.societyAccountForm.elements.email.focus();
+    url.searchParams.delete("resetPassword");
+    window.history.replaceState({}, "", url.toString());
+    showSocietyAccountMessage("Create a new password below to update your Club Society sign-in.", "notice");
+    return;
+  }
+
   const token = url.searchParams.get("completeProfile");
   if (!token) return;
 
@@ -741,6 +783,18 @@ function handleSocietyAppClick(event) {
       return;
     }
     signInSocietyMember(email, password);
+    return;
+  }
+
+  const forgotPasswordButton = event.target.closest("[data-forgot-password]");
+  if (forgotPasswordButton) {
+    const email = els.societyAccountForm.elements.signinEmail.value.trim();
+    if (!email) {
+      showSocietyAccountMessage("Enter your email address, then tap Forgot password.", "error");
+      els.societyAccountForm.elements.signinEmail.focus();
+      return;
+    }
+    sendForgotPasswordEmail(email);
     return;
   }
 

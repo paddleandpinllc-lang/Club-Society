@@ -1607,6 +1607,22 @@ textarea {
   display: grid;
 }
 
+.forgot-password-link {
+  justify-self: center;
+  min-height: 34px;
+  border: 0;
+  background: transparent;
+  color: var(--green);
+  font-weight: 900;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  box-shadow: none;
+}
+
+.forgot-password-link:hover {
+  color: var(--navy);
+}
+
 .society-check {
   min-height: auto;
   padding: 10px 0;

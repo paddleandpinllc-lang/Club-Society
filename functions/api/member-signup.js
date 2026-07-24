@@ -44,6 +44,11 @@ export async function onRequest(context) {
     if (signinError) return json({ ok: false, error: signinError }, 400, corsHeaders);
     return signInMember(payload, env, corsHeaders);
   }
+  if (payload.action === "forgot_password") {
+    const resetError = validatePasswordResetRequest(payload);
+    if (resetError) return json({ ok: false, error: resetError }, 400, corsHeaders);
+    return sendPasswordReset(payload, request, env, corsHeaders);
+  }
 
   if (validationError) return json({ ok: false, error: validationError }, 400, corsHeaders);
   const member = normalizeMember(payload);
@@ -152,6 +157,38 @@ async function signInMember(payload, env, corsHeaders) {
   } catch (error) {
     console.error("Club Society sign-in failed", error);
     return json({ ok: false, error: "Server error while signing in" }, 500, corsHeaders);
+  }
+}
+
+async function sendPasswordReset(payload, request, env, corsHeaders) {
+  const email = cleanEmail(payload.email);
+
+  try {
+    if (!env.DB) {
+      return json({ ok: true, message: "If that email exists, reset instructions will be sent." }, 200, corsHeaders);
+    }
+
+    await ensureMemberTable(env.DB);
+    const result = await env.DB.prepare(`
+      SELECT first_name, last_name, email
+      FROM club_members
+      WHERE email = ?
+      LIMIT 1
+    `).bind(email).first();
+
+    if (result) {
+      const resetLink = makePasswordResetLink(request, env, result.email);
+      await sendPasswordResetEmail(env, {
+        firstName: result.first_name || "",
+        lastName: result.last_name || "",
+        email: result.email,
+      }, resetLink);
+    }
+
+    return json({ ok: true, message: "If that email exists, reset instructions will be sent." }, 200, corsHeaders);
+  } catch (error) {
+    console.error("Club Society password reset request failed", error);
+    return json({ ok: false, error: "Server error while starting password reset" }, 500, corsHeaders);
   }
 }
 
@@ -278,11 +315,66 @@ async function sendConfirmationEmail(env, member, profileLink) {
   return { sent: true };
 }
 
+async function sendPasswordResetEmail(env, member, resetLink) {
+  if (!env.BREVO_API_KEY || !env.BREVO_SENDER_EMAIL) return { sent: false };
+
+  const body = {
+    sender: {
+      name: env.BREVO_SENDER_NAME || "Club Society",
+      email: env.BREVO_SENDER_EMAIL,
+    },
+    to: [{ email: member.email, name: fullName(member) }],
+    subject: "Reset your Club Society password",
+    htmlContent: `
+      <html>
+        <body style="font-family:Arial,sans-serif;color:#0b2231;line-height:1.5;">
+          <h2>Reset your Club Society password</h2>
+          <p>Hi ${escapeHtml(member.firstName || "there")},</p>
+          <p>Use the button below to return to Club Society and create a new password for your account.</p>
+          <p>
+            <a href="${escapeHtml(resetLink)}" style="display:inline-block;background:#f4b52b;color:#0b2231;padding:12px 18px;border-radius:999px;font-weight:bold;text-decoration:none;">
+              Create New Password
+            </a>
+          </p>
+          <p>If the button does not work, paste this link into your browser:</p>
+          <p>${escapeHtml(resetLink)}</p>
+        </body>
+      </html>
+    `,
+    tags: ["club-society", "password-reset"],
+  };
+
+  const response = await fetch("https://api.brevo.com/v3/smtp/email", {
+    method: "POST",
+    headers: {
+      accept: "application/json",
+      "api-key": env.BREVO_API_KEY,
+      "content-type": "application/json",
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (!response.ok) {
+    const text = await response.text();
+    console.error("Brevo password reset failed", response.status, text);
+    return { sent: false };
+  }
+
+  return { sent: true };
+}
+
 function validateSignup(payload) {
   if (!payload || typeof payload !== "object") return "Invalid JSON body";
   if (!payload.email) return "Missing required field: email";
   if (!isValidEmail(payload.email)) return "Invalid email";
   if (!payload.password || String(payload.password).length < 8) return "Password must be at least 8 characters";
+  return "";
+}
+
+function validatePasswordResetRequest(payload) {
+  if (!payload || typeof payload !== "object") return "Invalid JSON body";
+  if (!payload.email) return "Missing required field: email";
+  if (!isValidEmail(payload.email)) return "Invalid email";
   return "";
 }
 
@@ -311,6 +403,13 @@ function makeProfileLink(request, env, token) {
   const base = env.CLUB_SOCIETY_PROFILE_URL || new URL(request.url).origin;
   const url = new URL(base);
   url.searchParams.set("completeProfile", token);
+  return url.toString();
+}
+
+function makePasswordResetLink(request, env, email) {
+  const base = env.CLUB_SOCIETY_PROFILE_URL || new URL(request.url).origin;
+  const url = new URL(base);
+  url.searchParams.set("resetPassword", email);
   return url.toString();
 }
 
