@@ -4,8 +4,18 @@ const INTEGRATION_CONFIG_KEY = "clubSociety.integrationConfig.v1";
 const PADDLE_PINT_SYNC_CONFIG_KEY = "clubSociety.paddlePintSync.v1";
 const PADDLE_PINT_ENDPOINT_URL = "https://clubsociety.app/api/paddle-pint";
 const APP_VERSION = document.querySelector('meta[name="app-version"]')?.content || "local-dev";
+const STORAGE_SCHEMA_VERSION = 2;
 const urlParams = new URLSearchParams(window.location.search);
+const currentHost = window.location.hostname.toLowerCase();
+const currentPath = window.location.pathname.toLowerCase();
+const DASHBOARD_HOSTS = new Set(["clubsocietyapp.com", "www.clubsocietyapp.com"]);
+const MEMBER_APP_HOSTS = new Set(["clubsociety.app", "www.clubsociety.app", "club-society.pages.dev"]);
+const isDashboardLaunch = urlParams.get("admin") === "1"
+  || currentPath.startsWith("/admin")
+  || DASHBOARD_HOSTS.has(currentHost);
 const isStandaloneLaunch = urlParams.get("app") === "1"
+  || currentPath.startsWith("/app")
+  || MEMBER_APP_HOSTS.has(currentHost)
   || window.matchMedia("(display-mode: standalone)").matches
   || window.navigator.standalone === true;
 const DEFAULT_LOCATION = { street: "", city: "Watkinsville", state: "GA", zip: "30677" };
@@ -300,10 +310,16 @@ function loadState() {
     roundSettings: { selectedPlayerIds: [], teams: [] },
     selectedEventRosterId: "",
     sync: { status: "Local only", lastSync: "", pending: 0 },
+    storageMeta: {
+      schemaVersion: STORAGE_SCHEMA_VERSION,
+      appVersion: APP_VERSION,
+      lastSavedAt: "",
+      note: "Club Society saves member data outside the app cache so updates do not erase profiles.",
+    },
   };
 
   try {
-    return normalizeState({ ...fallback, ...JSON.parse(localStorage.getItem(STORAGE_KEY)) });
+    return normalizeState({ ...fallback, ...(JSON.parse(localStorage.getItem(STORAGE_KEY)) || {}) });
   } catch {
     return normalizeState(fallback);
   }
@@ -343,10 +359,22 @@ function normalizeState(data) {
   data.paddlePintImportedIds = data.paddlePintImportedIds || [];
   data.roundSettings = { selectedPlayerIds: [], teams: [], ...(data.roundSettings || {}) };
   data.selectedEventRosterId = data.selectedEventRosterId || "";
+  data.storageMeta = {
+    schemaVersion: STORAGE_SCHEMA_VERSION,
+    appVersion: APP_VERSION,
+    lastSavedAt: data.storageMeta?.lastSavedAt || "",
+    note: "Club Society saves member data outside the app cache so updates do not erase profiles.",
+  };
   return data;
 }
 
 function saveState() {
+  state.storageMeta = {
+    ...state.storageMeta,
+    schemaVersion: STORAGE_SCHEMA_VERSION,
+    appVersion: APP_VERSION,
+    lastSavedAt: new Date().toISOString(),
+  };
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
 }
 
@@ -356,16 +384,29 @@ function setView(id) {
 }
 
 function applyLaunchMode() {
-  if (urlParams.get("admin") === "1") {
+  if (isDashboardLaunch) {
     document.body.classList.add("admin-mode");
+    document.title = "Club Society Dashboard";
     setView("command");
     return;
   }
 
   if (isStandaloneLaunch) {
     document.body.classList.add("standalone-member-app");
+    document.title = "Club Society App";
     setView("societyApp");
     setSocietyTab("home");
+    preserveMemberStorage();
+  }
+}
+
+async function preserveMemberStorage() {
+  if (!navigator.storage?.persist) return;
+  try {
+    const alreadyPersistent = await navigator.storage.persisted();
+    if (!alreadyPersistent) await navigator.storage.persist();
+  } catch {
+    // Some browsers do not expose persistent storage for installed web apps.
   }
 }
 

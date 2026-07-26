@@ -1,6 +1,12 @@
 const SHOPIFY_ORIGIN = "https://www.paddleandpin.com";
-const APP_ORIGIN = "https://club-society.pages.dev";
-const ALLOWED_ORIGINS = new Set([SHOPIFY_ORIGIN, APP_ORIGIN]);
+const ALLOWED_ORIGINS = new Set([
+  SHOPIFY_ORIGIN,
+  "https://clubsociety.app",
+  "https://www.clubsociety.app",
+  "https://clubsocietyapp.com",
+  "https://www.clubsocietyapp.com",
+  "https://club-society.pages.dev",
+]);
 const ALLOWED_TYPES = new Set(["round_robin_event", "free_shirt_claim"]);
 
 function corsHeadersFor(request) {

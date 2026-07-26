@@ -1,7 +1,9 @@
 const APP_ORIGINS = new Set([
   "https://clubsociety.app",
-  "https://club-society.pages.dev",
   "https://www.clubsociety.app",
+  "https://clubsocietyapp.com",
+  "https://www.clubsocietyapp.com",
+  "https://club-society.pages.dev",
 ]);
 
 function corsHeadersFor(request) {

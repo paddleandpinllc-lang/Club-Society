@@ -9,6 +9,7 @@ const staticFiles = [
   "manifest.webmanifest",
   "sw.js",
   "_routes.json",
+  "_redirects",
   "club-society-mark.svg",
   "favicon-32.png",
   "apple-touch-icon.png",
