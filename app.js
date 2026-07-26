@@ -69,8 +69,27 @@ const DEFAULT_SHOP_COLLECTIONS = [
   { title: "Tournament Capsule", body: "Competitive apparel and accessories for bracket days.", tag: "Challenge gear" },
   { title: "Golf Social Edit", body: "Coming-soon crossover collection for nine-hole hangs.", tag: "Golf preview" },
 ];
+const MEMBER_SYNC_KEYS = [
+  "profiles",
+  "societyFavorites",
+  "societyFriends",
+  "clubGroups",
+  "casualMatches",
+  "quickGames",
+  "posts",
+  "golfTeeTimes",
+  "golfGroups",
+  "golfMessages",
+  "golfMatchIndex",
+  "societyFriendFilter",
+  "quickGameFilter",
+  "casualMatchFilter",
+  "courtFilter",
+];
 
 const state = loadState();
+let memberCloudSyncTimer = 0;
+let suppressMemberCloudSync = false;
 const els = {
   navItems: document.querySelectorAll(".nav-item"),
   views: document.querySelectorAll(".view"),
@@ -316,6 +335,13 @@ function loadState() {
       lastSavedAt: "",
       note: "Club Society saves member data outside the app cache so updates do not erase profiles.",
     },
+    cloudMemberSync: {
+      email: "",
+      token: "",
+      lastPulledAt: "",
+      lastPushedAt: "",
+      status: "Local only",
+    },
   };
 
   try {
@@ -365,6 +391,14 @@ function normalizeState(data) {
     lastSavedAt: data.storageMeta?.lastSavedAt || "",
     note: "Club Society saves member data outside the app cache so updates do not erase profiles.",
   };
+  data.cloudMemberSync = {
+    email: "",
+    token: "",
+    lastPulledAt: "",
+    lastPushedAt: "",
+    status: "Local only",
+    ...(data.cloudMemberSync || {}),
+  };
   return data;
 }
 
@@ -376,6 +410,102 @@ function saveState() {
     lastSavedAt: new Date().toISOString(),
   };
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  scheduleMemberCloudSync();
+}
+
+function saveCloudMemberCredentials(email, token) {
+  if (!email || !token) return;
+  state.cloudMemberSync = {
+    ...(state.cloudMemberSync || {}),
+    email: email.toLowerCase(),
+    token,
+    status: "Cloud sync ready",
+  };
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+}
+
+function memberCloudSnapshot() {
+  const snapshot = {};
+  MEMBER_SYNC_KEYS.forEach((key) => {
+    snapshot[key] = state[key];
+  });
+  snapshot.savedAt = new Date().toISOString();
+  snapshot.schemaVersion = STORAGE_SCHEMA_VERSION;
+  return snapshot;
+}
+
+function scheduleMemberCloudSync() {
+  if (suppressMemberCloudSync || !canUseMemberCloudSync()) return;
+  clearTimeout(memberCloudSyncTimer);
+  memberCloudSyncTimer = setTimeout(() => pushMemberCloudState(), 900);
+}
+
+function canUseMemberCloudSync() {
+  return window.location.protocol.startsWith("http")
+    && state.cloudMemberSync?.email
+    && state.cloudMemberSync?.token;
+}
+
+async function pushMemberCloudState(immediate = false) {
+  if (!canUseMemberCloudSync()) return;
+  clearTimeout(memberCloudSyncTimer);
+  const payload = {
+    action: "save_app_state",
+    email: state.cloudMemberSync.email,
+    syncToken: state.cloudMemberSync.token,
+    appState: memberCloudSnapshot(),
+  };
+  try {
+    const response = await fetch("/api/member-signup", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok || !result.ok) throw new Error(result.error || "Cloud sync failed");
+    state.cloudMemberSync.lastPushedAt = result.savedAt || new Date().toISOString();
+    state.cloudMemberSync.status = immediate ? "Cloud backup saved" : "Synced";
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  } catch {
+    state.cloudMemberSync.status = "Cloud sync pending";
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  }
+}
+
+function mergeMemberCloudState(appState) {
+  if (!appState || typeof appState !== "object") return;
+  suppressMemberCloudSync = true;
+  state.profiles = mergeRecords(state.profiles, appState.profiles, (item) => item.email || item.id);
+  state.clubGroups = mergeRecords(state.clubGroups, appState.clubGroups, (item) => item.id);
+  state.casualMatches = mergeRecords(state.casualMatches, appState.casualMatches, (item) => item.id);
+  state.quickGames = mergeRecords(state.quickGames, appState.quickGames, (item) => item.id);
+  state.posts = mergeRecords(state.posts, appState.posts, (item) => item.id);
+  state.golfTeeTimes = mergeRecords(state.golfTeeTimes, appState.golfTeeTimes, (item) => item.id);
+  state.golfGroups = mergeRecords(state.golfGroups, appState.golfGroups, (item) => item.id);
+  state.golfMessages = mergeRecords(state.golfMessages, appState.golfMessages, (item) => item.id);
+  state.societyFavorites = mergeValues(state.societyFavorites, appState.societyFavorites);
+  state.societyFriends = mergeValues(state.societyFriends, appState.societyFriends);
+  ["golfMatchIndex", "societyFriendFilter", "quickGameFilter", "casualMatchFilter", "courtFilter"].forEach((key) => {
+    if (appState[key] !== undefined && appState[key] !== null && appState[key] !== "") state[key] = appState[key];
+  });
+  state.cloudMemberSync.lastPulledAt = new Date().toISOString();
+  state.cloudMemberSync.status = "Cloud data loaded";
+  suppressMemberCloudSync = false;
+}
+
+function mergeRecords(localItems = [], cloudItems = [], identityFor) {
+  const records = new Map();
+  [...(cloudItems || []), ...(localItems || [])].forEach((item) => {
+    if (!item || typeof item !== "object") return;
+    const identity = String(identityFor(item) || item.id || newId()).toLowerCase();
+    const existing = records.get(identity) || {};
+    records.set(identity, { ...existing, ...item });
+  });
+  return [...records.values()].sort((a, b) => String(b.updatedAt || b.createdAt || "").localeCompare(String(a.updatedAt || a.createdAt || "")));
+}
+
+function mergeValues(localItems = [], cloudItems = []) {
+  return [...new Set([...(cloudItems || []), ...(localItems || [])].filter(Boolean))];
 }
 
 function setView(id) {
@@ -598,6 +728,7 @@ async function sendSocietySignupConfirmation(profile) {
         city: profile.city,
         state: profile.state,
         zip: profile.zip,
+        appState: memberCloudSnapshot(),
       }),
     });
     const result = await response.json().catch(() => ({}));
@@ -605,8 +736,12 @@ async function sendSocietySignupConfirmation(profile) {
       return { ok: false, message: result.error || "Profile saved, but the confirmation email could not be sent yet." };
     }
     if (result.emailSent) {
+      saveCloudMemberCredentials(profile.email, result.syncToken);
+      pushMemberCloudState(true);
       return { ok: true, message: "Welcome to Club Society. Check your email to verify your account and finish your profile." };
     }
+    saveCloudMemberCredentials(profile.email, result.syncToken);
+    pushMemberCloudState(true);
     return { ok: true, message: result.emailWarning || "Profile saved. Brevo email is waiting on Cloudflare secret configuration." };
   } catch {
     return { ok: false, message: "Profile saved locally. Hosted email confirmation is not reachable from this device yet." };
@@ -751,12 +886,15 @@ async function signInSocietyMember(email, password) {
         return;
       }
       if (result.member) upsertSocietyProfileFromCompletion(result.member);
+      saveCloudMemberCredentials(normalizedEmail, result.syncToken);
+      if (result.appState) mergeMemberCloudState(result.appState);
       state.societySessionEmail = normalizedEmail;
       saveState();
       updateSocietyHome();
+      render();
       localStorage.setItem("clubSociety.stayLoggedIn.v1", String(els.societyAccountForm.elements.signinStayLoggedIn.checked));
       showSocietyAccountMessage(result.emailVerified
-        ? "Welcome back. You are signed in."
+        ? "Welcome back. Your Club Society data is synced."
         : "Welcome back. Please verify your email from your Club Society welcome email.", "success");
       return;
     } catch {
@@ -1202,7 +1340,9 @@ function promptForSocietyPhoto() {
 }
 
 function logoutSociety() {
+  pushMemberCloudState(true);
   state.societySessionEmail = "";
+  state.cloudMemberSync = { email: "", token: "", lastPulledAt: "", lastPushedAt: "", status: "Local only" };
   state.profiles.forEach((profile) => {
     profile.stayLoggedIn = false;
   });

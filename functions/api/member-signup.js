@@ -46,6 +46,11 @@ export async function onRequest(context) {
     if (signinError) return json({ ok: false, error: signinError }, 400, corsHeaders);
     return signInMember(payload, env, corsHeaders);
   }
+  if (payload.action === "save_app_state") {
+    const syncError = validateAppStateSave(payload);
+    if (syncError) return json({ ok: false, error: syncError }, 400, corsHeaders);
+    return saveMemberAppState(payload, env, corsHeaders);
+  }
   if (payload.action === "forgot_password") {
     const resetError = validatePasswordResetRequest(payload);
     if (resetError) return json({ ok: false, error: resetError }, 400, corsHeaders);
@@ -58,9 +63,11 @@ export async function onRequest(context) {
   const profileLink = makeProfileLink(request, env, token);
 
   try {
+    let syncToken = "";
     if (env.DB) {
       await ensureMemberTable(env.DB);
-      await upsertMember(env.DB, member, token, payload.password);
+      syncToken = await makeToken(`${member.email}:sync`);
+      await upsertMember(env.DB, member, token, payload.password, syncToken, payload.appState);
     }
 
     const emailResult = await sendConfirmationEmail(env, member, profileLink);
@@ -70,6 +77,7 @@ export async function onRequest(context) {
       emailSent: emailResult.sent,
       emailWarning: emailResult.warning || "",
       profileLink,
+      syncToken,
     }, 200, corsHeaders);
   } catch (error) {
     console.error("Club Society member signup failed", error);
@@ -127,7 +135,7 @@ async function signInMember(payload, env, corsHeaders) {
   try {
     await ensureMemberTable(env.DB);
     const result = await env.DB.prepare(`
-      SELECT first_name, last_name, email, phone, sport, city, state, zip, password_hash, email_verified_at
+      SELECT first_name, last_name, email, phone, sport, city, state, zip, password_hash, email_verified_at, app_state_json
       FROM club_members
       WHERE email = ?
       LIMIT 1
@@ -142,9 +150,19 @@ async function signInMember(payload, env, corsHeaders) {
       return json({ ok: false, error: "That email and password did not match." }, 401, corsHeaders);
     }
 
+    const syncToken = await makeToken(`${email}:sync`);
+    await env.DB.prepare(`
+      UPDATE club_members
+      SET sync_token = ?,
+          updated_at = CURRENT_TIMESTAMP
+      WHERE email = ?
+    `).bind(syncToken, email).run();
+
     return json({
       ok: true,
       emailVerified: Boolean(result.email_verified_at),
+      syncToken,
+      appState: safeJsonParse(result.app_state_json, {}),
       member: {
         firstName: result.first_name || "",
         lastName: result.last_name || "",
@@ -194,6 +212,39 @@ async function sendPasswordReset(payload, request, env, corsHeaders) {
   }
 }
 
+async function saveMemberAppState(payload, env, corsHeaders) {
+  if (!env.DB) return json({ ok: false, error: "Database binding DB is not configured" }, 500, corsHeaders);
+
+  const email = cleanEmail(payload.email);
+  const syncToken = cleanText(payload.syncToken);
+  const appStateJson = JSON.stringify(sanitizeAppState(payload.appState));
+
+  try {
+    await ensureMemberTable(env.DB);
+    const result = await env.DB.prepare(`
+      SELECT id
+      FROM club_members
+      WHERE email = ? AND sync_token = ?
+      LIMIT 1
+    `).bind(email, syncToken).first();
+
+    if (!result) return json({ ok: false, error: "Cloud sync is not authorized" }, 401, corsHeaders);
+
+    await env.DB.prepare(`
+      UPDATE club_members
+      SET app_state_json = ?,
+          app_state_updated_at = CURRENT_TIMESTAMP,
+          updated_at = CURRENT_TIMESTAMP
+      WHERE email = ?
+    `).bind(appStateJson, email).run();
+
+    return json({ ok: true, savedAt: new Date().toISOString() }, 200, corsHeaders);
+  } catch (error) {
+    console.error("Club Society app-state save failed", error);
+    return json({ ok: false, error: "Server error while saving app data" }, 500, corsHeaders);
+  }
+}
+
 async function ensureMemberTable(db) {
   await db.prepare(`
     CREATE TABLE IF NOT EXISTS club_members (
@@ -208,6 +259,9 @@ async function ensureMemberTable(db) {
       zip TEXT,
       password_hash TEXT,
       completion_token TEXT NOT NULL UNIQUE,
+      sync_token TEXT,
+      app_state_json TEXT,
+      app_state_updated_at TEXT,
       email_verified_at TEXT,
       profile_completed_at TEXT,
       created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -216,9 +270,16 @@ async function ensureMemberTable(db) {
   `).run();
   await addColumnIfMissing(db, "club_members", "password_hash", "TEXT");
   await addColumnIfMissing(db, "club_members", "email_verified_at", "TEXT");
+  await addColumnIfMissing(db, "club_members", "sync_token", "TEXT");
+  await addColumnIfMissing(db, "club_members", "app_state_json", "TEXT");
+  await addColumnIfMissing(db, "club_members", "app_state_updated_at", "TEXT");
   await db.prepare(`
     CREATE INDEX IF NOT EXISTS idx_club_members_completion_token
     ON club_members (completion_token)
+  `).run();
+  await db.prepare(`
+    CREATE INDEX IF NOT EXISTS idx_club_members_sync_token
+    ON club_members (email, sync_token)
   `).run();
 }
 
@@ -228,12 +289,13 @@ async function addColumnIfMissing(db, table, column, type) {
   if (!exists) await db.prepare(`ALTER TABLE ${table} ADD COLUMN ${column} ${type}`).run();
 }
 
-async function upsertMember(db, member, token, password) {
+async function upsertMember(db, member, token, password, syncToken, appState = {}) {
   const passwordHash = await hashPassword(password);
+  const appStateJson = JSON.stringify(sanitizeAppState(appState));
   await db.prepare(`
     INSERT INTO club_members (
-      first_name, last_name, email, phone, sport, city, state, zip, password_hash, completion_token, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+      first_name, last_name, email, phone, sport, city, state, zip, password_hash, completion_token, sync_token, app_state_json, app_state_updated_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
     ON CONFLICT(email) DO UPDATE SET
       first_name = excluded.first_name,
       last_name = excluded.last_name,
@@ -244,6 +306,9 @@ async function upsertMember(db, member, token, password) {
       zip = excluded.zip,
       password_hash = excluded.password_hash,
       completion_token = excluded.completion_token,
+      sync_token = excluded.sync_token,
+      app_state_json = excluded.app_state_json,
+      app_state_updated_at = CURRENT_TIMESTAMP,
       updated_at = CURRENT_TIMESTAMP
   `).bind(
     member.firstName,
@@ -255,7 +320,9 @@ async function upsertMember(db, member, token, password) {
     member.state,
     member.zip,
     passwordHash,
-    token
+    token,
+    syncToken,
+    appStateJson
   ).run();
 }
 
@@ -380,6 +447,16 @@ function validatePasswordResetRequest(payload) {
   return "";
 }
 
+function validateAppStateSave(payload) {
+  if (!payload || typeof payload !== "object") return "Invalid JSON body";
+  if (!payload.email) return "Missing required field: email";
+  if (!isValidEmail(payload.email)) return "Invalid email";
+  if (!payload.syncToken) return "Missing cloud sync token";
+  if (!payload.appState || typeof payload.appState !== "object") return "Missing app state";
+  if (JSON.stringify(payload.appState).length > 1500000) return "App state is too large to sync";
+  return "";
+}
+
 function validateSignin(payload) {
   if (!payload || typeof payload !== "object") return "Invalid JSON body";
   if (!payload.email) return "Missing required field: email";
@@ -399,6 +476,42 @@ function normalizeMember(payload) {
     state: cleanText(payload.state || "GA"),
     zip: cleanText(payload.zip || "30677"),
   };
+}
+
+function sanitizeAppState(value) {
+  const allowedKeys = new Set([
+    "profiles",
+    "societyFavorites",
+    "societyFriends",
+    "clubGroups",
+    "casualMatches",
+    "quickGames",
+    "posts",
+    "golfTeeTimes",
+    "golfGroups",
+    "golfMessages",
+    "golfMatchIndex",
+    "societyFriendFilter",
+    "quickGameFilter",
+    "casualMatchFilter",
+    "courtFilter",
+    "savedAt",
+    "schemaVersion",
+  ]);
+  const clean = {};
+  Object.entries(value || {}).forEach(([key, entry]) => {
+    if (!allowedKeys.has(key)) return;
+    clean[key] = entry;
+  });
+  return JSON.parse(JSON.stringify(clean));
+}
+
+function safeJsonParse(value, fallback) {
+  try {
+    return value ? JSON.parse(value) : fallback;
+  } catch {
+    return fallback;
+  }
 }
 
 function makeProfileLink(request, env, token) {
