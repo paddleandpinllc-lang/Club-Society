@@ -141,8 +141,16 @@ async function signInMember(payload, env, corsHeaders) {
       LIMIT 1
     `).bind(email).first();
 
-    if (!result || !result.password_hash) {
+    if (!result) {
       return json({ ok: false, error: "That email and password did not match." }, 401, corsHeaders);
+    }
+
+    if (!result.password_hash) {
+      return json({
+        ok: false,
+        error: "This account exists, but no password has been set yet. Tap Join Now or Forgot password using this same email to create the cloud login.",
+        needsPasswordSetup: true,
+      }, 409, corsHeaders);
     }
 
     const passwordOk = await verifyPassword(payload.password, result.password_hash);

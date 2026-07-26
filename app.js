@@ -882,6 +882,13 @@ async function signInSocietyMember(email, password) {
       });
       const result = await response.json().catch(() => ({}));
       if (!response.ok || !result.ok) {
+        if (result.needsPasswordSetup) {
+          showSocietyAccountMessage(result.error, "notice");
+          setAuthPanel("signup");
+          els.societyAccountForm.elements.email.value = normalizedEmail;
+          els.societyAccountForm.elements.email.focus();
+          return;
+        }
         showSocietyAccountMessage(result.error || "That email and password did not match.", "error");
         return;
       }
