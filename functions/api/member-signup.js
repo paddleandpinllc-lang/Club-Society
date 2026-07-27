@@ -58,17 +58,16 @@ export async function onRequest(context) {
   }
 
   if (validationError) return json({ ok: false, error: validationError }, 400, corsHeaders);
+  if (!env.DB) return json({ ok: false, error: "Database binding DB is not configured" }, 500, corsHeaders);
+
   const member = normalizeMember(payload);
   const token = await makeToken(member.email);
   const profileLink = makeProfileLink(request, env, token);
 
   try {
-    let syncToken = "";
-    if (env.DB) {
-      await ensureMemberTable(env.DB);
-      syncToken = await makeToken(`${member.email}:sync`);
-      await upsertMember(env.DB, member, token, payload.password, syncToken, payload.appState);
-    }
+    await ensureMemberTable(env.DB);
+    const syncToken = await makeToken(`${member.email}:sync`);
+    await upsertMember(env.DB, member, token, payload.password, syncToken, payload.appState);
 
     const emailResult = await sendConfirmationEmail(env, member, profileLink);
     return json({

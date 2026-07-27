@@ -711,7 +711,7 @@ function resetPlayerForm() {
 
 async function sendSocietySignupConfirmation(profile) {
   if (!window.location.protocol.startsWith("http")) {
-    return { ok: true, message: "Profile saved locally. Confirmation email sends from the hosted app after Brevo is configured in Cloudflare." };
+    return { ok: false, message: "Open https://clubsociety.app to create a real account. This local preview cannot save users to Cloudflare or send verification emails." };
   }
 
   try {
@@ -742,9 +742,9 @@ async function sendSocietySignupConfirmation(profile) {
     }
     saveCloudMemberCredentials(profile.email, result.syncToken);
     pushMemberCloudState(true);
-    return { ok: true, message: result.emailWarning || "Profile saved. Brevo email is waiting on Cloudflare secret configuration." };
+    return { ok: true, message: result.emailWarning || "Profile saved, but the verification email did not send. Check the Brevo settings in Cloudflare." };
   } catch {
-    return { ok: false, message: "Profile saved locally. Hosted email confirmation is not reachable from this device yet." };
+    return { ok: false, message: "Cloud signup is not reachable from this device yet. Open https://clubsociety.app and try again." };
   }
 }
 
@@ -938,7 +938,13 @@ async function saveSocietyAccount(event) {
     showSocietyAccountMessage(passwordValidation.message, "error");
     return;
   }
+  if (!window.location.protocol.startsWith("http")) {
+    showSocietyAccountMessage("Open https://clubsociety.app to join. This local preview cannot save users to the Cloudflare database or send verification email.", "error");
+    return;
+  }
   const existing = state.profiles.find((profile) => profile.email?.toLowerCase() === data.email.toLowerCase());
+  const previousExisting = existing ? { ...existing } : null;
+  const previousSessionEmail = state.societySessionEmail;
   const sport = data.sport === "both" ? "pickleball" : data.sport || "pickleball";
   const level = data.sport === "golf" ? (data.handicap ? `Golf handicap ${data.handicap}` : "Golf member") : (data.pickleballLevel || "Open");
   const password = data.password;
@@ -977,6 +983,16 @@ async function saveSocietyAccount(event) {
   renderProfiles();
   updateSocietyHome();
   const emailResult = await sendSocietySignupConfirmation({ ...profile, password });
+  if (!emailResult.ok) {
+    if (existing && previousExisting) Object.assign(existing, previousExisting);
+    else state.profiles = state.profiles.filter((item) => item.id !== profile.id);
+    state.societySessionEmail = previousSessionEmail;
+    saveState();
+    renderProfiles();
+    updateSocietyHome();
+    showSocietyAccountMessage(emailResult.message, "error");
+    return;
+  }
   showSocietyAccountMessage(emailResult.message || (existing
     ? "Welcome back. Your Society Pass profile was updated."
     : "Welcome to Club Society. Check your email to verify your account and finish your profile."), emailResult.ok ? "success" : "error");
