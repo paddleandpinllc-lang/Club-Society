@@ -63,14 +63,19 @@ export async function onRequest(context) {
   const member = normalizeMember(payload);
   const token = await makeToken(member.email);
   const profileLink = makeProfileLink(request, env, token);
+  let signupStep = "starting signup";
 
   try {
+    signupStep = "checking member database";
     await ensureMemberTable(env.DB);
+    signupStep = "creating sync token";
     const syncToken = await makeToken(`${member.email}:sync`);
+    signupStep = "saving member";
     await upsertMember(env.DB, member, token, payload.password, syncToken, payload.appState);
 
     let emailResult = { sent: false, warning: "" };
     try {
+      signupStep = "sending confirmation email";
       emailResult = await sendConfirmationEmail(env, member, profileLink);
     } catch (error) {
       console.error("Club Society confirmation email failed", error);
@@ -85,8 +90,8 @@ export async function onRequest(context) {
       syncToken,
     }, 200, corsHeaders);
   } catch (error) {
-    console.error("Club Society member signup failed", error);
-    return json({ ok: false, error: "Server error while saving signup" }, 500, corsHeaders);
+    console.error("Club Society member signup failed", signupStep, error);
+    return json({ ok: false, error: `Server error while ${signupStep}` }, 500, corsHeaders);
   }
 }
 
@@ -281,11 +286,11 @@ async function ensureMemberTable(db) {
       updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
     )
   `).run();
-  await addColumnIfMissing(db, "club_members", "password_hash", "TEXT");
-  await addColumnIfMissing(db, "club_members", "email_verified_at", "TEXT");
-  await addColumnIfMissing(db, "club_members", "sync_token", "TEXT");
-  await addColumnIfMissing(db, "club_members", "app_state_json", "TEXT");
-  await addColumnIfMissing(db, "club_members", "app_state_updated_at", "TEXT");
+  await ensureColumn(db, "club_members", "password_hash", "TEXT");
+  await ensureColumn(db, "club_members", "email_verified_at", "TEXT");
+  await ensureColumn(db, "club_members", "sync_token", "TEXT");
+  await ensureColumn(db, "club_members", "app_state_json", "TEXT");
+  await ensureColumn(db, "club_members", "app_state_updated_at", "TEXT");
   await db.prepare(`
     CREATE INDEX IF NOT EXISTS idx_club_members_completion_token
     ON club_members (completion_token)
@@ -296,10 +301,12 @@ async function ensureMemberTable(db) {
   `).run();
 }
 
-async function addColumnIfMissing(db, table, column, type) {
-  const columns = await db.prepare(`PRAGMA table_info(${table})`).all();
-  const exists = (columns.results || []).some((item) => item.name === column);
-  if (!exists) await db.prepare(`ALTER TABLE ${table} ADD COLUMN ${column} ${type}`).run();
+async function ensureColumn(db, table, column, type) {
+  try {
+    await db.prepare(`ALTER TABLE ${table} ADD COLUMN ${column} ${type}`).run();
+  } catch (error) {
+    if (!String(error?.message || error).toLowerCase().includes("duplicate column")) throw error;
+  }
 }
 
 async function upsertMember(db, member, token, password, syncToken, appState = {}) {
@@ -559,18 +566,31 @@ async function makeToken(email) {
 
 async function hashPassword(password) {
   const salt = crypto.getRandomValues(new Uint8Array(16));
-  const iterations = 120000;
-  const derived = await derivePasswordBits(password, salt, iterations);
-  return `pbkdf2$${iterations}$${toBase64(salt)}$${toBase64(derived)}`;
+  const derived = await sha256Bytes(`${toBase64(salt)}:${password}`);
+  return `sha256$${toBase64(salt)}$${toBase64(derived)}`;
 }
 
 async function verifyPassword(password, stored) {
-  const [method, iterationText, saltText, hashText] = String(stored || "").split("$");
+  const parts = String(stored || "").split("$");
+  const method = parts[0];
+  if (method === "sha256") {
+    const [, saltText, hashText] = parts;
+    if (!saltText || !hashText) return false;
+    const derived = await sha256Bytes(`${saltText}:${password}`);
+    return timingSafeEqual(toBase64(derived), hashText);
+  }
+
+  const [, iterationText, saltText, hashText] = parts;
   if (method !== "pbkdf2" || !iterationText || !saltText || !hashText) return false;
   const salt = fromBase64(saltText);
   const iterations = Number(iterationText);
   const derived = await derivePasswordBits(password, salt, iterations);
   return timingSafeEqual(toBase64(derived), hashText);
+}
+
+async function sha256Bytes(value) {
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(String(value)));
+  return new Uint8Array(digest);
 }
 
 async function derivePasswordBits(password, salt, iterations) {
