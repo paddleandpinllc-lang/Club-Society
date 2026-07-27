@@ -69,7 +69,13 @@ export async function onRequest(context) {
     const syncToken = await makeToken(`${member.email}:sync`);
     await upsertMember(env.DB, member, token, payload.password, syncToken, payload.appState);
 
-    const emailResult = await sendConfirmationEmail(env, member, profileLink);
+    let emailResult = { sent: false, warning: "" };
+    try {
+      emailResult = await sendConfirmationEmail(env, member, profileLink);
+    } catch (error) {
+      console.error("Club Society confirmation email failed", error);
+      emailResult = { sent: false, warning: "Signup saved, but the verification email failed to send." };
+    }
     return json({
       ok: true,
       message: emailResult.sent ? "Signup saved and confirmation email sent" : "Signup saved",
@@ -298,7 +304,7 @@ async function addColumnIfMissing(db, table, column, type) {
 
 async function upsertMember(db, member, token, password, syncToken, appState = {}) {
   const passwordHash = await hashPassword(password);
-  const appStateJson = JSON.stringify(sanitizeAppState(appState));
+  const appStateJson = safeAppStateJson(appState);
   await db.prepare(`
     INSERT INTO club_members (
       first_name, last_name, email, phone, sport, city, state, zip, password_hash, completion_token, sync_token, app_state_json, app_state_updated_at, updated_at
@@ -511,6 +517,16 @@ function sanitizeAppState(value) {
     clean[key] = entry;
   });
   return JSON.parse(JSON.stringify(clean));
+}
+
+function safeAppStateJson(value) {
+  try {
+    const jsonText = JSON.stringify(sanitizeAppState(value));
+    if (jsonText.length > 500000) return "{}";
+    return jsonText;
+  } catch {
+    return "{}";
+  }
 }
 
 function safeJsonParse(value, fallback) {

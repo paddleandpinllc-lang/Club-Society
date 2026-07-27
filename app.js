@@ -434,6 +434,32 @@ function memberCloudSnapshot() {
   return snapshot;
 }
 
+function memberSignupSnapshot(profile) {
+  return {
+    profiles: [{
+      id: profile.id,
+      firstName: profile.firstName,
+      lastName: profile.lastName,
+      email: profile.email,
+      phone: profile.phone,
+      city: profile.city,
+      state: profile.state,
+      zip: profile.zip,
+      preferredSport: profile.preferredSport,
+      pickleballLevel: profile.pickleballLevel,
+      handicap: profile.handicap,
+      discoverable: profile.discoverable,
+      allowMessages: profile.allowMessages !== false,
+      verificationStatus: profile.verificationStatus,
+      source: profile.source,
+      updatedAt: profile.updatedAt,
+    }],
+    societySessionEmail: profile.email,
+    savedAt: new Date().toISOString(),
+    schemaVersion: STORAGE_SCHEMA_VERSION,
+  };
+}
+
 function scheduleMemberCloudSync() {
   if (suppressMemberCloudSync || !canUseMemberCloudSync()) return;
   clearTimeout(memberCloudSyncTimer);
@@ -728,7 +754,7 @@ async function sendSocietySignupConfirmation(profile) {
         city: profile.city,
         state: profile.state,
         zip: profile.zip,
-        appState: memberCloudSnapshot(),
+        appState: memberSignupSnapshot(profile),
       }),
     });
     const result = await response.json().catch(() => ({}));
