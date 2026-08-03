@@ -3873,8 +3873,14 @@ function renderPaddlePintSyncConfig() {
 }
 
 async function importPaddlePintSubmissions() {
+  if (!window.location.protocol.startsWith("http")) {
+    renderPaddlePintSyncStatus("Submission Sync must be run from the hosted admin dashboard because Cloudflare blocks local-file API calls for security. Open https://clubsocietyapp.com/admin and run Import Paddle + Pint RSVPs there.", "notice");
+    return;
+  }
+
   const config = {
     endpointUrl: PADDLE_PINT_ENDPOINT_URL,
+    ...loadPaddlePintSyncConfig(),
     ...Object.fromEntries(new FormData(els.paddlePintSyncForm).entries()),
   };
   if (!config.endpointUrl || config.endpointUrl.includes("club-society.pages.dev")) {
