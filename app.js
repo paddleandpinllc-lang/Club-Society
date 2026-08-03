@@ -364,8 +364,14 @@ function normalizeState(data) {
     discoverable: profile.discoverable === true,
     ...profile,
   }));
+  data.players = (data.players || []).map((player) => ({
+    waiverSignedAt: "",
+    waiverSource: "",
+    waiverAgreementText: "",
+    checkedInAt: "",
+    ...player,
+  }));
   data.events = data.events || [];
-  data.players = data.players || [];
   data.golfProfile = data.golfProfile || {};
   data.golfTeeTimes = data.golfTeeTimes || [];
   data.golfGroups = data.golfGroups || [];
@@ -697,6 +703,7 @@ function savePlayer(event) {
   const data = Object.fromEntries(new FormData(els.playerForm).entries());
   const existing = state.players.find((player) => player.id === data.playerId)
     || state.players.find((player) => player.email?.toLowerCase() === data.email.toLowerCase());
+  const waiverAudit = buildWaiverAudit(data.waiver, existing, "Admin check-in");
   const player = {
     ...data,
     id: existing?.id || newId(),
@@ -704,6 +711,7 @@ function savePlayer(event) {
     checkedIn: !["Waitlist", "Left event"].includes(data.status),
     status: data.status || "Checked in",
     checkedInAt: existing?.checkedInAt || new Date().toISOString(),
+    ...waiverAudit,
   };
   delete player.playerId;
 
@@ -733,6 +741,22 @@ function resetPlayerForm() {
   els.playerForm.elements.status.value = "Checked in";
   els.playerForm.elements.paid.value = "Not tracked";
   els.playerForm.querySelector("button[type=submit]").textContent = "Check In";
+}
+
+function buildWaiverAudit(waiverStatus, existing = {}, source = "Check-in") {
+  const signed = waiverStatus === "Signed";
+  if (!signed) {
+    return {
+      waiverSignedAt: "",
+      waiverSource: "",
+      waiverAgreementText: "",
+    };
+  }
+  return {
+    waiverSignedAt: existing?.waiverSignedAt || new Date().toISOString(),
+    waiverSource: existing?.waiverSource || source,
+    waiverAgreementText: existing?.waiverAgreementText || "Player selected I Agree to the Club Society / Paddle + Pint liability waiver before check-in.",
+  };
 }
 
 async function sendSocietySignupConfirmation(profile) {
@@ -2559,6 +2583,7 @@ function renderPlayers() {
           <strong>${escapeHtml(player.firstName)} ${escapeHtml(player.lastName)}</strong>
           <p class="meta">${escapeHtml(player.skill)} | ${escapeHtml(player.email)} | ${escapeHtml(player.status || "Checked in")} | ${player.checkedIn ? "Checked in" : "Not active"}</p>
           <p class="meta">Waiver: ${escapeHtml(player.waiver)} | Paid: ${escapeHtml(player.paid || "Not tracked")}${player.eventId ? ` | ${escapeHtml(eventName(player.eventId))}` : ""}</p>
+          <p class="meta">Waiver proof: ${player.waiverSignedAt ? `${escapeHtml(formatDateTime(player.waiverSignedAt))} via ${escapeHtml(player.waiverSource || "Check-in")}` : "Not signed yet"}</p>
         </div>
         <div class="card-actions">
           <button type="button" data-edit-player="${escapeHtml(player.id)}">Edit</button>
@@ -2671,6 +2696,7 @@ function renderWaivers() {
       <article class="card alert-card">
         <strong>${escapeHtml(player.firstName)} ${escapeHtml(player.lastName)}</strong>
         <p class="meta">${escapeHtml(player.email)} | ${escapeHtml(player.phone || "No phone")}</p>
+        <p class="meta">No waiver timestamp saved yet.</p>
       </article>
     `).join("")
     : `<div class="empty">All current players have signed waivers.</div>`;
@@ -2754,6 +2780,11 @@ function savePublicCheckin(event) {
     checkedIn: true,
     checkedInAt: new Date().toISOString(),
     sport: existing?.sport || state.mode,
+    ...buildWaiverAudit(data.waiver, {
+      ...existing,
+      waiverSignedAt: existing?.waiverSignedAt || els.publicCheckinForm.dataset.waiverSignedAt,
+      waiverSource: existing?.waiverSource || els.publicCheckinForm.dataset.waiverSource,
+    }, "Public check-in waiver modal"),
   };
 
   if (existing) Object.assign(existing, player);
@@ -2801,6 +2832,8 @@ function closeWaiverModal() {
 
 function agreeToWaiver() {
   setPublicWaiverStatus("Signed");
+  els.publicCheckinForm.dataset.waiverSignedAt = new Date().toISOString();
+  els.publicCheckinForm.dataset.waiverSource = "Public check-in waiver modal";
   closeWaiverModal();
 
   if (els.publicCheckinForm.dataset.pendingSubmit === "true") {
@@ -2811,6 +2844,8 @@ function agreeToWaiver() {
 
 function disagreeToWaiver() {
   setPublicWaiverStatus("Needs Signature");
+  els.publicCheckinForm.dataset.waiverSignedAt = "";
+  els.publicCheckinForm.dataset.waiverSource = "";
   els.publicCheckinForm.dataset.pendingSubmit = "";
   closeWaiverModal();
   els.publicResult.innerHTML = `
@@ -2858,6 +2893,8 @@ function clearPublicForm(keepMessage) {
   els.publicCheckinForm.reset();
   els.publicCheckinForm.dataset.playerId = "";
   els.publicCheckinForm.dataset.profileId = "";
+  els.publicCheckinForm.dataset.waiverSignedAt = "";
+  els.publicCheckinForm.dataset.waiverSource = "";
   els.publicCheckinForm.dataset.pendingSubmit = "";
   setPublicWaiverStatus("Needs Signature");
   if (!keepMessage) {
@@ -3356,16 +3393,13 @@ function saveProfile(event) {
   const existing = state.profiles.find((profile) => profile.id === data.profileId)
     || state.profiles.find((profile) => profile.email.toLowerCase() === data.email.toLowerCase());
   const verified = existing?.verificationStatus === "Verified" || isCurrentProfileVerified();
-  if (!verified) {
-    showAdminMessage("#profileList", "notice", "Verify the profile by email or SMS before saving.");
-    return;
-  }
   const profile = {
     ...data,
     id: existing?.id || newId(),
     sport: state.mode,
-    verificationStatus: "Verified",
-    verifiedAt: existing?.verifiedAt || new Date().toISOString(),
+    verificationStatus: verified ? "Verified" : "Admin entered",
+    verifiedAt: verified ? (existing?.verifiedAt || new Date().toISOString()) : existing?.verifiedAt || "",
+    source: existing?.source || "Admin profile entry",
     updatedAt: new Date().toISOString(),
   };
   delete profile.profileId;
@@ -3388,6 +3422,7 @@ function saveProfile(event) {
       paid: "Not tracked",
       checkedIn: false,
       sport: state.mode,
+      source: "Admin profile entry",
     });
   }
 
@@ -3708,9 +3743,21 @@ function exportArchiveCsv() {
 function exportSingleArchivedEventCsv(id) {
   const event = state.archivedEvents.find((item) => item.id === id);
   if (!event) return;
-  const headers = ["First Name", "Last Name", "Email", "Phone", "Skill", "Status", "Waiver", "Paid", "Checked In"];
+  const headers = ["First Name", "Last Name", "Email", "Phone", "Skill", "Status", "Waiver", "Waiver Signed At", "Waiver Source", "Waiver Agreement", "Paid", "Checked In", "Checked In At"];
   const rows = (event.players || []).map((player) => [
-    player.firstName, player.lastName, player.email, player.phone, player.skill, player.status, player.waiver, player.paid, player.checkedIn ? "Yes" : "No",
+    player.firstName,
+    player.lastName,
+    player.email,
+    player.phone,
+    player.skill,
+    player.status,
+    player.waiver,
+    player.waiverSignedAt || "",
+    player.waiverSource || "",
+    player.waiverAgreementText || "",
+    player.paid,
+    player.checkedIn ? "Yes" : "No",
+    player.checkedInAt || "",
   ]);
   downloadText(`${slugify(event.name)}-roster-${todaySlug()}.csv`, [headers, ...rows].map(csvLine).join("\n"), "text/csv");
 }
@@ -3719,9 +3766,9 @@ function exportArchivedEventReport(id) {
   const event = state.archivedEvents.find((item) => item.id === id);
   if (!event) return;
   const rows = (event.players || []).map((player) => `
-    <tr><td>${escapeHtml(player.firstName)} ${escapeHtml(player.lastName)}</td><td>${escapeHtml(player.email)}</td><td>${escapeHtml(player.status || "")}</td><td>${player.checkedIn ? "Yes" : "No"}</td></tr>
+    <tr><td>${escapeHtml(player.firstName)} ${escapeHtml(player.lastName)}</td><td>${escapeHtml(player.email)}</td><td>${escapeHtml(player.status || "")}</td><td>${player.checkedIn ? "Yes" : "No"}</td><td>${escapeHtml(player.waiver || "")}</td><td>${escapeHtml(player.waiverSignedAt ? formatDateTime(player.waiverSignedAt) : "Not signed")}</td></tr>
   `).join("");
-  const html = `<!doctype html><html><head><meta charset="utf-8"><title>${escapeHtml(event.name)} Report</title><style>body{font-family:Arial,sans-serif;margin:32px;color:#13262e}h1{color:#0b2231}table{width:100%;border-collapse:collapse}td,th{border:1px solid #ddd;padding:8px;text-align:left}.meta{color:#657477}</style></head><body><h1>${escapeHtml(event.name)}</h1><p class="meta">${escapeHtml(event.date)} | ${escapeHtml(event.venue)} | ${escapeHtml(event.format)}</p><p>${event.checkedInCount || 0} checked in / ${event.attendeeCount || 0} saved attendees.</p><table><thead><tr><th>Player</th><th>Email</th><th>Status</th><th>Checked In</th></tr></thead><tbody>${rows}</tbody></table><script>window.print();</script></body></html>`;
+  const html = `<!doctype html><html><head><meta charset="utf-8"><title>${escapeHtml(event.name)} Report</title><style>body{font-family:Arial,sans-serif;margin:32px;color:#13262e}h1{color:#0b2231}table{width:100%;border-collapse:collapse}td,th{border:1px solid #ddd;padding:8px;text-align:left}.meta{color:#657477}</style></head><body><h1>${escapeHtml(event.name)}</h1><p class="meta">${escapeHtml(event.date)} | ${escapeHtml(event.venue)} | ${escapeHtml(event.format)}</p><p>${event.checkedInCount || 0} checked in / ${event.attendeeCount || 0} saved attendees.</p><table><thead><tr><th>Player</th><th>Email</th><th>Status</th><th>Checked In</th><th>Waiver</th><th>Waiver Signed At</th></tr></thead><tbody>${rows}</tbody></table><script>window.print();</script></body></html>`;
   downloadText(`${slugify(event.name)}-printable-report.html`, html, "text/html");
 }
 
@@ -4215,7 +4262,22 @@ function seedDemo() {
     ["Cam", "Lewis", "cam@example.com", "Advanced", "Signed"],
     ["Riley", "Stone", "riley@example.com", "Beginner", "Signed"],
     ["Ari", "Cole", "ari@example.com", "Intermediate", "Signed"],
-  ].map(([firstName, lastName, email, skill, waiver]) => ({ id: newId(), firstName, lastName, email, phone: "", skill, waiver, status: "Checked in", paid: "Paid", eventId, checkedIn: true, sport: "pickleball" }));
+  ].map(([firstName, lastName, email, skill, waiver]) => ({
+    id: newId(),
+    firstName,
+    lastName,
+    email,
+    phone: "",
+    skill,
+    waiver,
+    status: "Checked in",
+    paid: "Paid",
+    eventId,
+    checkedIn: true,
+    checkedInAt: new Date().toISOString(),
+    sport: "pickleball",
+    ...buildWaiverAudit(waiver, {}, "Demo data"),
+  }));
   state.posts = [
     { id: newId(), name: "Taylor", type: "Looking for players", location: "South Main", skill: "Intermediate social", body: "Need two more for Thursday evening play.", sport: "pickleball" },
     { id: newId(), name: "Morgan", type: "Golf foursome", location: "West side", skill: "Casual", body: "Looking for a Sunday morning nine-hole group.", sport: "golf" },
@@ -4283,6 +4345,11 @@ function normalizeImportedPlayer(row) {
     phone: phone.trim(),
     skill: row.skill || row.level || "Intermediate",
     waiver: normalizeWaiver(row.waiver || row.signedWaiver),
+    ...buildWaiverAudit(normalizeWaiver(row.waiver || row.signedWaiver), {
+      waiverSignedAt: row.waiverSignedAt || row.waiverTime || row.signedAt || "",
+      waiverSource: row.waiverSource || row.source || "CSV import",
+      waiverAgreementText: row.waiverAgreement || row.waiverAgreementText || "",
+    }, "CSV import"),
     status: row.status || "RSVP",
     paid: row.paid || row.payment || row.paymentStatus || "Not tracked",
     eventId,
@@ -4294,7 +4361,7 @@ function normalizeImportedPlayer(row) {
 }
 
 function exportPlayerCsv() {
-  const headers = ["First Name", "Last Name", "Email", "Phone", "Event", "Skill", "Waiver", "Status", "Paid", "Checked In", "Notes"];
+  const headers = ["First Name", "Last Name", "Email", "Phone", "Event", "Skill", "Waiver", "Waiver Signed At", "Waiver Source", "Waiver Agreement", "Status", "Paid", "Checked In", "Checked In At", "Notes"];
   const selectedEventId = els.playerEvent.value;
   const event = state.events.find((item) => item.id === selectedEventId);
   const attendees = state.players
@@ -4309,9 +4376,13 @@ function exportPlayerCsv() {
     eventName(player.eventId),
     player.skill,
     player.waiver,
+    player.waiverSignedAt || "",
+    player.waiverSource || "",
+    player.waiverAgreementText || "",
     player.status,
     player.paid,
     player.checkedIn ? "Yes" : "No",
+    player.checkedInAt || "",
     player.notes,
   ]);
   const label = event ? slugify(event.name) : "checked-in-attendees";
