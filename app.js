@@ -160,6 +160,7 @@ const els = {
   cancelEventEditBtn: document.querySelector("#cancelEventEditBtn"),
   cancelPlayerEditBtn: document.querySelector("#cancelPlayerEditBtn"),
   cancelProfileEditBtn: document.querySelector("#cancelProfileEditBtn"),
+  exportProfilesBtn: document.querySelector("#exportProfilesBtn"),
   cancelShopEditBtn: document.querySelector("#cancelShopEditBtn"),
   sendVerificationBtn: document.querySelector("#sendVerificationBtn"),
   verifyProfileBtn: document.querySelector("#verifyProfileBtn"),
@@ -255,6 +256,7 @@ els.fillRsvpBtn.addEventListener("click", fillRsvp);
 els.cancelEventEditBtn.addEventListener("click", resetEventForm);
 els.cancelPlayerEditBtn.addEventListener("click", resetPlayerForm);
 els.cancelProfileEditBtn.addEventListener("click", resetProfileForm);
+els.exportProfilesBtn.addEventListener("click", exportProfilesCsv);
 els.cancelShopEditBtn.addEventListener("click", resetShopForm);
 els.sendVerificationBtn.addEventListener("click", sendProfileVerification);
 els.verifyProfileBtn.addEventListener("click", verifyProfileCode);
@@ -291,6 +293,7 @@ if ("serviceWorker" in navigator) {
   }).catch(() => {});
 }
 
+autoArchiveEndedEvents();
 applyLaunchMode();
 render();
 initProfileCompletionLink();
@@ -2553,19 +2556,35 @@ function archiveEvent(id) {
   const item = state.events.find((event) => event.id === id);
   if (!item) return;
   if (!window.confirm(`Archive ${item.name}? It will move from active events into Event History.`)) return;
-  const attendees = state.players.filter((player) => player.eventId === id);
-  state.archivedEvents.unshift({
-    ...item,
-    archivedAt: new Date().toISOString(),
-    attendeeCount: attendees.length,
-    checkedInCount: attendees.filter((player) => player.checkedIn).length,
-    players: attendees,
-  });
+  archiveEventRecord(item, "Manual archive");
   state.events = state.events.filter((event) => event.id !== id);
   if (state.selectedEventRosterId === id) state.selectedEventRosterId = "";
   saveState();
   render();
   showAdminMessage("#eventList", "success", "Event archived.");
+}
+
+function autoArchiveEndedEvents() {
+  const today = localDateKey();
+  const endedEvents = state.events.filter((event) => event.date && event.date < today);
+  if (!endedEvents.length) return;
+  endedEvents.forEach((event) => archiveEventRecord(event, "Auto archived after event date"));
+  const endedIds = new Set(endedEvents.map((event) => event.id));
+  state.events = state.events.filter((event) => !endedIds.has(event.id));
+  if (endedIds.has(state.selectedEventRosterId)) state.selectedEventRosterId = "";
+  saveState();
+}
+
+function archiveEventRecord(event, reason) {
+  const attendees = state.players.filter((player) => player.eventId === event.id);
+  state.archivedEvents.unshift({
+    ...event,
+    archivedAt: new Date().toISOString(),
+    archiveReason: reason,
+    attendeeCount: attendees.length,
+    checkedInCount: attendees.filter((player) => player.checkedIn).length,
+    players: attendees,
+  });
 }
 
 function renderPlayers() {
@@ -4389,6 +4408,67 @@ function exportPlayerCsv() {
   downloadText(`club-society-${label}-${todaySlug()}.csv`, [headers, ...rows].map(csvLine).join("\n"), "text/csv");
 }
 
+function exportProfilesCsv() {
+  const headers = [
+    "First Name",
+    "Last Name",
+    "Email",
+    "Phone",
+    "Street",
+    "City",
+    "State",
+    "ZIP",
+    "Sport",
+    "Preferred Sport",
+    "Skill",
+    "Pickleball Level",
+    "Golf Handicap",
+    "Availability",
+    "Interests",
+    "SMS Subscriber",
+    "Discoverable",
+    "Allow Messages",
+    "Verification Status",
+    "Verification Method",
+    "Verified At",
+    "Source",
+    "Created At",
+    "Updated At",
+    "Bio",
+  ];
+  const rows = state.profiles
+    .slice()
+    .sort((a, b) => `${a.lastName || ""} ${a.firstName || ""}`.localeCompare(`${b.lastName || ""} ${b.firstName || ""}`))
+    .map((profile) => [
+      profile.firstName || "",
+      profile.lastName || "",
+      profile.email || "",
+      profile.phone || "",
+      profile.street || "",
+      profile.city || "",
+      profile.state || "",
+      profile.zip || "",
+      profile.sport || "",
+      profile.preferredSport || "",
+      profile.skill || "",
+      profile.pickleballLevel || "",
+      profile.handicap || "",
+      profile.availability || "",
+      listText(profile.interests || []),
+      profile.smsSubscriber ? "Yes" : "No",
+      profile.discoverable ? "Yes" : "No",
+      profile.allowMessages === false ? "No" : "Yes",
+      profile.verificationStatus || "",
+      profile.verificationMethod || "",
+      profile.verifiedAt || "",
+      profile.source || "",
+      profile.createdAt || "",
+      profile.updatedAt || "",
+      profile.bio || "",
+    ]);
+  downloadText(`club-society-player-profiles-${todaySlug()}.csv`, [headers, ...rows].map(csvLine).join("\n"), "text/csv");
+}
+
 function parseCsv(input) {
   const rows = [];
   let current = "";
@@ -4463,6 +4543,13 @@ function isValidPhone(value) {
 
 function todaySlug() {
   return new Date().toISOString().slice(0, 10);
+}
+
+function localDateKey(date = new Date()) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
 
 function names(ids) {
