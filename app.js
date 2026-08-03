@@ -364,6 +364,10 @@ function normalizeState(data) {
     ...DEFAULT_LOCATION,
     verificationStatus: profile.verificationStatus || "Unverified",
     verificationMethod: profile.verificationMethod || "email",
+    waiver: profile.waiver || "Needs Signature",
+    waiverSignedAt: profile.waiverSignedAt || "",
+    waiverSource: profile.waiverSource || "",
+    waiverAgreementText: profile.waiverAgreementText || "",
     discoverable: profile.discoverable === true,
     ...profile,
   }));
@@ -2808,12 +2812,27 @@ function savePublicCheckin(event) {
 
   if (existing) Object.assign(existing, player);
   else state.players.unshift({ ...player, id: newId() });
+  if (matchedProfile) {
+    Object.assign(matchedProfile, {
+      waiver: data.waiver,
+      ...buildWaiverAudit(data.waiver, {
+        ...matchedProfile,
+        waiverSignedAt: matchedProfile.waiverSignedAt || els.publicCheckinForm.dataset.waiverSignedAt,
+        waiverSource: matchedProfile.waiverSource || els.publicCheckinForm.dataset.waiverSource,
+      }, "Public check-in waiver modal"),
+      updatedAt: new Date().toISOString(),
+    });
+  }
   upsertPlayerDirectoryProfile({
     firstName: data.firstName,
     lastName: data.lastName,
     email: data.email,
     phone: data.phone,
     skill: data.skill,
+    waiver: data.waiver,
+    waiverSignedAt: els.publicCheckinForm.dataset.waiverSignedAt,
+    waiverSource: els.publicCheckinForm.dataset.waiverSource,
+    waiverAgreementText: "Player selected I Agree to the Club Society / Paddle + Pint liability waiver before check-in.",
     interests: ["Social round robins"],
     source: "Public check-in",
   });
@@ -3412,10 +3431,12 @@ function saveProfile(event) {
   const existing = state.profiles.find((profile) => profile.id === data.profileId)
     || state.profiles.find((profile) => profile.email.toLowerCase() === data.email.toLowerCase());
   const verified = existing?.verificationStatus === "Verified" || isCurrentProfileVerified();
+  const waiverAudit = buildWaiverAudit(data.waiver, existing, "Admin profile entry");
   const profile = {
     ...data,
     id: existing?.id || newId(),
     sport: state.mode,
+    ...waiverAudit,
     verificationStatus: verified ? "Verified" : "Admin entered",
     verifiedAt: verified ? (existing?.verifiedAt || new Date().toISOString()) : existing?.verifiedAt || "",
     source: existing?.source || "Admin profile entry",
@@ -3436,7 +3457,8 @@ function saveProfile(event) {
       email: data.email,
       phone: data.phone || "",
       skill: data.skill,
-      waiver: "Needs Signature",
+      waiver: data.waiver || "Needs Signature",
+      ...waiverAudit,
       status: "Profile",
       paid: "Not tracked",
       checkedIn: false,
@@ -3460,7 +3482,8 @@ function renderProfiles() {
         <strong>${escapeHtml(profile.firstName)} ${escapeHtml(profile.lastName)}</strong>
         <p class="meta">${escapeHtml(profile.skill)} | ${escapeHtml(profile.street || "")} ${escapeHtml(profile.city || "Local")}${profile.state ? `, ${escapeHtml(profile.state)}` : ""}${profile.zip ? ` ${escapeHtml(profile.zip)}` : ""}</p>
         <p>${escapeHtml(listText(profile.interests))} | ${escapeHtml(profile.availability)}</p>
-        <p class="meta">${escapeHtml(profile.phone || "No phone")} | SMS: ${profile.smsSubscriber ? "Yes" : "No"}</p>
+        <p class="meta">${escapeHtml(profile.phone || "No phone")} | SMS: ${profile.smsSubscriber ? "Yes" : "No"} | Waiver: ${escapeHtml(profile.waiver || "Needs Signature")}</p>
+        <p class="meta">Waiver proof: ${profile.waiverSignedAt ? `${escapeHtml(formatDateTime(profile.waiverSignedAt))} via ${escapeHtml(profile.waiverSource || "Profile")}` : "Not signed yet"}</p>
         <div class="card-actions">
           <button type="button" data-edit-profile="${escapeHtml(profile.id)}">Edit</button>
           <button class="danger" type="button" data-delete-profile="${escapeHtml(profile.id)}">Delete</button>
@@ -4076,6 +4099,10 @@ function upsertPlayerDirectoryProfile(profile) {
     state: existing?.state || DEFAULT_LOCATION.state,
     zip: existing?.zip || DEFAULT_LOCATION.zip,
     skill: profile.skill || existing?.skill || "Open",
+    waiver: profile.waiver || existing?.waiver || "Needs Signature",
+    waiverSignedAt: profile.waiverSignedAt || existing?.waiverSignedAt || "",
+    waiverSource: profile.waiverSource || existing?.waiverSource || "",
+    waiverAgreementText: profile.waiverAgreementText || existing?.waiverAgreementText || "",
     availability: existing?.availability || "Flexible",
     interests: Array.from(new Set([...(existing?.interests || []), ...(profile.interests || [])])),
     smsSubscriber: existing?.smsSubscriber || false,
@@ -4425,6 +4452,10 @@ function exportProfilesCsv() {
     "Golf Handicap",
     "Availability",
     "Interests",
+    "Waiver",
+    "Waiver Signed At",
+    "Waiver Source",
+    "Waiver Agreement",
     "SMS Subscriber",
     "Discoverable",
     "Allow Messages",
@@ -4455,6 +4486,10 @@ function exportProfilesCsv() {
       profile.handicap || "",
       profile.availability || "",
       listText(profile.interests || []),
+      profile.waiver || "Needs Signature",
+      profile.waiverSignedAt || "",
+      profile.waiverSource || "",
+      profile.waiverAgreementText || "",
       profile.smsSubscriber ? "Yes" : "No",
       profile.discoverable ? "Yes" : "No",
       profile.allowMessages === false ? "No" : "Yes",
