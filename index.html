@@ -25,12 +25,9 @@
         <button class="nav-item public-nav" data-view="societyApp">Society App</button>
         <button class="nav-item active" data-view="command">Command</button>
         <button class="nav-item" data-view="events">Events</button>
-        <button class="nav-item" data-view="publicView">Public View</button>
         <button class="nav-item public-nav" data-view="publicEvents">Public Events</button>
         <button class="nav-item public-nav" data-view="profile">Player Profile</button>
-        <button class="nav-item public-nav" data-view="discover">Discover</button>
         <button class="nav-item" data-view="checkin">Check-In</button>
-        <button class="nav-item public-nav" data-view="public">Public Check-In</button>
         <button class="nav-item" data-view="rounds">Round Robin</button>
         <button class="nav-item" data-view="tournament">Tournament</button>
         <button class="nav-item" data-view="community">Community</button>
@@ -81,7 +78,7 @@
                 <div class="toolbar">
                   <button data-jump="discover">Discover</button>
                   <button data-jump="publicEvents">Public Events</button>
-                  <button data-jump="public">Public Check-In</button>
+                  <button data-jump="checkin">Check-In</button>
                   <button class="primary" data-jump="checkin">Admin Check-In</button>
                 </div>
               </div>
@@ -209,6 +206,17 @@
                     </label>
                     <button class="primary" data-signin-submit type="button">Sign In</button>
                     <button class="forgot-password-link" data-forgot-password type="button">Forgot password?</button>
+                  </div>
+                  <div class="auth-panel" data-auth-content="reset">
+                    <h3>Create a new password</h3>
+                    <p class="meta">Enter a new password for your Club Society account.</p>
+                    <input name="resetToken" type="hidden">
+                    <input name="resetEmail" type="email" placeholder="Email address" readonly>
+                    <div class="form-pair">
+                      <input name="resetNewPassword" type="password" placeholder="New password" minlength="8" autocomplete="new-password">
+                      <input name="resetConfirmPassword" type="password" placeholder="Confirm new password" minlength="8" autocomplete="new-password">
+                    </div>
+                    <button class="primary" type="submit">Save New Password</button>
                   </div>
                   <p class="meta">After sign up, members receive a verification email with instructions on what to do next.</p>
                 </form>
@@ -767,6 +775,13 @@
                 <label>Last name<input name="lastName" required></label>
                 <label>Email<input name="email" type="email" required></label>
                 <label>Phone number<input name="phone" type="tel" placeholder="555-0101"></label>
+                <label>Gender
+                  <select name="gender" required>
+                    <option value="">Not specified</option>
+                    <option value="Female">Female</option>
+                    <option value="Male">Male</option>
+                  </select>
+                </label>
                 <label class="full">Street address<input name="street" placeholder="123 Main Street"></label>
                 <label>City<input name="city" value="Watkinsville" placeholder="Watkinsville"></label>
                 <label>State<input name="state" value="GA" placeholder="GA"></label>
@@ -831,38 +846,12 @@
                   <h2>Player Profiles</h2>
                 </div>
                 <div class="toolbar">
+                  <button id="importProfilesBtn" type="button">Import Profiles</button>
                   <button id="exportProfilesBtn" type="button">Export Profiles</button>
+                  <input id="profilesImport" type="file" accept=".csv,text/csv" hidden>
                 </div>
               </div>
               <div id="profileList" class="profile-grid"></div>
-            </section>
-          </div>
-        </section>
-
-        <section class="view" id="discover">
-          <div class="discover-shell">
-            <section class="discover-hero">
-              <p class="eyebrow">Play. Connect. Challenge.</p>
-              <h2>Discover local play</h2>
-              <p>Find players, open matches, tournaments, and club challenges from one public-facing hub.</p>
-            </section>
-            <section class="panel">
-              <div class="panel-head">
-                <div>
-                  <p class="eyebrow">Matches</p>
-                  <h2>Recommended Connections</h2>
-                </div>
-              </div>
-              <div id="matchList" class="match-grid"></div>
-            </section>
-            <section class="panel">
-              <div class="panel-head">
-                <div>
-                  <p class="eyebrow">Tournaments</p>
-                  <h2>Discovery Board</h2>
-                </div>
-              </div>
-              <div id="tournamentDiscoveryList" class="discovery-grid"></div>
             </section>
           </div>
         </section>
@@ -1045,45 +1034,10 @@
                 </div>
               </div>
               <div id="eventList" class="stack"></div>
+              <div class="form-actions calendar-actions">
+                <button id="beginSelectedEventBtn" class="primary" type="button">Begin Event</button>
+              </div>
               <div id="eventRosterPanel" class="stack event-roster-panel"></div>
-            </section>
-          </div>
-        </section>
-
-        <section class="view" id="publicView">
-          <div class="workspace two">
-            <section class="panel">
-              <div class="panel-head">
-                <div>
-                  <p class="eyebrow">Backend controls</p>
-                  <h2>Public View</h2>
-                </div>
-              </div>
-              <form id="publicViewForm" class="form-grid">
-                <label class="full">Public headline<input name="headline" required></label>
-                <label class="full">Intro text<textarea name="intro" rows="3" required></textarea></label>
-                <label>Primary button label<input name="primaryLabel" required></label>
-                <label>Secondary label<input name="secondaryLabel"></label>
-                <label class="full">Public announcement<textarea name="announcement" rows="2"></textarea></label>
-                <fieldset class="full interest-checks">
-                  <legend>Featured events</legend>
-                  <div id="featuredEventControls" class="check-list"></div>
-                </fieldset>
-                <fieldset class="full interest-checks">
-                  <legend>Featured players</legend>
-                  <div id="featuredPlayerControls" class="check-list"></div>
-                </fieldset>
-                <button class="primary full" type="submit">Save Public View</button>
-              </form>
-            </section>
-            <section class="panel">
-              <div class="panel-head">
-                <div>
-                  <p class="eyebrow">Preview</p>
-                  <h2>Public Main Page</h2>
-                </div>
-              </div>
-              <div id="publicViewPreview" class="stack"></div>
             </section>
           </div>
         </section>
@@ -1100,16 +1054,61 @@
               <form id="playerForm" class="form-grid">
                 <input name="playerId" type="hidden">
                 <div class="full quick-fill">
-                  <label>Already RSVP'd?
+                  <label>Find active player or RSVP
                     <input id="rsvpLookup" list="rsvpOptions" placeholder="Search name, email, or phone">
                     <datalist id="rsvpOptions"></datalist>
                   </label>
-                  <button id="fillRsvpBtn" type="button">Fill RSVP</button>
+                  <button id="fillRsvpBtn" type="button">Fill Player</button>
                 </div>
+                <label class="full checkbox-line">
+                  <input id="coupleCheckin" name="checkInPartner" type="checkbox">
+                  Check in this player with a partner
+                </label>
+                <fieldset id="partnerCheckinFields" class="full form-grid" hidden>
+                  <legend>Partner check-in</legend>
+                  <div class="full quick-fill">
+                    <label>Find partner
+                      <input id="partnerLookup" list="rsvpOptions" placeholder="Search name, email, or phone">
+                    </label>
+                    <button id="fillPartnerBtn" type="button">Fill Partner</button>
+                  </div>
+                  <label>Partner first name<input name="partnerFirstName" disabled></label>
+                  <label>Partner last name<input name="partnerLastName" disabled></label>
+                  <label>Partner email<input name="partnerEmail" type="email" disabled></label>
+                  <label>Partner phone<input name="partnerPhone" type="tel" disabled></label>
+                  <label>Partner gender
+                    <select name="partnerGender" required disabled>
+                      <option value="">Not specified</option>
+                      <option value="Female">Female</option>
+                      <option value="Male">Male</option>
+                    </select>
+                  </label>
+                  <label>Partner skill
+                    <select name="partnerSkill" disabled>
+                      <option>Beginner</option>
+                      <option selected>Intermediate</option>
+                      <option>Advanced</option>
+                      <option>Open</option>
+                    </select>
+                  </label>
+                  <label>Partner waiver
+                    <select name="partnerWaiver" disabled>
+                      <option>Signed</option>
+                      <option selected>Needs Signature</option>
+                    </select>
+                  </label>
+                </fieldset>
                 <label>First name<input name="firstName" required></label>
                 <label>Last name<input name="lastName" required></label>
                 <label>Email<input name="email" type="email" required></label>
                 <label>Phone<input name="phone" type="tel"></label>
+                <label>Gender
+                  <select name="gender" required>
+                    <option value="">Not specified</option>
+                    <option value="Female">Female</option>
+                    <option value="Male">Male</option>
+                  </select>
+                </label>
                 <label>Event
                   <select name="eventId" id="playerEvent"></select>
                 </label>
@@ -1192,9 +1191,17 @@
                     <option value="checked" selected>All checked in</option>
                     <option value="manual">Manual select</option>
                     <option value="teams">Manual teams</option>
+                    <option value="partners">Came-with partners + manual singles</option>
+                  </select>
+                </label>
+                <label>Rotation
+                  <select id="roundRotationStyle">
+                    <option value="all" selected>Change all players</option>
+                    <option value="winners">Keep winners, rotate losers</option>
                   </select>
                 </label>
                 <button id="clearRoundsBtn" type="button">Clear Rounds</button>
+                <button id="advanceRoundBtn" type="button" hidden>Next Round</button>
                 <button class="primary" id="buildRoundsBtn">Generate</button>
               </div>
             </div>
@@ -1215,9 +1222,19 @@
                 <button class="primary" id="advanceBracketBtn">Advance Winners</button>
               </div>
             </div>
-            <div class="tournament-promo">
-              <strong>Tournament discovery</strong>
-              <span>Published tournament events also appear on the Discover board for players.</span>
+            <div class="template-strip" aria-label="Tournament format">
+              <label>Format
+                <select id="tournamentFormat">
+                  <option value="singles">Singles</option>
+                  <option value="doubles">Doubles</option>
+                </select>
+              </label>
+              <label id="doublesPairingLabel" hidden>Doubles partners
+                <select id="doublesPairing">
+                  <option value="random">Randomly assign partners</option>
+                  <option value="came-with">Partner with who they came with</option>
+                </select>
+              </label>
             </div>
             <div id="bracket" class="bracket"></div>
           </section>
@@ -1429,7 +1446,7 @@
                 <label class="full">Admin sync key<input name="adminKey" type="password" placeholder="Paste the Cloudflare ADMIN_SYNC_KEY"></label>
                 <div class="form-actions full">
                   <button class="primary" type="submit">Save Sync Settings</button>
-                  <button id="importPaddlePintBtn" type="button">Import Paddle + Pint RSVPs</button>
+                  <button id="importPaddlePintBtn" type="button">Sync Cloudflare to This Site</button>
                 </div>
               </form>
               <div id="paddlePintSyncStatus" class="sync-status"></div>
@@ -1543,3 +1560,4 @@
     <script src="app.js?v=local-dev"></script>
   </body>
 </html>
+
