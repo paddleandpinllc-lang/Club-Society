@@ -1,4 +1,4 @@
-const APP_VERSION = "2026-08-10-standalone-2";
+const APP_VERSION = "2026-08-10-social-1";
 const CACHE_NAME = `club-society-${APP_VERSION}`;
 const versioned = (path) => `${path}?v=${encodeURIComponent(APP_VERSION)}`;
 const ASSETS = [
