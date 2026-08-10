@@ -1,4 +1,7 @@
-﻿const STORAGE_KEY = "paddlePinClub.v1";
+Warning: truncated output (original token count: 57873)
+Total output lines: 5451
+
+const STORAGE_KEY = "paddlePinClub.v1";
 const CLOUD_CONFIG_KEY = "clubSociety.cloudConfig.v1";
 const INTEGRATION_CONFIG_KEY = "clubSociety.integrationConfig.v1";
 const PADDLE_PINT_SYNC_CONFIG_KEY = "clubSociety.paddlePintSync.v1";
@@ -137,7 +140,6 @@ const els = {
   golfMessageMatchBtn: document.querySelector("#golfMessageMatchBtn"),
   adminForm: document.querySelector("#adminForm"),
   profileForm: document.querySelector("#profileForm"),
-  publicViewForm: document.querySelector("#publicViewForm"),
   shopForm: document.querySelector("#shopForm"),
   integrationForm: document.querySelector("#integrationForm"),
   paddlePintSyncForm: document.querySelector("#paddlePintSyncForm"),
@@ -150,16 +152,28 @@ const els = {
   courtCount: document.querySelector("#courtCount"),
   roundCount: document.querySelector("#roundCount"),
   roundPlayerSource: document.querySelector("#roundPlayerSource"),
+  roundRotationStyle: document.querySelector("#roundRotationStyle"),
   roundPlayerPicker: document.querySelector("#roundPlayerPicker"),
   buildRoundsBtn: document.querySelector("#buildRoundsBtn"),
+  advanceRoundBtn: document.querySelector("#advanceRoundBtn"),
   clearRoundsBtn: document.querySelector("#clearRoundsBtn"),
   seedBracketBtn: document.querySelector("#seedBracketBtn"),
   advanceBracketBtn: document.querySelector("#advanceBracketBtn"),
+  tournamentFormat: document.querySelector("#tournamentFormat"),
+  doublesPairing: document.querySelector("#doublesPairing"),
+  doublesPairingLabel: document.querySelector("#doublesPairingLabel"),
   rsvpLookup: document.querySelector("#rsvpLookup"),
   fillRsvpBtn: document.querySelector("#fillRsvpBtn"),
+  coupleCheckin: document.querySelector("#coupleCheckin"),
+  partnerCheckinFields: document.querySelector("#partnerCheckinFields"),
+  partnerLookup: document.querySelector("#partnerLookup"),
+  fillPartnerBtn: document.querySelector("#fillPartnerBtn"),
   cancelEventEditBtn: document.querySelector("#cancelEventEditBtn"),
+  beginSelectedEventBtn: document.querySelector("#beginSelectedEventBtn"),
   cancelPlayerEditBtn: document.querySelector("#cancelPlayerEditBtn"),
   cancelProfileEditBtn: document.querySelector("#cancelProfileEditBtn"),
+  importProfilesBtn: document.querySelector("#importProfilesBtn"),
+  profilesImport: document.querySelector("#profilesImport"),
   exportProfilesBtn: document.querySelector("#exportProfilesBtn"),
   cancelShopEditBtn: document.querySelector("#cancelShopEditBtn"),
   sendVerificationBtn: document.querySelector("#sendVerificationBtn"),
@@ -231,7 +245,6 @@ els.golfPassBtn.addEventListener("click", passGolfMatch);
 els.golfMessageMatchBtn.addEventListener("click", messageGolfMatch);
 els.adminForm.addEventListener("submit", saveAdmin);
 els.profileForm.addEventListener("submit", saveProfile);
-els.publicViewForm.addEventListener("submit", savePublicView);
 els.shopForm.addEventListener("submit", saveShopCollection);
 els.integrationForm.addEventListener("submit", saveIntegrationConfig);
 els.paddlePintSyncForm.addEventListener("submit", savePaddlePintSyncConfig);
@@ -240,22 +253,31 @@ els.cloudConfigForm.addEventListener("submit", saveCloudConfig);
 els.rosterSearch.addEventListener("input", renderPlayers);
 document.querySelector("#playerList").addEventListener("click", handlePlayerListClick);
 document.querySelector("#eventList").addEventListener("click", handleEventListClick);
+document.querySelector("#commandEvents").addEventListener("click", handleEventListClick);
 document.querySelector("#publicEventList").addEventListener("click", handlePublicEventListClick);
 document.querySelector("#profileList").addEventListener("click", handleProfileListClick);
 document.querySelector("#shopCollections").addEventListener("click", handleShopListClick);
 document.querySelector("#archiveList").addEventListener("click", handleArchiveListClick);
 els.buildRoundsBtn.addEventListener("click", buildRounds);
 els.roundPlayerSource.addEventListener("change", renderRoundPlayerPicker);
+els.roundRotationStyle.addEventListener("change", updateRoundRotationControls);
+els.advanceRoundBtn.addEventListener("click", advanceRoundRobin);
 els.roundPlayerPicker.addEventListener("change", saveRoundManualSelection);
 els.clearRoundsBtn.addEventListener("click", clearAllRounds);
 document.querySelector("#roundList").addEventListener("click", handleRoundListClick);
 document.querySelector("#roundList").addEventListener("change", handleRoundListChange);
 els.seedBracketBtn.addEventListener("click", seedBracket);
 els.advanceBracketBtn.addEventListener("click", advanceBracket);
+els.tournamentFormat.addEventListener("change", updateTournamentFormatControls);
 els.fillRsvpBtn.addEventListener("click", fillRsvp);
+els.coupleCheckin.addEventListener("change", toggleCoupleCheckin);
+els.fillPartnerBtn.addEventListener("click", fillPartner);
 els.cancelEventEditBtn.addEventListener("click", resetEventForm);
+els.beginSelectedEventBtn.addEventListener("click", () => beginEvent());
 els.cancelPlayerEditBtn.addEventListener("click", resetPlayerForm);
 els.cancelProfileEditBtn.addEventListener("click", resetProfileForm);
+els.importProfilesBtn.addEventListener("click", () => els.profilesImport.click());
+els.profilesImport.addEventListener("change", importProfilesCsv);
 els.exportProfilesBtn.addEventListener("click", exportProfilesCsv);
 els.cancelShopEditBtn.addEventListener("click", resetShopForm);
 els.sendVerificationBtn.addEventListener("click", sendProfileVerification);
@@ -266,7 +288,7 @@ els.exportCsvBtn.addEventListener("click", exportPlayerCsv);
 els.templateButtons.forEach((button) => button.addEventListener("click", () => applyEventTemplate(button.dataset.template)));
 els.publicFindBtn.addEventListener("click", findPublicPlayer);
 els.publicCheckinForm.addEventListener("submit", savePublicCheckin);
-els.openWaiverBtn.addEventListener("click", openWaiverModal);
+els.openWaiverBtn.addEventListener("click", () => openWaiverModal("public"));
 els.waiverAgreeBtn.addEventListener("click", agreeToWaiver);
 els.waiverDisagreeBtn.addEventListener("click", disagreeToWaiver);
 els.mockSyncBtn.addEventListener("click", mockSync);
@@ -329,7 +351,7 @@ function loadState() {
     quickGameFilter: "all",
     courtFilter: "all",
     paddlePintImportedIds: [],
-    roundSettings: { selectedPlayerIds: [], teams: [] },
+    roundSettings: { selectedPlayerIds: [], teams: [], partnerTeams: [], teamMatchQueue: [], sequentialTeams: [], sequentialMatchesRemaining: 0 },
     selectedEventRosterId: "",
     sync: { status: "Local only", lastSync: "", pending: 0 },
     storageMeta: {
@@ -369,6 +391,7 @@ function normalizeState(data) {
     waiverSource: profile.waiverSource || "",
     waiverAgreementText: profile.waiverAgreementText || "",
     discoverable: profile.discoverable === true,
+    gender: profile.gender || "",
     ...profile,
   }));
   data.players = (data.players || []).map((player) => ({
@@ -376,6 +399,7 @@ function normalizeState(data) {
     waiverSource: "",
     waiverAgreementText: "",
     checkedInAt: "",
+    gender: "",
     ...player,
   }));
   data.events = data.events || [];
@@ -396,7 +420,7 @@ function normalizeState(data) {
   data.quickGameFilter = data.quickGameFilter || "all";
   data.courtFilter = data.courtFilter || "all";
   data.paddlePintImportedIds = data.paddlePintImportedIds || [];
-  data.roundSettings = { selectedPlayerIds: [], teams: [], ...(data.roundSettings || {}) };
+  data.roundSettings = { selectedPlayerIds: [], teams: [], partnerTeams: [], teamMatchQueue: [], sequentialTeams: [], sequentialMatchesRemaining: 0, ...(data.roundSettings || {}) };
   data.selectedEventRosterId = data.selectedEventRosterId || "";
   data.storageMeta = {
     schemaVersion: STORAGE_SCHEMA_VERSION,
@@ -609,12 +633,11 @@ function closeGolfPreview() {
 
 function render() {
   els.modes.forEach((item) => item.classList.toggle("active", item.dataset.mode === state.mode));
+  updateTournamentFormatControls();
   renderMetrics();
   renderEvents();
   renderEventRoster();
   renderEventOptions();
-  renderPublicViewControls();
-  renderPublicViewPreview();
   renderPublicEvents();
   renderPlayers();
   renderRsvpOptions();
@@ -626,8 +649,6 @@ function render() {
   renderAdmins();
   renderSync();
   renderProfiles();
-  renderMatches();
-  renderTournamentDiscovery();
   renderShopCollections();
   renderArchive();
   renderIntegrationConfig();
@@ -709,9 +730,32 @@ function resetEventForm() {
 function savePlayer(event) {
   event.preventDefault();
   const data = Object.fromEntries(new FormData(els.playerForm).entries());
+  const checkingInPartner = data.checkInPartner === "on";
+  if (checkingInPartner && (!data.partnerFirstName?.trim() || !data.partnerLastName?.trim() || !isValidEmail(data.partnerEmail))) {
+    showAdminMessage("#playerList", "notice", "Enter the partner's first name, last name, and valid email.");
+    return;
+  }
+  if (checkingInPartner && data.partnerEmail.trim().toLowerCase() === data.email.trim().toLowerCase()) {
+    showAdminMessage("#playerList", "notice", "Choose a different member as the partner.");
+    return;
+  }
+  if (data.waiver !== "Signed") {
+    els.playerForm.dataset.pendingSubmit = "true";
+    openWaiverModal("admin-primary");
+    return;
+  }
+  if (checkingInPartner && data.partnerWaiver !== "Signed") {
+    els.playerForm.dataset.pendingSubmit = "true";
+    openWaiverModal("admin-partner");
+    return;
+  }
   const existing = state.players.find((player) => player.id === data.playerId)
     || state.players.find((player) => player.email?.toLowerCase() === data.email.toLowerCase());
-  const waiverAudit = buildWaiverAudit(data.waiver, existing, "Admin check-in");
+  const waiverAudit = buildWaiverAudit(data.waiver, {
+    ...existing,
+    waiverSignedAt: existing?.waiverSignedAt || els.playerForm.dataset.waiverSignedAt,
+    waiverSource: existing?.waiverSource || els.playerForm.dataset.waiverSource,
+  }, "Admin check-in waiver modal");
   const player = {
     ...data,
     id: existing?.id || newId(),
@@ -722,6 +766,7 @@ function savePlayer(event) {
     ...waiverAudit,
   };
   delete player.playerId;
+  ["checkInPartner", "partnerFirstName", "partnerLastName", "partnerEmail", "partnerPhone", "partnerGender", "partnerSkill", "partnerWaiver"].forEach((field) => delete player[field]);
 
   if (existing) Object.assign(existing, player);
   else state.players.unshift(player);
@@ -731,24 +776,89 @@ function savePlayer(event) {
       lastName: player.lastName,
       email: player.email,
       phone: player.phone,
+      gender: player.gender || "",
       skill: player.skill,
+      waiver: player.waiver,
+      waiverSignedAt: player.waiverSignedAt,
+      waiverSource: player.waiverSource,
+      waiverAgreementText: player.waiverAgreementText,
       interests: ["Played event", "Social round robins"],
       source: eventName(player.eventId) || "Admin check-in",
     });
   }
 
+  if (checkingInPartner) savePartnerCheckin(data, player);
+
   resetPlayerForm();
   saveState();
   render();
-  showAdminMessage("#playerList", "success", existing ? "Player updated." : "Player checked in.");
+  showAdminMessage("#playerList", "success", checkingInPartner ? "Both partners are checked in." : existing ? "Player updated." : "Player checked in.");
+}
+
+function savePartnerCheckin(data, primaryPlayer) {
+  const existing = state.players.find((player) => player.id === els.playerForm.dataset.partnerPlayerId)
+    || state.players.find((player) => player.email?.toLowerCase() === data.partnerEmail.toLowerCase());
+  const waiverAudit = buildWaiverAudit(data.partnerWaiver, {
+    ...existing,
+    waiverSignedAt: existing?.waiverSignedAt || els.playerForm.dataset.partnerWaiverSignedAt,
+    waiverSource: existing?.waiverSource || els.playerForm.dataset.partnerWaiverSource,
+  }, "Admin partner waiver modal");
+  const partner = {
+    id: existing?.id || newId(),
+    firstName: data.partnerFirstName,
+    lastName: data.partnerLastName,
+    email: data.partnerEmail,
+    phone: data.partnerPhone || "",
+    gender: data.partnerGender || "",
+    skill: data.partnerSkill || "Intermediate",
+    waiver: data.partnerWaiver,
+    status: "Checked in",
+    paid: data.paid || "Not tracked",
+    eventId: data.eventId,
+    notes: `Checked in with ${primaryPlayer.firstName} ${primaryPlayer.lastName}`,
+    checkedIn: true,
+    checkedInAt: existing?.checkedInAt || new Date().toISOString(),
+    sport: state.mode,
+    partnerPlayerId: primaryPlayer.id,
+    partnerName: `${primaryPlayer.firstName} ${primaryPlayer.lastName}`,
+    ...waiverAudit,
+  };
+  if (existing) Object.assign(existing, partner);
+  else state.players.unshift(partner);
+  const savedPrimary = state.players.find((player) => player.id === primaryPlayer.id);
+  if (savedPrimary) {
+    savedPrimary.partnerPlayerId = partner.id;
+    savedPrimary.partnerName = `${partner.firstName} ${partner.lastName}`;
+  }
+  upsertPlayerDirectoryProfile({
+    firstName: partner.firstName,
+    lastName: partner.lastName,
+    email: partner.email,
+    phone: partner.phone,
+    gender: partner.gender || "",
+    skill: partner.skill,
+    waiver: partner.waiver,
+    waiverSignedAt: partner.waiverSignedAt,
+    waiverSource: partner.waiverSource,
+    waiverAgreementText: partner.waiverAgreementText,
+    interests: ["Played event", "Social round robins"],
+    source: eventName(partner.eventId) || "Couple check-in",
+  });
 }
 
 function resetPlayerForm() {
   els.playerForm.reset();
+  els.playerForm.dataset.pendingSubmit = "";
+  els.playerForm.dataset.waiverSignedAt = "";
+  els.playerForm.dataset.waiverSource = "";
+  els.playerForm.dataset.partnerPlayerId = "";
+  els.playerForm.dataset.partnerWaiverSignedAt = "";
+  els.playerForm.dataset.partnerWaiverSource = "";
   els.playerForm.elements.playerId.value = "";
   els.playerForm.elements.status.value = "Checked in";
   els.playerForm.elements.paid.value = "Not tracked";
   els.playerForm.querySelector("button[type=submit]").textContent = "Check In";
+  toggleCoupleCheckin();
 }
 
 function buildWaiverAudit(waiverStatus, existing = {}, source = "Check-in") {
@@ -837,16 +947,16 @@ async function sendForgotPasswordEmail(email) {
 
 async function initProfileCompletionLink() {
   const url = new URL(window.location.href);
-  const resetEmail = url.searchParams.get("resetPassword");
-  if (resetEmail) {
+  const resetToken = url.searchParams.get("resetPassword");
+  const resetEmail = url.searchParams.get("email") || "";
+  if (resetToken) {
     setView("societyApp");
     setSocietyTab("home");
-    setAuthPanel("signup");
-    els.societyAccountForm.elements.email.value = resetEmail;
-    els.societyAccountForm.elements.email.focus();
-    url.searchParams.delete("resetPassword");
-    window.history.replaceState({}, "", url.toString());
-    showSocietyAccountMessage("Create a new password below to update your Club Society sign-in.", "notice");
+    setAuthPanel("reset");
+    els.societyAccountForm.elements.resetToken.value = resetToken;
+    els.societyAccountForm.elements.resetEmail.value = resetEmail;
+    els.societyAccountForm.elements.resetNewPassword.focus();
+    showSocietyAccountMessage("Create a new password below. This reset link expires after one hour.", "notice");
     return;
   }
 
@@ -990,6 +1100,10 @@ function savePost(event) {
 
 async function saveSocietyAccount(event) {
   event.preventDefault();
+  if (document.querySelector('[data-auth-content="reset"]')?.classList.contains("active")) {
+    await saveResetPassword();
+    return;
+  }
   const data = Object.fromEntries(new FormData(els.societyAccountForm).entries());
   const passwordValidation = validateSocietyPassword(data.password, data.confirmPassword);
   if (!passwordValidation.ok) {
@@ -1058,6 +1172,43 @@ async function saveSocietyAccount(event) {
   els.societyAccountForm.elements.city.value = "Watkinsville";
   els.societyAccountForm.elements.state.value = "GA";
   els.societyAccountForm.elements.zip.value = "30677";
+}
+
+async function saveResetPassword() {
+  const form = els.societyAccountForm.elements;
+  const passwordValidation = validateSocietyPassword(form.resetNewPassword.value, form.resetConfirmPassword.value);
+  if (!passwordValidation.ok) {
+    showSocietyAccountMessage(passwordValidation.message.replace("join Club Society", "continue"), "error");
+    return;
+  }
+  try {
+    const response = await fetch("/api/member-signup", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        action: "reset_password",
+        token: form.resetToken.value,
+        password: form.resetNewPassword.value,
+      }),
+    });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok || !result.ok) {
+      showSocietyAccountMessage(result.error || "This reset link could not be used. Request a new one.", "error");
+      return;
+    }
+    const url = new URL(window.location.href);
+    url.searchParams.delete("resetPassword");
+    url.searchParams.delete("email");
+    window.history.replaceState({}, "", url.toString());
+    const email = form.resetEmail.value;
+    els.societyAccountForm.reset();
+    setAuthPanel("signin");
+    els.societyAccountForm.elements.signinEmail.value = email;
+    showSocietyAccountMessage("Your password has been updated. Sign in with your new password.", "success");
+    els.societyAccountForm.elements.signinPassword.focus();
+  } catch {
+    showSocietyAccountMessage("Password reset is temporarily unavailable. Please try again.", "error");
+  }
 }
 
 function handleSocietyAppClick(event) {
@@ -1306,2159 +1457,7 @@ function currentSocietyProfile() {
 }
 
 function updateSocietyHome() {
-  const hasAccess = hasSocietyAccess();
-  document.querySelector(".society-guest-panel")?.classList.toggle("hidden", hasAccess);
-  document.querySelector(".society-public-hero")?.classList.toggle("hidden", hasAccess);
-  els.societyMemberDashboard?.classList.toggle("active", hasAccess);
-  if (!hasAccess) return;
-  const profile = currentSocietyProfile();
-  const name = profile ? `${profile.firstName || ""} ${profile.lastName || ""}`.trim() : "Society Member";
-  els.societyMemberName.textContent = name || "Society Member";
-  els.societyMemberMeta.textContent = profile
-    ? `${profile.city || "Watkinsville"}, ${profile.state || "GA"} | ${profile.preferredSport || "Golf + Pickleball"}`
-    : "Golf + Pickleball | 30677";
-  if (els.societyFavoriteCount) els.societyFavoriteCount.textContent = String(state.societyFavorites.length);
-  if (els.societyFriendCount) els.societyFriendCount.textContent = String(state.societyFriends.length);
-  if (els.societyGroupCount) els.societyGroupCount.textContent = String(myClubGroups().length);
-  fillSocietyProfileDrawer(profile);
-  updateSocietyAvatar(profile);
-  renderSocietyFriends();
-  renderProfileActivity();
-}
-
-function fillSocietyProfileDrawer(profile) {
-  if (!els.societyProfileDrawer) return;
-  const fields = els.societyProfileDrawer.elements;
-  fields.firstName.value = profile?.firstName || "";
-  fields.lastName.value = profile?.lastName || "";
-  fields.email.value = profile?.email || state.societySessionEmail || "";
-  fields.phone.value = profile?.phone || "";
-  fields.city.value = profile?.city || "Watkinsville";
-  fields.state.value = profile?.state || "GA";
-  fields.zip.value = profile?.zip || "30677";
-  fields.bio.value = profile?.bio || "";
-  fields.allowMessages.checked = profile?.allowMessages !== false;
-  fields.discoverable.checked = profile?.discoverable === true;
-}
-
-function updateSocietyAvatar(profile = currentSocietyProfile()) {
-  const photo = profile?.photoDataUrl || "";
-  if (photo) {
-    els.societyAvatar.style.backgroundImage = `url("${photo}")`;
-    els.societyAvatar.textContent = "";
-    els.societyPhotoPreview.style.backgroundImage = `url("${photo}")`;
-    els.societyPhotoPreview.textContent = "Change photo";
-  } else {
-    els.societyAvatar.style.backgroundImage = "";
-    els.societyAvatar.textContent = "CS";
-    els.societyPhotoPreview.style.backgroundImage = "";
-    els.societyPhotoPreview.textContent = "Add photo";
-  }
-}
-
-function toggleSocietyProfileDrawer(forceOpen) {
-  const shouldOpen = forceOpen ?? !els.societyProfileDrawer.classList.contains("active");
-  els.societyProfileDrawer.classList.toggle("active", shouldOpen);
-  if (shouldOpen) fillSocietyProfileDrawer(currentSocietyProfile());
-}
-
-async function previewSocietyPhoto() {
-  const file = els.societyPhotoInput.files?.[0];
-  if (!file) return;
-  const photo = await readFileAsDataUrl(file);
-  els.societyPhotoPreview.style.backgroundImage = `url("${photo}")`;
-  els.societyPhotoPreview.textContent = "Photo selected";
-}
-
-async function saveSocietyProfileFromDrawer() {
-  const data = Object.fromEntries(new FormData(els.societyProfileDrawer).entries());
-  if (!data.email?.trim()) {
-    els.societyAccountMessage.textContent = "Add an email before saving your profile.";
-    return;
-  }
-  let profile = currentSocietyProfile() || state.profiles.find((item) => item.email?.toLowerCase() === data.email.toLowerCase());
-  const photoFile = els.societyPhotoInput.files?.[0];
-  const photoDataUrl = photoFile ? await readFileAsDataUrl(photoFile) : profile?.photoDataUrl || "";
-  const nextProfile = {
-    ...(profile || {}),
-    id: profile?.id || newId(),
-    firstName: titleCase(data.firstName || profile?.firstName || "Society"),
-    lastName: titleCase(data.lastName || profile?.lastName || "Member"),
-    email: data.email.trim().toLowerCase(),
-    phone: data.phone || "",
-    city: data.city || "Watkinsville",
-    state: data.state || "GA",
-    zip: data.zip || "30677",
-    bio: data.bio || "",
-    photoDataUrl,
-    allowMessages: data.allowMessages === "on",
-    discoverable: data.discoverable === "on",
-    stayLoggedIn: true,
-    preferredSport: profile?.preferredSport || "both",
-    sport: profile?.sport || "pickleball",
-    source: profile?.source || "Society profile",
-    updatedAt: new Date().toISOString(),
-  };
-  if (profile) Object.assign(profile, nextProfile);
-  else state.profiles.unshift(nextProfile);
-  state.societySessionEmail = nextProfile.email;
-  saveState();
-  updateSocietyHome();
-  toggleSocietyProfileDrawer(false);
-  els.societyAccountMessage.textContent = photoDataUrl
-    ? "Profile saved. Messaging and posting are unlocked."
-    : "Profile saved. Add a photo before messaging or posting.";
-}
-
-function profileHasPhoto() {
-  return Boolean(currentSocietyProfile()?.photoDataUrl);
-}
-
-function promptForSocietyPhoto() {
-  setSocietyTab("home");
-  toggleSocietyProfileDrawer(true);
-  els.societyAccountMessage.textContent = "Add a profile photo before messaging or posting an event.";
-}
-
-function logoutSociety() {
-  pushMemberCloudState(true);
-  state.societySessionEmail = "";
-  state.cloudMemberSync = { email: "", token: "", lastPulledAt: "", lastPushedAt: "", status: "Local only" };
-  state.profiles.forEach((profile) => {
-    profile.stayLoggedIn = false;
-  });
-  saveState();
-  els.societyProfileDrawer?.classList.remove("active");
-  els.societyAccountForm.classList.add("auth-form-collapsed");
-  document.querySelector(".society-public-hero")?.classList.remove("hidden");
-  updateSocietyHome();
-  setSocietyTab("home");
-  els.societyAccountMessage.textContent = "You are logged out.";
-}
-
-function readFileAsDataUrl(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result);
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
-}
-
-function societyDirectoryCards() {
-  const currentEmail = state.societySessionEmail?.toLowerCase();
-  const savedProfiles = state.profiles
-    .filter((profile) => profile.email?.toLowerCase() !== currentEmail && profile.discoverable === true)
-    .map((profile) => ({
-      id: profile.id,
-      name: `${profile.firstName || ""} ${profile.lastName || ""}`.trim() || "Club member",
-      city: profile.city || "Watkinsville",
-      sport: profile.preferredSport || profile.sport || "pickleball",
-      skill: profile.skill || profile.pickleballLevel || (profile.handicap ? `Golf handicap ${profile.handicap}` : "Open play"),
-      vibe: profile.bio || (profile.socialPlay ? "Open to social play and friendly matchups." : "Looking for local games and club friends."),
-      photoDataUrl: profile.photoDataUrl || "",
-      socialPlay: Boolean(profile.socialPlay),
-      allowMessages: profile.allowMessages !== false,
-      bio: profile.bio || "",
-      email: profile.email || "",
-      phone: profile.phone || "",
-      discoverable: true,
-    }));
-  const demoProfiles = [
-    { id: "demo-maya", name: "Maya Thompson", city: "Watkinsville", sport: "pickleball", skill: "3.5 doubles", vibe: "Weeknight games, mixed doubles, and post-match hangouts.", socialPlay: true, allowMessages: true, discoverable: true },
-    { id: "demo-eli", name: "Eli Parker", city: "Athens", sport: "golf", skill: "12 handicap", vibe: "Last-minute tee times, relaxed pace, good playlists.", socialPlay: true, allowMessages: true, discoverable: true },
-    { id: "demo-jordan", name: "Jordan Reese", city: "Oconee", sport: "both", skill: "Pickleball 3.0 | Golf 18", vibe: "Down for social play, beginner-friendly groups, and club events.", socialPlay: true, allowMessages: true, discoverable: true },
-  ];
-  return [...savedProfiles, ...demoProfiles];
-}
-
-function defaultCasualMatches() {
-  return [
-    { id: "match-sat-doubles", title: "Need 2 for social doubles", day: "Today", time: "18:00", playersNeeded: "2", skill: "3.0-3.5", location: "Southeast Clarke Park", note: "Rotating partners, friendly but competitive.", ownerName: "Maya T.", ownerEmail: "demo-maya@example.com", rsvps: [] },
-    { id: "match-mixed-oconee", title: "Mixed doubles practice group", day: "Tomorrow", time: "09:00", playersNeeded: "1", skill: "Open", location: "Herman C. Michael Park", note: "Easy pace, drill a little then play.", ownerName: "Jordan R.", ownerEmail: "demo-jordan@example.com", rsvps: [] },
-    { id: "match-weekend-open", title: "Weekend open play group", day: "This weekend", time: "10:00", playersNeeded: "4", skill: "All levels", location: "Bishop Park", note: "Looking for a relaxed rotation Saturday morning.", ownerName: "Avery C.", ownerEmail: "demo-avery@example.com", rsvps: [] },
-  ];
-}
-
-function defaultQuickGames() {
-  return [
-    { id: "quick-today-singles", title: "Singles hit around", day: "Today", time: "16:30", location: "Satterfield Park", note: "One player, 45 minutes, any level.", ownerName: "Maya T.", ownerEmail: "demo-maya@example.com", rsvps: [] },
-    { id: "quick-tomorrow-open", title: "Need 1 for doubles", day: "Tomorrow", time: "07:45", location: "Southeast Clarke Park", note: "Casual doubles before work.", ownerName: "Jordan R.", ownerEmail: "demo-jordan@example.com", rsvps: [] },
-    { id: "quick-weekend-rotation", title: "Weekend rotation", day: "This weekend", time: "09:30", location: "Bishop Park", note: "Trying to get 6-8 players for rotating games.", ownerName: "Taylor R.", ownerEmail: "demo-taylor@example.com", rsvps: [] },
-  ];
-}
-
-function courtDirectory() {
-  return [
-    { name: "Southeast Clarke Park", city: "Athens", address: "4440 Lexington Road, Athens, GA 30605", access: "Public city/county", surface: "Outdoor", courts: "6 dedicated", note: "Free; permanent nets; dawn to dusk; no lights." },
-    { name: "Satterfield Park", city: "Athens", address: "2950 Cherokee Road, Athens, GA 30605", access: "Public city/county", surface: "Outdoor", courts: "6 shared/lined", note: "Lighted courts lined on tennis courts; first come when not reserved." },
-    { name: "Bishop Park", city: "Athens", address: "705 Sunset Drive, Athens, GA 30606", access: "Public city/county", surface: "Outdoor", courts: "6 shared/lined", note: "Lighted; lined on tennis/jr tennis courts." },
-    { name: "UGA Intramural Fields", city: "Athens", address: "5 Lake Herrick Drive, Athens, GA 30602", access: "College/public access varies", surface: "Outdoor", courts: "18 dedicated", note: "Large outdoor bank; check parking and access rules." },
-    { name: "Thomas Lay Community Center", city: "Athens", address: "297 Hoyt Street, Athens, GA 30601", access: "Public city/county", surface: "Indoor", courts: "3", note: "Weekday morning indoor play listed by AAPA." },
-    { name: "Aaron Heard Park and Community Center", city: "Athens", address: "400 McKinley Drive, Athens, GA 30601", access: "Public city/county", surface: "Indoor/outdoor", courts: "3 indoor / 4 outdoor", note: "Beginner-friendly sessions; outdoor times can vary by season." },
-    { name: "Athens First United Methodist Church", city: "Athens", address: "327 N Lumpkin Street, Athens, GA 30601", access: "Church/community", surface: "Indoor", courts: "3", note: "Tuesday/Thursday afternoon play listed by AAPA." },
-    { name: "Herman C. Michael Park", city: "Bishop", address: "1051 Elder Road, Bishop, GA 30621", access: "Oconee County public", surface: "Indoor/outdoor", courts: "3 indoor / 2 outdoor", note: "Indoor fee may apply for non-residents; outdoor free during park hours." },
-    { name: "YWCO", city: "Athens", address: "562 Research Drive, Athens, GA 30605", access: "Membership/day fee", surface: "Indoor", courts: "3", note: "Members/Silver Sneakers free; non-member day fee listed by AAPA." },
-    { name: "Mars Hill Baptist Church", city: "Watkinsville", address: "2661 Mars Hill Road, Watkinsville, GA 30677", access: "Church/community", surface: "Indoor", courts: "2 dedicated", note: "Tuesday sessions listed by AAPA; free to play." },
-    { name: "Oconee Veterans Park", city: "Watkinsville", address: "3500A Hog Mountain Road, Watkinsville, GA 30677", access: "Oconee County public", surface: "Indoor", courts: "2+", note: "County facility; check current schedule and resident/non-resident fees." },
-    { name: "Ramsey Student Center", city: "Athens", address: "330 River Road, Athens, GA 30602", access: "UGA students/faculty", surface: "Indoor", courts: "3", note: "UGA access only per AAPA listing." },
-    { name: "Jennings Mill Country Club", city: "Bogart", address: "Bogart, GA 30622", access: "Club/private", surface: "Outdoor", courts: "8", note: "Country club members only; pickleball memberships may be available." },
-    { name: "Athens Country Club", city: "Athens", address: "2700 Jefferson Road, Athens, GA 30607", access: "Club/private", surface: "Outdoor", courts: "6 dedicated / 12 shared", note: "Member or member guest access." },
-    { name: "The Georgia Club", city: "Statham", address: "1050 Chancellors Drive, Statham, GA 30666", access: "Club/private", surface: "Outdoor", courts: "4 dedicated / 4 shared", note: "Member or member guest access." },
-    { name: "Winder-Barrow / Victor Lord Park", city: "Winder", address: "175 2nd Street, Winder, GA 30680", access: "Public", surface: "Indoor/outdoor", courts: "7 total", note: "Indoor gym plus outdoor courts; schedule listed by AAPA." },
-    { name: "Jefferson Parks and Recreation", city: "Jefferson", address: "2495 Old Pendergrass Road, Jefferson, GA 30549", access: "Public", surface: "Indoor", courts: "4", note: "Indoor schedule listed by AAPA; call to confirm." },
-    { name: "Bethlehem First United Methodist Church", city: "Bethlehem", address: "709 Christmas Avenue, Bethlehem, GA 30620", access: "Church/community", surface: "Indoor", courts: "3", note: "Wednesday afternoon play listed by AAPA." },
-  ];
-}
-
-function renderSocietyFriends() {
-  if (!els.societyFriendResults) return;
-  const query = (els.societyFriendSearch?.value || "").trim().toLowerCase();
-  const filter = state.societyFriendFilter || "all";
-  const cards = societyDirectoryCards().filter((card) => {
-    const haystack = `${card.name} ${card.city} ${card.sport} ${card.skill} ${card.vibe}`.toLowerCase();
-    const matchesQuery = !query || haystack.includes(query);
-    const matchesFilter = filter === "all"
-      || (filter === "social" ? card.socialPlay : String(card.sport).toLowerCase().includes(filter) || card.sport === "both");
-    return matchesQuery && matchesFilter;
-  });
-  document.querySelectorAll("[data-society-friend-filter]").forEach((button) => {
-    button.classList.toggle("active", button.dataset.societyFriendFilter === filter);
-  });
-  els.societyFriendResults.innerHTML = cards.length
-    ? cards.map((card) => renderSocietyFriendCard(card)).join("")
-    : `<article class="society-list-card"><strong>No discoverable members yet</strong><p>Members appear here only after they turn on discoverability in their profile.</p></article>`;
-  if (els.societyProfilePreview && state.selectedSocietyProfileId && cards.some((card) => card.id === state.selectedSocietyProfileId)) {
-    showSocietyProfilePreview(state.selectedSocietyProfileId);
-  } else if (els.societyProfilePreview) {
-    state.selectedSocietyProfileId = "";
-    els.societyProfilePreview.innerHTML = `<article class="society-list-card"><strong>Tap a member</strong><p>Click a profile photo or name to preview details and connection options.</p></article>`;
-  }
-  updateSinglesToggle();
-}
-
-function showSocietyProfilePreview(id) {
-  const card = societyDirectoryCards().find((item) => item.id === id);
-  if (!card || !els.societyProfilePreview) return;
-  state.selectedSocietyProfileId = id;
-  saveState();
-  const photo = card.photoDataUrl
-    ? `style="background-image:url('${escapeHtml(card.photoDataUrl)}')"`
-    : "";
-  els.societyProfilePreview.innerHTML = `
-    <article class="society-profile-preview-card">
-      <button class="society-friend-photo large" data-profile-view="${escapeHtml(card.id)}" ${photo} type="button">${card.photoDataUrl ? "" : escapeHtml(initials(card.name))}</button>
-      <div>
-        <span>${escapeHtml(card.city)} | ${escapeHtml(card.sport)}</span>
-        <strong>${escapeHtml(card.name)}</strong>
-        <p>${escapeHtml(card.skill)}</p>
-        <p>${escapeHtml(card.bio || card.vibe || "Open to club play.")}</p>
-      </div>
-      <div class="society-friend-actions">
-        <button data-friend-add="${escapeHtml(card.id)}" type="button">Add Friend</button>
-        <button ${card.allowMessages === false ? "disabled" : `data-friend-message="${escapeHtml(card.id)}"`} type="button">${card.allowMessages === false ? "No messages" : "Message"}</button>
-      </div>
-    </article>
-  `;
-}
-
-function saveCasualMatch(event) {
-  event.preventDefault();
-  if (!profileHasPhoto()) {
-    promptForSocietyPhoto();
-    return;
-  }
-  const data = Object.fromEntries(new FormData(els.casualMatchForm).entries());
-  state.casualMatches.unshift({ ...data, ...currentPostOwner(), id: newId(), rsvps: [], createdAt: new Date().toISOString() });
-  els.casualMatchForm.reset();
-  saveState();
-  renderCasualMatches();
-  renderProfileActivity();
-}
-
-function renderCasualMatches() {
-  if (!els.casualMatchList) return;
-  const filter = state.casualMatchFilter || "all";
-  document.querySelectorAll("[data-match-filter]").forEach((button) => {
-    button.classList.toggle("active", button.dataset.matchFilter === filter);
-  });
-  const currentEmail = (currentSocietyProfile()?.email || state.societySessionEmail || "").toLowerCase();
-  const posts = [...state.quickGames, ...state.casualMatches, ...defaultQuickGames(), ...defaultCasualMatches()]
-    .filter((post) => String(post.ownerEmail || "").toLowerCase() !== currentEmail)
-    .filter((post) => matchesDayFilter(post.day, filter));
-  els.casualMatchList.innerHTML = posts.length
-    ? posts.map((post) => renderPostCard(post, "match")).join("")
-    : `<article class="society-list-card"><strong>No member matches yet</strong><p>Check another day or ask members to post from Play.</p></article>`;
-}
-
-function saveQuickGame(event) {
-  event.preventDefault();
-  if (!profileHasPhoto()) {
-    promptForSocietyPhoto();
-    return;
-  }
-  const data = Object.fromEntries(new FormData(els.quickGameForm).entries());
-  state.quickGames.unshift({ ...data, ...currentPostOwner(), id: newId(), rsvps: [], createdAt: new Date().toISOString() });
-  els.quickGameForm.reset();
-  saveState();
-  renderQuickGames();
-  renderProfileActivity();
-}
-
-function renderQuickGames() {
-  if (!els.quickGameList) return;
-  const filter = state.quickGameFilter || "all";
-  document.querySelectorAll("[data-quick-game-filter]").forEach((button) => {
-    button.classList.toggle("active", button.dataset.quickGameFilter === filter);
-  });
-  const currentEmail = (currentSocietyProfile()?.email || state.societySessionEmail || "").toLowerCase();
-  const posts = state.quickGames
-    .filter((post) => !currentEmail || String(post.ownerEmail || "").toLowerCase() === currentEmail)
-    .filter((post) => matchesDayFilter(post.day, filter));
-  els.quickGameList.innerHTML = posts.length
-    ? posts.map((post) => renderPostCard(post, "quick")).join("")
-    : `<article class="society-list-card"><strong>No games posted yet</strong><p>Post a last-minute game above for today, tomorrow, or this weekend.</p></article>`;
-}
-
-function renderPostCard(post, type) {
-  const rsvps = post.rsvps || [];
-  const action = type === "match" ? "data-match-rsvp" : "data-quick-game-rsvp";
-  const messageAction = type === "match" ? "data-match-message" : "data-quick-game-message";
-  const needed = post.playersNeeded ? `${post.playersNeeded} needed | ` : "";
-  return `
-    <article class="society-post-card">
-      <div>
-        <span>${escapeHtml(post.day)} | ${escapeHtml(formatDisplayTime(post.time) || "Time TBD")}</span>
-        <strong>${escapeHtml(post.title)}</strong>
-        ${post.ownerName ? `<em class="post-owner">Posted by ${escapeHtml(post.ownerName)}</em>` : ""}
-        <p>${needed}${escapeHtml(post.location || "Location TBD")} ${post.skill ? `| ${escapeHtml(post.skill)}` : ""}</p>
-        <p>${escapeHtml(post.note || "RSVP if you can play.")}</p>
-      </div>
-      <div class="society-post-actions">
-        <span>${rsvps.length} RSVP${rsvps.length === 1 ? "" : "s"}</span>
-        <button ${action}="${escapeHtml(post.id)}" type="button">RSVP</button>
-        <button ${messageAction}="${escapeHtml(post.id)}" type="button">Message</button>
-      </div>
-    </article>
-  `;
-}
-
-function currentPostOwner() {
-  const profile = currentSocietyProfile();
-  return {
-    ownerEmail: profile?.email || state.societySessionEmail || "",
-    ownerName: profile ? `${profile.firstName || ""} ${profile.lastName || ""}`.trim() : "Society Member",
-  };
-}
-
-function renderProfileActivity() {
-  if (!els.myRsvpList || !els.myPostList) return;
-  const profile = currentSocietyProfile();
-  const email = (profile?.email || state.societySessionEmail || "").toLowerCase();
-  const allPosts = [
-    ...state.casualMatches.map((post) => ({ ...post, typeLabel: "Match" })),
-    ...state.quickGames.map((post) => ({ ...post, typeLabel: "Quick Game" })),
-  ];
-  const myRsvps = allPosts.filter((post) => (post.rsvps || []).some((rsvp) => String(rsvp.email || rsvp).toLowerCase() === email));
-  const myPosts = allPosts.filter((post) => String(post.ownerEmail || "").toLowerCase() === email);
-  els.myRsvpList.innerHTML = myRsvps.length
-    ? myRsvps.map((post) => renderActivityItem(post, `${post.typeLabel} RSVP`)).join("")
-    : `<p class="empty-mini">No RSVPs yet.</p>`;
-  els.myPostList.innerHTML = myPosts.length
-    ? myPosts.map((post) => {
-      const responders = (post.rsvps || []).map((rsvp) => rsvp.name || rsvp).filter(Boolean);
-      return renderActivityItem(post, `${responders.length} response${responders.length === 1 ? "" : "s"}`, responders.join(", ") || "No responses yet");
-    }).join("")
-    : `<p class="empty-mini">No posts yet.</p>`;
-}
-
-function renderActivityItem(post, label, detail = "") {
-  return `
-    <article class="society-activity-item">
-      <span>${escapeHtml(label)}</span>
-      <strong>${escapeHtml(post.title || "Untitled")}</strong>
-      <p>${escapeHtml(post.day || "Any day")} | ${escapeHtml(formatDisplayTime(post.time) || "Time TBD")} | ${escapeHtml(post.location || "Location TBD")}</p>
-      ${detail ? `<p>${escapeHtml(detail)}</p>` : ""}
-    </article>
-  `;
-}
-
-function rsvpToCasualMatch(id) {
-  const collection = state.quickGames.some((item) => item.id === id) ? state.quickGames : state.casualMatches;
-  rsvpToPost(collection, id);
-  renderCasualMatches();
-}
-
-function rsvpToQuickGame(id) {
-  rsvpToPost(state.quickGames, id);
-  renderQuickGames();
-}
-
-function rsvpToPost(collection, id) {
-  let post = collection.find((item) => item.id === id);
-  if (!post) {
-    const seed = [...defaultCasualMatches(), ...defaultQuickGames()].find((item) => item.id === id);
-    if (!seed) return;
-    post = { ...seed, rsvps: [] };
-    collection.unshift(post);
-  }
-  const profile = currentSocietyProfile();
-  const name = profile ? `${profile.firstName || ""} ${profile.lastName || ""}`.trim() : "Society Member";
-  post.rsvps = post.rsvps || [];
-  const email = profile?.email || state.societySessionEmail || "";
-  if (!post.rsvps.some((rsvp) => String(rsvp.email || rsvp).toLowerCase() === email.toLowerCase())) {
-    post.rsvps.push({ name, email, at: new Date().toISOString() });
-  }
-  saveState();
-  renderProfileActivity();
-  els.societyAccountMessage.textContent = "RSVP saved.";
-}
-
-function allPlayablePosts() {
-  return [
-    ...state.casualMatches,
-    ...state.quickGames,
-    ...defaultCasualMatches(),
-    ...defaultQuickGames(),
-  ];
-}
-
-function findPlayablePost(id) {
-  return allPlayablePosts().find((post) => post.id === id);
-}
-
-function messagePostCreator(id) {
-  const post = findPlayablePost(id);
-  if (!post) return;
-  openPrefilledMessage(
-    post.ownerName || "Society Member",
-    `Hey ${post.ownerName || "there"}, I saw your post for ${post.title || "a game"} and wanted to connect.`
-  );
-}
-
-function matchesDayFilter(day, filter) {
-  const normalized = String(day || "").toLowerCase();
-  if (filter === "all") return true;
-  if (filter === "weekend") return normalized.includes("weekend");
-  return normalized === filter;
-}
-
-function renderCourtDirectory() {
-  if (!els.courtDirectoryList) return;
-  const query = (els.courtSearch?.value || "").trim().toLowerCase();
-  const filter = state.courtFilter || "all";
-  document.querySelectorAll("[data-court-filter]").forEach((button) => {
-    button.classList.toggle("active", button.dataset.courtFilter === filter);
-  });
-  const courts = courtDirectory().filter((court) => {
-    const text = `${court.name} ${court.city} ${court.address} ${court.access} ${court.surface} ${court.courts} ${court.note}`.toLowerCase();
-    const filterMatch = filter === "all"
-      || (filter === "club" ? court.access.toLowerCase().includes("club") || court.access.toLowerCase().includes("private") : text.includes(filter));
-    return filterMatch && (!query || text.includes(query));
-  });
-  els.courtDirectoryList.innerHTML = courts.map((court) => `
-    <article class="society-court-card">
-      <span>${escapeHtml(court.city)} | ${escapeHtml(court.surface)} | ${escapeHtml(court.access)}</span>
-      <strong>${escapeHtml(court.name)}</strong>
-      <p>${escapeHtml(court.address)}</p>
-      <p>${escapeHtml(court.courts)} - ${escapeHtml(court.note)}</p>
-    </article>
-  `).join("");
-}
-
-function renderSocietyFriendCard(card) {
-  const isFriend = state.societyFriends.includes(card.id);
-  const photo = card.photoDataUrl
-    ? `style="background-image:url('${escapeHtml(card.photoDataUrl)}')"`
-    : "";
-  return `
-    <article class="society-friend-card">
-      <button class="society-friend-photo" data-profile-view="${escapeHtml(card.id)}" ${photo} type="button" aria-label="View ${escapeHtml(card.name)}">${card.photoDataUrl ? "" : escapeHtml(initials(card.name))}</button>
-      <div>
-        <span>${escapeHtml(card.city)} | ${escapeHtml(card.sport)}</span>
-        <button class="profile-name-link" data-profile-view="${escapeHtml(card.id)}" type="button">${escapeHtml(card.name)}</button>
-        <p>${escapeHtml(card.skill)} - ${escapeHtml(card.vibe)}</p>
-      </div>
-      <div class="society-friend-actions">
-        <button class="${isFriend ? "active" : ""}" data-friend-add="${escapeHtml(card.id)}" type="button">${isFriend ? "Friends" : "Add"}</button>
-        <button ${card.allowMessages === false ? "disabled" : `data-friend-message="${escapeHtml(card.id)}"`} type="button">${card.allowMessages === false ? "No messages" : "Message"}</button>
-      </div>
-    </article>
-  `;
-}
-
-function addSocietyFriend(id) {
-  if (!id) return;
-  if (!state.societyFriends.includes(id)) state.societyFriends.push(id);
-  saveState();
-  renderSocietyFriends();
-  updateSocietyHome();
-  els.societyAccountMessage.textContent = "Added to Club Friends.";
-}
-
-function messageSocietyFriend(id) {
-  const card = societyDirectoryCards().find((item) => item.id === id);
-  if (!card) return;
-  if (card.allowMessages === false) {
-    els.societyAccountMessage.textContent = "That member is not accepting messages right now.";
-    return;
-  }
-  setSocietyTab("golfMessages");
-  els.golfMessageForm.elements.to.value = card.name;
-  els.golfMessageForm.elements.body.value = `Want to connect for ${String(card.sport).includes("golf") ? "a round" : "a game"} sometime?`;
-}
-
-function toggleSocialPlay() {
-  const profile = currentSocietyProfile();
-  if (!profile) return;
-  profile.socialPlay = !profile.socialPlay;
-  saveState();
-  updateSinglesToggle();
-  renderSocietyFriends();
-  els.societyAccountMessage.textContent = profile.socialPlay
-    ? "Social Play is on. Members can see you are open to friendly meetups."
-    : "Social Play is off.";
-}
-
-function saveClubGroup(event) {
-  event.preventDefault();
-  if (!profileHasPhoto()) {
-    promptForSocietyPhoto();
-    return;
-  }
-  const data = Object.fromEntries(new FormData(els.clubGroupForm).entries());
-  const owner = currentPostOwner();
-  state.clubGroups.unshift({
-    ...data,
-    ...owner,
-    id: newId(),
-    invitees: splitInvitees(data.invitees),
-    members: [owner.ownerEmail].filter(Boolean),
-    messages: [],
-    events: [],
-    createdAt: new Date().toISOString(),
-  });
-  els.clubGroupForm.reset();
-  saveState();
-  renderClubGroups();
-  renderMyGroups();
-  els.societyAccountMessage.textContent = `${data.name} created.`;
-}
-
-function currentGroupIdentity() {
-  const profile = currentSocietyProfile();
-  return {
-    email: (profile?.email || state.societySessionEmail || "").toLowerCase(),
-    name: profile ? `${profile.firstName || ""} ${profile.lastName || ""}`.trim().toLowerCase() : "",
-  };
-}
-
-function isGroupOwner(group, email = currentGroupIdentity().email) {
-  return String(group.ownerEmail || "").toLowerCase() === email;
-}
-
-function isGroupInvited(group, identity = currentGroupIdentity()) {
-  return (group.invitees || []).some((invite) => {
-    const value = invite.toLowerCase();
-    return value === identity.email || (identity.name && value === identity.name);
-  });
-}
-
-function isGroupMember(group, email = currentGroupIdentity().email) {
-  return (group.members || []).some((member) => String(member).toLowerCase() === email);
-}
-
-function myClubGroups() {
-  const identity = currentGroupIdentity();
-  return state.clubGroups.filter((group) => {
-    const isOwner = isGroupOwner(group, identity.email);
-    const isJoined = isGroupMember(group, identity.email);
-    const isInvited = isGroupInvited(group, identity);
-    return isOwner || isJoined || isInvited;
-  });
-}
-
-function renderClubGroups() {
-  if (!els.clubGroupList) return;
-  const identity = currentGroupIdentity();
-  const groups = state.clubGroups.filter((group) => group.visibility === "public");
-  els.clubGroupList.innerHTML = groups.length
-    ? groups.map((group) => renderClubGroupCard(group, identity.email, "public")).join("")
-    : `<article class="society-list-card"><strong>No public groups yet</strong><p>Create a public group from My Groups and it will show here for members to join.</p></article>`;
-}
-
-function renderMyGroups() {
-  if (!els.myGroupList) return;
-  const identity = currentGroupIdentity();
-  const groups = myClubGroups();
-  if (els.societyGroupCount) els.societyGroupCount.textContent = String(groups.length);
-  els.myGroupList.innerHTML = groups.length
-    ? groups.map((group) => renderClubGroupCard(group, identity.email, "mine")).join("")
-    : `<article class="society-list-card"><strong>No groups yet</strong><p>Create a group above or join a public group from Club Groups.</p></article>`;
-}
-
-function renderClubGroupCard(group, currentEmail, context = "mine") {
-  const isOwner = isGroupOwner(group, currentEmail);
-  const isJoined = isGroupMember(group, currentEmail);
-  const canJoin = context === "public" && !isOwner && !isJoined;
-  const invitees = (group.invitees || []).join(", ") || "No invitees yet";
-  const events = (group.events || []).map((item) => `
-    <li><strong>${escapeHtml(item.title)}</strong> ${escapeHtml(item.date || "Date TBD")} ${escapeHtml(formatDisplayTime(item.time) || "")} | ${escapeHtml(item.repeats || "One-time")}</li>
-  `).join("") || "<li>No scheduled events yet.</li>";
-  const messages = (group.messages || []).slice(0, 3).map((item) => `
-    <p><strong>${escapeHtml(item.from || "Member")}:</strong> ${escapeHtml(item.body)}</p>
-  `).join("") || "<p>No group messages yet.</p>";
-  return `
-    <article class="club-group-card">
-      <div class="club-group-head">
-        <div>
-          <span>${escapeHtml(group.visibility)} | ${escapeHtml(group.sport)}</span>
-          <strong>${escapeHtml(group.name)}</strong>
-          <p>${escapeHtml(group.description || "A Club Society group.")}</p>
-        </div>
-        <span class="status-pill">${escapeHtml(group.ownerName || "Organizer")}</span>
-      </div>
-      <p class="meta">Invited: ${escapeHtml(invitees)}</p>
-      <div class="club-group-events"><span>Schedule</span><ul>${events}</ul></div>
-      <div class="club-group-messages"><span>Group chat</span>${messages}</div>
-      <div class="society-friend-actions">
-        ${canJoin ? `<button class="primary" data-group-join="${escapeHtml(group.id)}" type="button">Join Group</button>` : `<button data-group-message="${escapeHtml(group.id)}" type="button">Message Group</button>`}
-        ${context === "public" && isJoined ? `<button class="active" type="button" disabled>Joined</button>` : ""}
-        ${isOwner && context === "mine" ? `<button data-group-add-event="${escapeHtml(group.id)}" type="button">Schedule Event</button><button class="danger" data-group-delete="${escapeHtml(group.id)}" type="button">Delete</button>` : ""}
-      </div>
-    </article>
-  `;
-}
-
-function joinClubGroup(id) {
-  const group = state.clubGroups.find((item) => item.id === id);
-  const email = currentGroupIdentity().email;
-  if (!group || !email) return;
-  group.members = group.members || [];
-  if (!group.members.some((member) => String(member).toLowerCase() === email)) {
-    group.members.push(email);
-  }
-  saveState();
-  renderClubGroups();
-  renderMyGroups();
-  els.societyAccountMessage.textContent = `Joined ${group.name}.`;
-}
-
-function messageClubGroup(id) {
-  const group = state.clubGroups.find((item) => item.id === id);
-  if (!group) return;
-  const body = window.prompt(`Message ${group.name}`);
-  if (!body?.trim()) return;
-  group.messages = group.messages || [];
-  group.messages.unshift({ from: currentPostOwner().ownerName, body: body.trim(), at: new Date().toISOString() });
-  saveState();
-  renderClubGroups();
-  renderMyGroups();
-}
-
-function addClubGroupEvent(id) {
-  const group = state.clubGroups.find((item) => item.id === id);
-  if (!group) return;
-  const title = window.prompt("Event name");
-  if (!title?.trim()) return;
-  const date = window.prompt("Event date, ex: Friday or 2026-08-01") || "";
-  const time = window.prompt("Start time, ex: 6:00 PM") || "";
-  const repeats = window.prompt("Repeat schedule: One-time, Weekly, Monthly") || "One-time";
-  group.events = group.events || [];
-  group.events.unshift({ id: newId(), title: title.trim(), date, time, repeats, createdAt: new Date().toISOString() });
-  saveState();
-  renderClubGroups();
-  renderMyGroups();
-}
-
-function deleteClubGroup(id) {
-  const group = state.clubGroups.find((item) => item.id === id);
-  if (!group) return;
-  if (!window.confirm(`Delete ${group.name}?`)) return;
-  state.clubGroups = state.clubGroups.filter((item) => item.id !== id);
-  saveState();
-  renderClubGroups();
-  renderMyGroups();
-}
-
-function splitInvitees(value) {
-  return String(value || "")
-    .split(",")
-    .map((item) => item.trim().toLowerCase())
-    .filter(Boolean);
-}
-
-function updateSinglesToggle() {
-  const enabled = Boolean(currentSocietyProfile()?.socialPlay);
-  if (!els.societySinglesToggle) return;
-  els.societySinglesToggle.classList.toggle("active", enabled);
-  els.societySinglesToggle.textContent = enabled ? "On" : "Turn On";
-}
-
-function initials(name) {
-  return String(name || "CS")
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0])
-    .join("")
-    .toUpperCase() || "CS";
-}
-
-function setSocietyEventTab(tab) {
-  document.querySelectorAll("[data-society-event-list]").forEach((list) => {
-    list.classList.toggle("active", list.dataset.societyEventList === tab);
-  });
-  document.querySelectorAll("[data-society-event-tab]").forEach((button) => {
-    button.classList.toggle("active", button.dataset.societyEventTab === tab);
-  });
-}
-
-function addSocietyFavorite(label) {
-  if (!label) return;
-  if (!state.societyFavorites.includes(label)) state.societyFavorites.push(label);
-  saveState();
-  updateSocietyHome();
-  els.societyAccountMessage.textContent = `${label} added to favorites and reminders.`;
-}
-
-function saveGolfTeeTime(event) {
-  event.preventDefault();
-  if (!profileHasPhoto()) {
-    promptForSocietyPhoto();
-    return;
-  }
-  const data = Object.fromEntries(new FormData(els.golfTeeTimeForm).entries());
-  state.golfTeeTimes.unshift({
-    ...data,
-    id: newId(),
-    zip: data.zip || "30677",
-    createdAt: new Date().toISOString(),
-  });
-  els.golfTeeTimeForm.reset();
-  els.golfTeeTimeForm.elements.zip.value = "30677";
-  saveState();
-  renderGolf();
-}
-
-function saveGolfGroup(event) {
-  event.preventDefault();
-  const data = Object.fromEntries(new FormData(els.golfGroupForm).entries());
-  state.golfGroups.unshift({ ...data, id: newId(), createdAt: new Date().toISOString() });
-  els.golfGroupForm.reset();
-  saveState();
-  renderGolf();
-}
-
-function saveGolfMessage(event) {
-  event.preventDefault();
-  const data = Object.fromEntries(new FormData(els.golfMessageForm).entries());
-  const recipient = resolveMessageRecipient(data.to);
-  if (!recipient.ok) {
-    els.societyAccountMessage.textContent = recipient.message;
-    els.golfMessageForm.elements.to.focus();
-    return;
-  }
-  state.golfMessages.unshift({
-    ...data,
-    to: recipient.name,
-    toId: recipient.id || "",
-    id: newId(),
-    from: currentPostOwner().ownerName || "You",
-    createdAt: new Date().toISOString(),
-  });
-  els.golfMessageForm.reset();
-  saveState();
-  renderGolf();
-  els.societyAccountMessage.textContent = `Message sent to ${recipient.name}.`;
-}
-
-function passGolfMatch() {
-  const cards = golfMatchCards();
-  state.golfMatchIndex = (state.golfMatchIndex + 1) % cards.length;
-  saveState();
-  renderGolfMatchDeck();
-}
-
-function messageGolfMatch() {
-  if (!profileHasPhoto()) {
-    promptForSocietyPhoto();
-    return;
-  }
-  const card = golfMatchCards()[state.golfMatchIndex % golfMatchCards().length];
-  setSocietyTab("golfMessages");
-  els.golfMessageForm.elements.to.value = card.name;
-  els.golfMessageForm.elements.body.value = `Interested in ${card.cta.toLowerCase()} at ${card.course}.`;
-}
-
-function renderGolf() {
-  renderGolfMatchDeck();
-  renderGolfTeeTimes();
-  renderGolfGroups();
-  renderGolfMessages();
-}
-
-function renderGolfMatchDeck() {
-  const cards = golfMatchCards();
-  const card = cards[state.golfMatchIndex % cards.length];
-  els.golfMatchDeck.innerHTML = `
-    <article class="golf-match-card">
-      <span>${escapeHtml(card.distance)} from 30677</span>
-      <strong>${escapeHtml(card.name)}</strong>
-      <p>${escapeHtml(card.course)} | ${escapeHtml(card.time)} | HCP ${escapeHtml(card.handicap)}</p>
-      <div class="golf-card-tags">
-        ${card.tags.map((tag) => `<em>${escapeHtml(tag)}</em>`).join("")}
-      </div>
-      <div class="golf-card-cta">${escapeHtml(card.cta)}</div>
-    </article>
-  `;
-}
-
-function renderGolfTeeTimes() {
-  const demo = [
-    { course: "Lane Creek Golf Club", date: "Today", time: "4:20 PM", spots: "1", note: "Single dropped. Need one more for a relaxed foursome." },
-    { course: "UGA Golf Course", date: "Tomorrow", time: "8:40 AM", spots: "2", note: "Cart booked. Casual pace, 12-20 handicap range." },
-  ];
-  const items = [...state.golfTeeTimes, ...demo];
-  els.golfTeeTimeList.innerHTML = items.map((item) => `
-    <article class="society-list-card">
-      <strong>${escapeHtml(item.course)}</strong>
-      <span>${escapeHtml(item.date)} | ${escapeHtml(formatDisplayTime(item.time))} | ${escapeHtml(item.spots)} open</span>
-      <p>${escapeHtml(item.note || "Open tee time inside the Club Society golf radius.")}</p>
-    </article>
-  `).join("");
-}
-
-function renderGolfGroups() {
-  const demo = [
-    { name: "Oconee After Work 9", vibe: "Casual foursome finder", note: "Weekday nine-hole rounds near Watkinsville." },
-    { name: "Athens Weekend Skins", vibe: "Competitive matches", note: "Friendly matches with a little pressure." },
-  ];
-  const items = [...state.golfGroups, ...demo];
-  els.golfGroupList.innerHTML = items.map((item) => `
-    <article class="society-list-card">
-      <strong>${escapeHtml(item.name)}</strong>
-      <span>${escapeHtml(item.vibe)}</span>
-      <p>${escapeHtml(item.note || "Golf group inside the 30677 radius.")}</p>
-    </article>
-  `).join("");
-}
-
-function renderGolfMessages() {
-  els.golfMessageList.innerHTML = state.golfMessages.length
-    ? state.golfMessages.map((message) => `
-      <article class="society-list-card">
-        <strong>${escapeHtml(message.to)}</strong>
-        <span>${escapeHtml(message.from)} | ${formatDateTime(message.createdAt)}</span>
-        <p>${escapeHtml(message.body)}</p>
-      </article>
-    `).join("")
-    : `<div class="empty">No golf messages yet. Message a match or tee-time host to start the conversation.</div>`;
-}
-
-function messageSuggestionCards() {
-  const profile = currentSocietyProfile();
-  const currentEmail = (profile?.email || state.societySessionEmail || "").toLowerCase();
-  const profileCards = state.profiles
-    .filter((item) => item.email?.toLowerCase() !== currentEmail)
-    .filter((item) => item.discoverable === true || item.allowMessages === true)
-    .map((item) => ({
-      id: item.id,
-      name: `${item.firstName || ""} ${item.lastName || ""}`.trim() || item.email,
-      email: item.email || "",
-      type: "Member",
-    }));
-  const demoCards = societyDirectoryCards().map((item) => ({
-    id: item.id,
-    name: item.name,
-    email: item.email || "",
-    type: "Member",
-  }));
-  const groupCards = state.clubGroups.map((item) => ({
-    id: item.id,
-    name: item.name,
-    email: "",
-    type: item.visibility === "private" ? "Private group" : "Group",
-  }));
-  const postOwnerCards = allPlayablePosts()
-    .filter((item) => item.ownerName)
-    .map((item) => ({
-      id: item.ownerEmail || item.ownerName,
-      name: item.ownerName,
-      email: item.ownerEmail || "",
-      type: "Post creator",
-    }));
-  const hostCards = state.events.map((item) => ({
-    id: item.id,
-    name: item.ownerName || item.hostName || "Club Society Host",
-    email: item.ownerEmail || item.hostEmail || "",
-    type: "Event host",
-  }));
-  const byName = new Map();
-  [...profileCards, ...demoCards, ...groupCards, ...postOwnerCards, ...hostCards, { id: "club-society-host", name: "Club Society Host", email: "", type: "Event host" }]
-    .filter((item) => item.name)
-    .forEach((item) => {
-      const key = item.name.toLowerCase();
-      if (!byName.has(key)) byName.set(key, item);
-    });
-  return [...byName.values()].sort((a, b) => a.name.localeCompare(b.name));
-}
-
-function updateMemberSuggestions() {
-  if (!els.memberSuggestionList) return;
-  els.memberSuggestionList.innerHTML = messageSuggestionCards().map((item) => `
-    <option value="${escapeHtml(item.name)}" label="${escapeHtml([item.type, item.email].filter(Boolean).join(" | "))}"></option>
-  `).join("");
-}
-
-function resolveMessageRecipient(value) {
-  const input = String(value || "").trim();
-  if (!input) return { ok: false, message: "Type a member or group name first." };
-  const normalized = input.toLowerCase();
-  const cards = messageSuggestionCards();
-  const exact = cards.find((item) => item.name.toLowerCase() === normalized || item.email.toLowerCase() === normalized);
-  if (exact) return { ok: true, ...exact };
-  const partial = cards.filter((item) => item.name.toLowerCase().includes(normalized));
-  if (partial.length === 1) return { ok: true, ...partial[0] };
-  if (partial.length > 1) return { ok: false, message: "Pick one matching member from the suggestions." };
-  return { ok: false, message: "No matching member or group found. Try a different name." };
-}
-
-function openPrefilledMessage(to, body) {
-  setSocietyTab("golfMessages");
-  els.golfMessageForm.elements.to.value = to || "Club Society Host";
-  els.golfMessageForm.elements.body.value = body || "Wanted to connect about this post.";
-  els.golfMessageForm.elements.body.focus();
-}
-
-function golfMatchCards() {
-  return [
-    { name: "Blake M.", course: "Lane Creek Golf Club", time: "Today 4:10 PM", handicap: "11", distance: "9 miles", cta: "Needs one more", tags: ["Fast reply", "Cart booked", "Casual"] },
-    { name: "Jordan K.", course: "UGA Golf Course", time: "Tomorrow 8:40 AM", handicap: "18", distance: "12 miles", cta: "Open twosome", tags: ["Beginner friendly", "Morning", "Social"] },
-    { name: "Taylor R.", course: "Jennings Mill", time: "Friday 2:30 PM", handicap: "6", distance: "14 miles", cta: "Match play invite", tags: ["Competitive", "Member invite", "18 holes"] },
-  ];
-}
-
-function savePublicRsvp(event) {
-  event.preventDefault();
-  const data = Object.fromEntries(new FormData(els.publicRsvpForm).entries());
-  const selectedEvent = state.events.find((item) => item.id === data.eventId);
-
-  if (!selectedEvent) {
-    showPublicRsvpMessage("notice", "No event selected.", "Publish an event before accepting RSVPs.");
-    return;
-  }
-
-  const reserved = eventPlayers(selectedEvent.id).filter((player) => player.status !== "Waitlist").length;
-  const capacity = Number(selectedEvent.capacity) || 0;
-  const status = capacity > 0 && reserved >= capacity ? "Waitlist" : "RSVP";
-  const existing = state.players.find((player) => player.email.toLowerCase() === data.email.toLowerCase());
-  const player = {
-    ...data,
-    id: existing?.id || newId(),
-    eventId: selectedEvent.id,
-    waiver: existing?.waiver || "Needs Signature",
-    status,
-    checkedIn: false,
-    sport: selectedEvent.sport || state.mode,
-    publicSignupAt: new Date().toISOString(),
-  };
-
-  if (existing) Object.assign(existing, player);
-  else state.players.unshift(player);
-
-  saveState();
-  render();
-  els.publicRsvpForm.reset();
-  showPublicRsvpMessage(
-    status === "Waitlist" ? "notice" : "success",
-    status === "Waitlist" ? "You're on the waitlist." : "You're on the list.",
-    status === "Waitlist" ? "The event is full, so the host will follow up if a spot opens." : "Your RSVP is saved. Use Public Check-In when you arrive."
-  );
-}
-
-function showPublicRsvpMessage(type, title, body) {
-  els.publicRsvpResult.innerHTML = `
-    <div class="public-message ${type}">
-      <strong>${escapeHtml(title)}</strong>
-      <span>${escapeHtml(body)}</span>
-    </div>
-  `;
-}
-
-function renderMetrics() {
-  const modePlayers = state.players.filter((player) => (player.sport || "pickleball") === state.mode);
-  const modeEvents = state.events.filter((event) => (event.sport || "pickleball") === state.mode);
-  const checked = modePlayers.filter((player) => player.checkedIn).length;
-  text("#metricPlayers", modePlayers.length);
-  text("#metricCheckedIn", checked);
-  text("#metricEvents", modeEvents.length);
-  text("#metricPosts", state.posts.filter((post) => (post.sport || "pickleball") === state.mode).length);
-}
-
-function renderEvents() {
-  const command = document.querySelector("#commandEvents");
-  const list = document.querySelector("#eventList");
-  const events = state.events.filter((event) => (event.sport || "pickleball") === state.mode);
-  const html = events.length
-    ? events.map(eventCard).join("")
-    : `<div class="empty">Create the first ${escapeHtml(state.mode)} club event.</div>`;
-  command.innerHTML = html;
-  list.innerHTML = html;
-}
-
-function renderEventOptions() {
-  const events = state.events.filter((event) => (event.sport || "pickleball") === state.mode);
-  const options = events.length
-    ? events.map((event) => `<option value="${event.id}">${escapeHtml(event.name)} - ${escapeHtml(event.date)}</option>`).join("")
-    : `<option value="">No event selected</option>`;
-  els.playerEvent.innerHTML = options;
-}
-
-function renderPublicEvents() {
-  const view = state.publicView || DEFAULT_PUBLIC_VIEW;
-  const featured = new Set(view.featuredEvents || []);
-  const published = state.events
-    .filter((event) => (event.sport || "pickleball") === state.mode)
-    .filter((event) => event.published !== false)
-    .filter((event) => !featured.size || featured.has(event.id));
-  const hero = document.querySelector(".public-event-hero");
-  if (hero) {
-    hero.querySelector(".eyebrow").textContent = view.secondaryLabel || "Public events";
-    hero.querySelector("h2").textContent = view.headline;
-    hero.querySelector("p:not(.eyebrow)").textContent = view.intro;
-  }
-  const publicRsvpPanel = document.querySelector(".public-rsvp-panel");
-  if (publicRsvpPanel) {
-    publicRsvpPanel.querySelector("h2").textContent = view.primaryLabel || "Reserve a spot";
-    publicRsvpPanel.querySelector("button[type=submit]").textContent = view.primaryLabel || "Submit RSVP";
-  }
-  document.querySelector("#publicEventList").innerHTML = published.length
-    ? published.map((event) => {
-      const count = eventPlayers(event.id).filter((player) => player.status !== "Waitlist").length;
-      const capacity = Number(event.capacity) || 0;
-      const full = capacity > 0 && count >= capacity;
-      return `
-        <article class="card public-event-card">
-          <span class="status-pill ${full ? "waitlist" : ""}">${full ? "Waitlist" : "Open"}</span>
-          <strong>${escapeHtml(event.name)}</strong>
-          <p class="meta">${escapeHtml(event.format)} | ${escapeHtml(event.venue)} | ${escapeHtml(event.date)}</p>
-          <p>${escapeHtml(event.note || "")}</p>
-          <p class="meta">${count}/${capacity || "No"} spots reserved | /events/${escapeHtml(event.slug || event.id)}</p>
-          <div class="card-actions">
-            <button type="button" data-society-event-rsvp="${escapeHtml(event.id)}">${full ? "Join Waitlist" : "RSVP"}</button>
-            <button type="button" data-society-event-message="${escapeHtml(event.id)}">Message Host</button>
-          </div>
-        </article>
-      `;
-    }).join("")
-    : `<div class="empty">${escapeHtml(featured.size ? "No featured published events match your Public View settings." : "Publish an event from the Events tab to preview the public page.")}</div>`;
-
-  els.publicRsvpEvent.innerHTML = published.length
-    ? published.map((event) => `<option value="${event.id}">${escapeHtml(event.name)} - ${escapeHtml(event.date)}</option>`).join("")
-    : `<option value="">No published events yet</option>`;
-}
-
-function handlePublicEventListClick(event) {
-  const rsvpButton = event.target.closest("[data-society-event-rsvp]");
-  if (rsvpButton) {
-    openEventRsvp(rsvpButton.dataset.societyEventRsvp);
-    return;
-  }
-
-  const messageButton = event.target.closest("[data-society-event-message]");
-  if (messageButton) messageEventHost(messageButton.dataset.societyEventMessage);
-}
-
-function openEventRsvp(id) {
-  const item = state.events.find((event) => event.id === id);
-  if (!item) return;
-  setView("publicEvents");
-  if (els.publicRsvpEvent) els.publicRsvpEvent.value = item.id;
-  document.querySelector(".public-rsvp-panel")?.scrollIntoView({ behavior: "smooth", block: "start" });
-}
-
-function messageEventHost(id) {
-  const item = state.events.find((event) => event.id === id);
-  if (!item) return;
-  const host = item.ownerName || item.hostName || "Club Society Host";
-  openPrefilledMessage(host, `I wanted to ask about ${item.name} on ${item.date || "the event date"}.`);
-}
-
-function messageStaticEventHost(label) {
-  openPrefilledMessage("Club Society Host", `I wanted to ask about ${label || "this event"}.`);
-}
-
-function renderPublicViewControls() {
-  const view = state.publicView || DEFAULT_PUBLIC_VIEW;
-  Object.entries(view).forEach(([name, value]) => {
-    const field = els.publicViewForm.elements[name];
-    if (field && !Array.isArray(value)) field.value = value || "";
-  });
-  const featuredEvents = new Set(view.featuredEvents || []);
-  document.querySelector("#featuredEventControls").innerHTML = state.events.length
-    ? state.events.map((event) => `
-      <label><input name="featuredEvents" type="checkbox" value="${escapeHtml(event.id)}" ${featuredEvents.has(event.id) ? "checked" : ""}> ${escapeHtml(event.name)} (${escapeHtml(event.date)})</label>
-    `).join("")
-    : `<p class="meta">Create events first, then choose which ones appear publicly.</p>`;
-
-  const featuredPlayers = new Set(view.featuredPlayers || []);
-  document.querySelector("#featuredPlayerControls").innerHTML = state.profiles.length
-    ? state.profiles.map((profile) => `
-      <label><input name="featuredPlayers" type="checkbox" value="${escapeHtml(profile.id)}" ${featuredPlayers.has(profile.id) ? "checked" : ""}> ${escapeHtml(profile.firstName)} ${escapeHtml(profile.lastName)}</label>
-    `).join("")
-    : `<p class="meta">Create player profiles first, then feature selected players.</p>`;
-}
-
-function savePublicView(event) {
-  event.preventDefault();
-  const form = new FormData(els.publicViewForm);
-  const data = Object.fromEntries(form.entries());
-  if (!data.headline?.trim() || !data.intro?.trim() || !data.primaryLabel?.trim()) {
-    showAdminMessage("#publicViewPreview", "notice", "Headline, intro text, and primary button label are required.");
-    return;
-  }
-  state.publicView = {
-    ...state.publicView,
-    ...data,
-    featuredEvents: form.getAll("featuredEvents"),
-    featuredPlayers: form.getAll("featuredPlayers"),
-  };
-  saveState();
-  render();
-  showAdminMessage("#publicViewPreview", "success", "Public view updated.");
-}
-
-function renderPublicViewPreview() {
-  const view = state.publicView || DEFAULT_PUBLIC_VIEW;
-  const featuredEvents = state.events.filter((event) => (view.featuredEvents || []).includes(event.id));
-  const featuredPlayers = state.profiles.filter((profile) => (view.featuredPlayers || []).includes(profile.id));
-  document.querySelector("#publicViewPreview").innerHTML = `
-    <article class="card public-preview-card">
-      <span class="status-pill">${escapeHtml(view.secondaryLabel || "Public page")}</span>
-      <strong>${escapeHtml(view.headline)}</strong>
-      <p>${escapeHtml(view.intro)}</p>
-      <p class="meta">${escapeHtml(view.announcement || "No announcement set.")}</p>
-    </article>
-    <article class="card">
-      <strong>Featured events</strong>
-      <p class="meta">${featuredEvents.length ? featuredEvents.map((event) => event.name).join(", ") : "All published events appear."}</p>
-    </article>
-    <article class="card">
-      <strong>Featured players</strong>
-      <p class="meta">${featuredPlayers.length ? featuredPlayers.map((profile) => `${profile.firstName} ${profile.lastName}`).join(", ") : "No featured player section selected."}</p>
-    </article>
-  `;
-}
-
-function eventCard(event) {
-  return `
-    <article class="card">
-      <span class="status-pill ${event.published === false ? "draft" : ""}">${event.published === false ? "Draft" : "Published"}</span>
-      <strong>${escapeHtml(event.name)}</strong>
-      <p class="meta">${escapeHtml(event.format)} | ${escapeHtml(event.venue)} | ${escapeHtml(event.date)} | ${escapeHtml(event.sport)}</p>
-      <p class="meta">Public link: /events/${escapeHtml(event.slug || event.id)}</p>
-      <p class="meta">${escapeHtml(event.note || "")}</p>
-      <div class="card-actions">
-        <button type="button" data-view-event-roster="${escapeHtml(event.id)}">View RSVPs</button>
-        <button type="button" data-edit-event="${escapeHtml(event.id)}">Edit</button>
-        <button type="button" data-archive-event="${escapeHtml(event.id)}">Archive</button>
-        <button class="danger" type="button" data-delete-event="${escapeHtml(event.id)}">Delete</button>
-      </div>
-    </article>
-  `;
-}
-
-function handleEventListClick(event) {
-  const rosterButton = event.target.closest("[data-view-event-roster]");
-  const editButton = event.target.closest("[data-edit-event]");
-  const archiveButton = event.target.closest("[data-archive-event]");
-  const deleteButton = event.target.closest("[data-delete-event]");
-
-  if (rosterButton) viewEventRoster(rosterButton.dataset.viewEventRoster);
-  if (editButton) editEvent(editButton.dataset.editEvent);
-  if (archiveButton) archiveEvent(archiveButton.dataset.archiveEvent);
-  if (deleteButton) deleteEvent(deleteButton.dataset.deleteEvent);
-}
-
-function viewEventRoster(id) {
-  state.selectedEventRosterId = id;
-  saveState();
-  renderEventRoster();
-  document.querySelector("#eventRosterPanel")?.scrollIntoView({ behavior: "smooth", block: "nearest" });
-}
-
-function renderEventRoster() {
-  const panel = document.querySelector("#eventRosterPanel");
-  if (!panel) return;
-  const event = state.events.find((item) => item.id === state.selectedEventRosterId);
-  if (!event) {
-    panel.innerHTML = "";
-    return;
-  }
-
-  const roster = eventPlayers(event.id).sort((a, b) => (a.lastName || "").localeCompare(b.lastName || ""));
-  panel.innerHTML = `
-    <article class="card event-roster-card">
-      <span class="status-pill">${roster.length} RSVP${roster.length === 1 ? "" : "s"}</span>
-      <strong>${escapeHtml(event.name)}</strong>
-      <p class="meta">${escapeHtml(event.date)} | ${escapeHtml(event.venue)} | ${escapeHtml(event.format)}</p>
-      ${roster.length ? `
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Player</th>
-                <th>Email</th>
-                <th>Phone</th>
-                <th>Status</th>
-                <th>Shirt</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${roster.map((player) => `
-                <tr>
-                  <td>${escapeHtml(player.firstName)} ${escapeHtml(player.lastName)}</td>
-                  <td>${escapeHtml(player.email || "")}</td>
-                  <td>${escapeHtml(player.phone || "")}</td>
-                  <td>${escapeHtml(player.status || "RSVP")}</td>
-                  <td>${escapeHtml([player.shirtGender, player.shirtSize, player.optionalShirtChoice].filter(Boolean).join(" / ") || "-")}</td>
-                </tr>
-              `).join("")}
-            </tbody>
-          </table>
-        </div>
-      ` : `<p class="meta">No RSVPs have been imported for this event yet.</p>`}
-    </article>
-  `;
-}
-
-function editEvent(id) {
-  const item = state.events.find((event) => event.id === id);
-  if (!item) return;
-  Object.entries(item).forEach(([name, value]) => {
-    const field = els.eventForm.elements[name === "id" ? "eventId" : name];
-    if (field) field.value = value;
-  });
-  els.eventForm.elements.published.value = String(item.published !== false);
-  els.eventForm.querySelector("button[type=submit]").textContent = "Update Event";
-  els.eventForm.scrollIntoView({ behavior: "smooth", block: "start" });
-}
-
-function deleteEvent(id) {
-  const item = state.events.find((event) => event.id === id);
-  if (!item) return;
-  if (!window.confirm(`Delete ${item.name}? This removes it from public events and event dropdowns.`)) return;
-  state.events = state.events.filter((event) => event.id !== id);
-  state.players = state.players.map((player) => player.eventId === id ? { ...player, eventId: "" } : player);
-  if (state.selectedEventRosterId === id) state.selectedEventRosterId = "";
-  saveState();
-  render();
-  showAdminMessage("#eventList", "success", "Event deleted.");
-}
-
-function archiveEvent(id) {
-  const item = state.events.find((event) => event.id === id);
-  if (!item) return;
-  if (!window.confirm(`Archive ${item.name}? It will move from active events into Event History.`)) return;
-  archiveEventRecord(item, "Manual archive");
-  state.events = state.events.filter((event) => event.id !== id);
-  if (state.selectedEventRosterId === id) state.selectedEventRosterId = "";
-  saveState();
-  render();
-  showAdminMessage("#eventList", "success", "Event archived.");
-}
-
-function autoArchiveEndedEvents() {
-  const today = localDateKey();
-  const endedEvents = state.events.filter((event) => event.date && event.date < today);
-  if (!endedEvents.length) return;
-  endedEvents.forEach((event) => archiveEventRecord(event, "Auto archived after event date"));
-  const endedIds = new Set(endedEvents.map((event) => event.id));
-  state.events = state.events.filter((event) => !endedIds.has(event.id));
-  if (endedIds.has(state.selectedEventRosterId)) state.selectedEventRosterId = "";
-  saveState();
-}
-
-function archiveEventRecord(event, reason) {
-  const attendees = state.players.filter((player) => player.eventId === event.id);
-  state.archivedEvents.unshift({
-    ...event,
-    archivedAt: new Date().toISOString(),
-    archiveReason: reason,
-    attendeeCount: attendees.length,
-    checkedInCount: attendees.filter((player) => player.checkedIn).length,
-    players: attendees,
-  });
-}
-
-function renderPlayers() {
-  const query = els.rosterSearch.value.trim().toLowerCase();
-  const players = state.players
-    .filter((player) => (player.sport || "pickleball") === state.mode)
-    .filter((player) => player.checkedIn)
-    .filter((player) => `${player.firstName} ${player.lastName} ${player.email}`.toLowerCase().includes(query))
-    .sort((a, b) => a.lastName.localeCompare(b.lastName));
-
-  document.querySelector("#playerList").innerHTML = players.length
-    ? players.map((player) => `
-      <article class="card player-card">
-        <div class="card-copy">
-          <strong>${escapeHtml(player.firstName)} ${escapeHtml(player.lastName)}</strong>
-          <p class="meta">${escapeHtml(player.skill)} | ${escapeHtml(player.email)} | ${escapeHtml(player.status || "Checked in")} | ${player.checkedIn ? "Checked in" : "Not active"}</p>
-          <p class="meta">Waiver: ${escapeHtml(player.waiver)} | Paid: ${escapeHtml(player.paid || "Not tracked")}${player.eventId ? ` | ${escapeHtml(eventName(player.eventId))}` : ""}</p>
-          <p class="meta">Waiver proof: ${player.waiverSignedAt ? `${escapeHtml(formatDateTime(player.waiverSignedAt))} via ${escapeHtml(player.waiverSource || "Check-in")}` : "Not signed yet"}</p>
-        </div>
-        <div class="card-actions">
-          <button type="button" data-edit-player="${escapeHtml(player.id)}">Edit</button>
-          <button type="button" data-toggle-player-active="${escapeHtml(player.id)}">${player.checkedIn ? "Mark Out" : "Check In"}</button>
-          <button class="danger delete-player-btn" type="button" data-delete-player="${escapeHtml(player.id)}" aria-label="Delete ${escapeHtml(player.firstName)} ${escapeHtml(player.lastName)}">Delete</button>
-        </div>
-      </article>
-    `).join("")
-    : `<div class="empty">No players are currently checked in.</div>`;
-}
-
-function handlePlayerListClick(event) {
-  const editButton = event.target.closest("[data-edit-player]");
-  if (editButton) {
-    editPlayer(editButton.dataset.editPlayer);
-    return;
-  }
-
-  const activeButton = event.target.closest("[data-toggle-player-active]");
-  if (activeButton) {
-    togglePlayerActive(activeButton.dataset.togglePlayerActive);
-    return;
-  }
-
-  const button = event.target.closest("[data-delete-player]");
-  if (!button) return;
-
-  const player = state.players.find((item) => item.id === button.dataset.deletePlayer);
-  if (!player) return;
-
-  const name = `${player.firstName} ${player.lastName}`.trim() || "this player";
-  if (!window.confirm(`Delete ${name} from check-in?`)) return;
-
-  deletePlayer(player.id);
-  showAdminMessage("#playerList", "success", "Player deleted.");
-}
-
-function editPlayer(id) {
-  const player = state.players.find((item) => item.id === id);
-  if (!player) return;
-  Object.entries(player).forEach(([name, value]) => {
-    const field = els.playerForm.elements[name === "id" ? "playerId" : name];
-    if (field) field.value = value || "";
-  });
-  els.playerForm.elements.playerId.value = player.id;
-  els.playerForm.querySelector("button[type=submit]").textContent = "Update Player";
-  els.playerForm.scrollIntoView({ behavior: "smooth", block: "start" });
-}
-
-function togglePlayerActive(id) {
-  const player = state.players.find((item) => item.id === id);
-  if (!player) return;
-  if (player.checkedIn) {
-    if (!window.confirm(`Mark ${player.firstName} ${player.lastName} out and remove them from current rounds?`)) return;
-    player.checkedIn = false;
-    player.status = "Left event";
-    removePlayerFromActivePlay(id);
-  } else {
-    player.checkedIn = true;
-    player.status = "Checked in";
-    player.checkedInAt = new Date().toISOString();
-  }
-  saveState();
-  render();
-  showAdminMessage("#playerList", "success", player.checkedIn ? "Player checked back in." : "Player marked out.");
-}
-
-function deletePlayer(id) {
-  state.players = state.players.filter((player) => player.id !== id);
-  removePlayerFromActivePlay(id);
-  state.roundSettings.selectedPlayerIds = (state.roundSettings.selectedPlayerIds || []).filter((playerId) => playerId !== id);
-  saveState();
-  render();
-}
-
-function removePlayerFromActivePlay(id) {
-  state.rounds = state.rounds
-    .map((round) => ({
-      ...round,
-      sitting: (round.sitting || []).filter((playerId) => playerId !== id),
-      matches: (round.matches || [])
-        .map((match) => ({
-          ...match,
-          teamA: (match.teamA || []).filter((playerId) => playerId !== id),
-          teamB: (match.teamB || []).filter((playerId) => playerId !== id),
-        }))
-        .filter((match) => match.teamA.length || match.teamB.length),
-    }))
-    .filter((round) => round.matches.length || round.sitting.length);
-  state.bracket = state.bracket
-    .map((match) => ({
-      ...match,
-      players: (match.players || []).filter((playerId) => playerId !== id),
-      winner: match.winner === id ? "" : match.winner,
-    }))
-    .filter((match) => match.players.length);
-  state.sync.pending = (state.sync.pending || 0) + 1;
-}
-
-function renderRsvpOptions() {
-  document.querySelector("#rsvpOptions").innerHTML = state.players.map((player) => `
-    <option value="${escapeHtml(`${player.firstName} ${player.lastName} | ${player.email} | ${player.phone || ""}`)}"></option>
-  `).join("");
-}
-
-function renderWaivers() {
-  const queue = state.players.filter((player) => player.waiver === "Needs Signature");
-  document.querySelector("#waiverList").innerHTML = queue.length
-    ? queue.map((player) => `
-      <article class="card alert-card">
-        <strong>${escapeHtml(player.firstName)} ${escapeHtml(player.lastName)}</strong>
-        <p class="meta">${escapeHtml(player.email)} | ${escapeHtml(player.phone || "No phone")}</p>
-        <p class="meta">No waiver timestamp saved yet.</p>
-      </article>
-    `).join("")
-    : `<div class="empty">All current players have signed waivers.</div>`;
-}
-
-function fillRsvp() {
-  const query = els.rsvpLookup.value.toLowerCase();
-  const player = state.players.find((item) => {
-    const haystack = `${item.firstName} ${item.lastName} ${item.email} ${item.phone || ""}`.toLowerCase();
-    return query && haystack.includes(query.split("|")[0].trim());
-  });
-
-  if (!player) return;
-
-  ["firstName", "lastName", "email", "phone", "skill", "waiver", "status", "paid", "notes"].forEach((name) => {
-    const field = els.playerForm.elements[name];
-    if (field && player[name]) field.value = player[name];
-  });
-
-  if (player.eventId) els.playerForm.elements.eventId.value = player.eventId;
-  els.playerForm.elements.status.value = "Checked in";
-}
-
-function findPublicPlayer() {
-  const match = findCheckinLookupRecord(els.publicLookup.value);
-  const player = match?.player || match?.profile || null;
-  els.publicCheckinForm.dataset.playerId = match?.player?.id || "";
-  els.publicCheckinForm.dataset.profileId = match?.profile?.id || "";
-
-  if (!player) {
-    els.publicResult.innerHTML = `
-      <div class="public-message notice">
-        <strong>No RSVP found yet.</strong>
-        <span>You can still check in as a walk-up. Enter your details below.</span>
-      </div>
-    `;
-    clearPublicForm(false);
-    setPublicWaiverStatus("Needs Signature");
-    return;
-  }
-
-  ["firstName", "lastName", "email", "phone", "skill", "waiver"].forEach((name) => {
-    const field = els.publicCheckinForm.elements[name];
-    if (field && player[name]) field.value = player[name];
-  });
-
-  els.publicResult.innerHTML = `
-    <div class="public-message success">
-      <strong>${match.player ? "We found your RSVP" : "We found your player profile"}, ${escapeHtml(player.firstName)}.</strong>
-      <span>${match.player?.checkedIn ? "You are already checked in. You can update and submit again if needed." : "Confirm your details below to finish check-in."}</span>
-    </div>
-  `;
-  setPublicWaiverStatus(player.waiver || "Needs Signature");
-  if (player.waiver !== "Signed") openWaiverModal();
-}
-
-function savePublicCheckin(event) {
-  event.preventDefault();
-  const data = Object.fromEntries(new FormData(els.publicCheckinForm).entries());
-  if (data.waiver !== "Signed") {
-    els.publicCheckinForm.dataset.pendingSubmit = "true";
-    openWaiverModal();
-    return;
-  }
-
-  const existing = state.players.find((player) => player.id === els.publicCheckinForm.dataset.playerId)
-    || state.players.find((player) => player.email.toLowerCase() === data.email.toLowerCase());
-  const matchedProfile = state.profiles.find((profile) => profile.id === els.publicCheckinForm.dataset.profileId)
-    || findProfileByPrivateLookup(data.email || data.phone || `${data.firstName} ${data.lastName}`);
-  const player = {
-    firstName: data.firstName,
-    lastName: data.lastName,
-    email: data.email,
-    phone: data.phone,
-    skill: data.skill,
-    waiver: data.waiver,
-    status: existing?.status === "Walk-up" ? "Walk-up" : matchedProfile && !existing ? "Profile check-in" : existing ? "Checked in" : "Walk-up",
-    paid: existing?.paid || "Not tracked",
-    eventId: existing?.eventId || state.events[0]?.id || "",
-    notes: existing?.notes || "",
-    checkedIn: true,
-    checkedInAt: new Date().toISOString(),
-    sport: existing?.sport || state.mode,
-    ...buildWaiverAudit(data.waiver, {
-      ...existing,
-      waiverSignedAt: existing?.waiverSignedAt || els.publicCheckinForm.dataset.waiverSignedAt,
-      waiverSource: existing?.waiverSource || els.publicCheckinForm.dataset.waiverSource,
-    }, "Public check-in waiver modal"),
-  };
-
-  if (existing) Object.assign(existing, player);
-  else state.players.unshift({ ...player, id: newId() });
-  if (matchedProfile) {
-    Object.assign(matchedProfile, {
-      waiver: data.waiver,
-      ...buildWaiverAudit(data.waiver, {
-        ...matchedProfile,
-        waiverSignedAt: matchedProfile.waiverSignedAt || els.publicCheckinForm.dataset.waiverSignedAt,
-        waiverSource: matchedProfile.waiverSource || els.publicCheckinForm.dataset.waiverSource,
-      }, "Public check-in waiver modal"),
-      updatedAt: new Date().toISOString(),
-    });
-  }
-  upsertPlayerDirectoryProfile({
-    firstName: data.firstName,
-    lastName: data.lastName,
-    email: data.email,
-    phone: data.phone,
-    skill: data.skill,
-    waiver: data.waiver,
-    waiverSignedAt: els.publicCheckinForm.dataset.waiverSignedAt,
-    waiverSource: els.publicCheckinForm.dataset.waiverSource,
-    waiverAgreementText: "Player selected I Agree to the Club Society / Paddle + Pint liability waiver before check-in.",
-    interests: ["Social round robins"],
-    source: "Public check-in",
-  });
-
-  saveState();
-  render();
-  els.publicResult.innerHTML = `
-    <div class="public-message success">
-      <strong>You're checked in.</strong>
-      <span>You're all set. See the host if you need to change anything.</span>
-    </div>
-  `;
-  clearPublicForm(true);
-}
-
-function findCheckinLookupRecord(value) {
-  const player = findPlayerByPrivateLookup(value);
-  if (player) return { player, profile: findProfileByPrivateLookup(player.email || player.phone || `${player.firstName} ${player.lastName}`) };
-
-  const profile = findProfileByPrivateLookup(value);
-  if (profile) return { player: null, profile };
-
-  return null;
-}
-
-function openWaiverModal() {
-  els.waiverModal.classList.add("open");
-  els.waiverModal.setAttribute("aria-hidden", "false");
-}
-
-function closeWaiverModal() {
-  els.waiverModal.classList.remove("open");
-  els.waiverModal.setAttribute("aria-hidden", "true");
-}
-
-function agreeToWaiver() {
-  setPublicWaiverStatus("Signed");
-  els.publicCheckinForm.dataset.waiverSignedAt = new Date().toISOString();
-  els.publicCheckinForm.dataset.waiverSource = "Public check-in waiver modal";
-  closeWaiverModal();
-
-  if (els.publicCheckinForm.dataset.pendingSubmit === "true") {
-    els.publicCheckinForm.dataset.pendingSubmit = "";
-    els.publicCheckinForm.requestSubmit();
-  }
-}
-
-function disagreeToWaiver() {
-  setPublicWaiverStatus("Needs Signature");
-  els.publicCheckinForm.dataset.waiverSignedAt = "";
-  els.publicCheckinForm.dataset.waiverSource = "";
-  els.publicCheckinForm.dataset.pendingSubmit = "";
-  closeWaiverModal();
-  els.publicResult.innerHTML = `
-    <div class="public-message notice">
-      <strong>Check-in paused.</strong>
-      <span>You must agree to the waiver before completing check-in.</span>
-    </div>
-  `;
-}
-
-function setPublicWaiverStatus(status) {
-  const signed = status === "Signed";
-  els.publicCheckinForm.elements.waiver.value = signed ? "Signed" : "Needs Signature";
-  els.publicWaiverStatus.textContent = signed ? "Signed" : "Needs Signature";
-  els.publicWaiverStatus.classList.toggle("signed", signed);
-}
-
-function findPlayerByPrivateLookup(value) {
-  const query = String(value || "").trim().toLowerCase();
-  if (query.length < 3) return null;
-
-  return state.players.find((player) => {
-    const exactEmail = player.email?.toLowerCase() === query;
-    const exactPhone = digits(player.phone) && digits(player.phone) === digits(query);
-    const name = `${player.firstName} ${player.lastName}`.toLowerCase();
-    const nameMatch = name.includes(query);
-    return exactEmail || exactPhone || nameMatch;
-  }) || null;
-}
-
-function findProfileByPrivateLookup(value) {
-  const query = String(value || "").trim().toLowerCase();
-  if (query.length < 3) return null;
-
-  return state.profiles.find((profile) => {
-    const exactEmail = profile.email?.toLowerCase() === query;
-    const exactPhone = digits(profile.phone) && digits(profile.phone) === digits(query);
-    const name = `${profile.firstName} ${profile.lastName}`.toLowerCase();
-    const nameMatch = name.includes(query);
-    return exactEmail || exactPhone || nameMatch;
-  }) || null;
-}
-
-function clearPublicForm(keepMessage) {
-  els.publicCheckinForm.reset();
-  els.publicCheckinForm.dataset.playerId = "";
-  els.publicCheckinForm.dataset.profileId = "";
-  els.publicCheckinForm.dataset.waiverSignedAt = "";
-  els.publicCheckinForm.dataset.waiverSource = "";
-  els.publicCheckinForm.dataset.pendingSubmit = "";
-  setPublicWaiverStatus("Needs Signature");
-  if (!keepMessage) {
-    ["firstName", "lastName", "email", "phone"].forEach((name) => {
-      els.publicCheckinForm.elements[name].value = "";
-    });
-  }
-}
-
-function renderCommunity() {
-  const posts = state.posts.filter((post) => (post.sport || "pickleball") === state.mode);
-  document.querySelector("#communityList").innerHTML = posts.length
-    ? posts.map((post) => `
-      <article class="post">
-        <strong>${escapeHtml(post.type)}</strong>
-        <p class="meta">${escapeHtml(post.name)} | ${escapeHtml(post.location)} | ${escapeHtml(post.skill)}</p>
-        <p>${escapeHtml(post.body)}</p>
-      </article>
-    `).join("")
-    : `<div class="empty">No ${escapeHtml(state.mode)} match posts yet.</div>`;
-}
-
-function checkedPlayers() {
-  return state.players.filter((player) => player.checkedIn && (player.sport || "pickleball") === state.mode);
-}
-
-function roundEligiblePlayers() {
-  const players = checkedPlayers().sort(skillSort);
-  if (!["manual", "teams"].includes(els.roundPlayerSource.value)) return players;
-  if (els.roundPlayerSource.value === "teams") return players;
-
-  const selected = new Set(state.roundSettings.selectedPlayerIds || []);
-  return players.filter((player) => selected.has(player.id));
-}
-
-function renderRoundPlayerPicker() {
-  const players = checkedPlayers().sort(skillSort);
-  const mode = els.roundPlayerSource.value;
-  const manual = mode === "manual";
-  const teamsMode = mode === "teams";
-  els.roundPlayerPicker.classList.toggle("is-hidden", !manual && !teamsMode);
-
-  if (!manual && !teamsMode) {
-    els.roundPlayerPicker.innerHTML = "";
-    return;
-  }
-
-  if (teamsMode) {
-    renderRoundTeamBuilder(players);
-    return;
-  }
-
-  const selected = new Set(state.roundSettings.selectedPlayerIds || players.map((player) => player.id));
-  state.roundSettings.selectedPlayerIds = Array.from(selected);
-  els.roundPlayerPicker.innerHTML = players.length
-    ? `
-      <div class="round-picker-head">
-        <strong>Manual player selection</strong>
-        <span>${selected.size} of ${players.length} checked-in players selected</span>
-      </div>
-      <div class="check-list round-check-list">
-        ${players.map((player) => `
-          <label>
-            <input type="checkbox" value="${player.id}" ${selected.has(player.id) ? "checked" : ""}>
-            ${escapeHtml(player.firstName)} ${escapeHtml(player.lastName)}
-            <span>${escapeHtml(player.skill || "Open")}</span>
-          </label>
-        `).join("")}
-      </div>
-    `
-    : `<div class="empty">No checked-in players are ready for round robin yet.</div>`;
-}
-
-function saveRoundManualSelection() {
-  if (els.roundPlayerSource.value === "teams") {
-    saveRoundTeams();
-    return;
-  }
-  state.roundSettings.selectedPlayerIds = Array.from(els.roundPlayerPicker.querySelectorAll("input[type='checkbox']:checked")).map((input) => input.value);
-  saveState();
-  renderRoundPlayerPicker();
-}
-
-function renderRoundTeamBuilder(players) {
-  const existingTeams = (state.roundSettings.teams || []).filter((team) => team?.playerA || team?.playerB);
-  const teamCount = Math.max(2, existingTeams.length || Math.floor(players.length / 2));
-  const teams = Array.from({ length: teamCount }, (_, index) => existingTeams[index] || { id: newId(), name: `Team ${index + 1}`, playerA: "", playerB: "" });
-  state.roundSettings.teams = teams;
-
-  els.roundPlayerPicker.innerHTML = players.length >= 4
-    ? `
-      <div class="round-picker-head">
-        <strong>Manual team assignment</strong>
-        <span>${teams.length} teams | Choose two players per team</span>
-      </div>
-      <div class="round-team-list">
-        ${teams.map((team, index) => `
-          <article class="round-team-card">
-            <input data-team-index="${index}" data-team-field="name" value="${escapeHtml(team.name || `Team ${index + 1}`)}" aria-label="Team name">
-            ${roundTeamPlayerSelect(players, team.playerA, index, "playerA")}
-            ${roundTeamPlayerSelect(players, team.playerB, index, "playerB")}
-          </article>
-        `).join("")}
-      </div>
-    `
-    : `<div class="empty">Check in at least 4 players before assigning teams.</div>`;
-}
-
-function roundTeamPlayerSelect(players, selectedId, teamIndex, field) {
-  return `
-    <select data-team-index="${teamIndex}" data-team-field="${field}">
-      <option value="">Select player</option>
-      ${players.map((player) => `
-        <option value="${player.id}" ${player.id === selectedId ? "selected" : ""}>${escapeHtml(player.firstName)} ${escapeHtml(player.lastName)}</option>
-      `).join("")}
-    </select>
-  `;
-}
-
-function saveRoundTeams() {
-  const teamMap = new Map((state.roundSettings.teams || []).map((team, index) => [String(index), { ...team }]));
-  els.roundPlayerPicker.querySelectorAll("[data-team-index]").forEach((field) => {
-    const team = teamMap.get(field.dataset.teamIndex) || { id: newId(), name: `Team ${Number(field.dataset.teamIndex) + 1}`, playerA: "", playerB: "" };
-    team[field.dataset.teamField] = field.value;
-    teamMap.set(field.dataset.teamIndex, team);
-  });
-  state.roundSettings.teams = Array.from(teamMap.values());
-  saveState();
-}
-
-function buildRounds() {
-  if (els.roundPlayerSource.value === "teams") {
-    buildTeamRounds();
-    return;
-  }
-
-  const players = roundEligiblePlayers();
-  const courts = Math.max(1, Number(els.courtCount.value) || 1);
-  const courtCapacity = courts * 4;
-  const roundCount = Math.max(1, Number(els.roundCount.value) || 1);
-
-  if (players.length < 4) {
-    document.querySelector("#roundList").innerHTML = `<div class="empty">Select at least 4 checked-in players.</div>`;
-    return;
-  }
-
-  state.rounds = [];
-  let drawBag = shuffle(players);
-  const drawNextPlayer = () => {
-    if (!drawBag.length) drawBag = shuffle(players);
-    return drawBag.shift();
-  };
-
-  for (let round = 1; round <= roundCount; round += 1) {
-    const roundPlayers = [];
-    const slotsThisRound = Math.min(courtCapacity, players.length);
-    while (roundPlayers.length < slotsThisRound) {
-      const nextPlayer = drawNextPlayer();
-      if (!nextPlayer) break;
-      roundPlayers.push(nextPlayer);
-    }
-
-    const available = [...roundPlayers];
-    const matches = [];
-    const activeCourts = Math.min(courts, Math.floor(available.length / 4));
-
-    for (let court = 1; court <= activeCourts; court += 1) {
-      const group = available.splice(0, 4);
-      matches.push({
-        court,
-        teamA: [group[0].id, group[1].id],
-        teamB: [group[2].id, group[3].id],
-      });
-    }
-
-    const playingIds = new Set(roundPlayers.map((player) => player.id));
-    state.rounds.push({
-      round,
-      rotationStyle: "random",
-      matches,
-      sitting: players.filter((player) => !playingIds.has(player.id)).map((player) => player.id),
-    });
-  }
-
-  saveState();
-  renderRounds();
-}
-
-function buildTeamRounds() {
-  saveRoundTeams();
-  const courts = Math.max(1, Number(els.courtCount.value) || 1);
-  const roundCount = Math.max(1, Number(els.roundCount.value) || 1);
-  const teams = getManualRoundTeams();
-  const allTeamPlayerIds = teams.flatMap((team) => team.players.map((player) => player.id));
-  const duplicatePlayers = allTeamPlayerIds.filter((id, index) => allTeamPlayerIds.indexOf(id) !== index);
-
-  if (teams.length < 2) {
-    document.querySelector("#roundList").innerHTML = `<div class="empty">Create at least 2 complete teams before generating team rounds.</div>`;
-    return;
-  }
-  if (duplicatePlayers.length) {
-    document.querySelector("#roundList").innerHTML = `<div class="empty">Each player can only be assigned to one team.</div>`;
-    return;
-  }
-
-  state.rounds = [];
-  let teamBag = shuffle(teams);
-  const drawNextTeam = () => {
-    if (!teamBag.length) teamBag = shuffle(teams);
-    return teamBag.shift();
-  };
-
-  for (let round = 1; round <= roundCount; round += 1) {
-    const roundTeams = [];
-    const teamsThisRound = Math.min(courts * 2, teams.length);
-    while (roundTeams.length < teamsThisRound) {
-      const nextTeam = drawNextTeam();
-      if (!nextTeam) break;
-      roundTeams.push(nextTeam);
-    }
-
-    const availableTeams = [...roundTeams];
-    const matches = [];
-    for (let court = 1; court <= courts && availableTeams.length >= 2; court += 1) {
-      const teamA = availableTeams.shift();
-      const teamB = availableTeams.shift();
-      matches.push({
-        court,
-        teamA: teamA.players.map((player) => player.id),
-        teamB: teamB.players.map((player) => player.id),
-        teamALabel: teamA.name,
-        teamBLabel: teamB.name,
-      });
-    }
-
-    const playingTeamIds = new Set(roundTeams.map((team) => team.id));
-    state.rounds.push({
-      round,
-      rotationStyle: "teams",
-      matches,
-      sitting: teams.filter((team) => !playingTeamIds.has(team.id)).flatMap((team) => team.players.map((player) => player.id)),
-    });
-  }
-
-  saveState();
-  renderRounds();
-}
-
-function getManualRoundTeams() {
-  return (state.roundSettings.teams || [])
-    .map((team, index) => {
-      const players = [team.playerA, team.playerB]
-        .map((id) => state.players.find((player) => player.id === id && player.checkedIn))
-        .filter(Boolean);
-      return {
-        id: team.id || `team-${index + 1}`,
-        name: team.name || `Team ${index + 1}`,
-        players,
-      };
-    })
-    .filter((team) => team.players.length === 2);
-}
-
-function renderRounds() {
-  const target = document.querySelector("#roundList");
-  renderRoundPlayerPicker();
-  target.innerHTML = state.rounds.length
-    ? state.rounds.map((round) => `
-      <article class="card round-card">
-        <div class="round-card-head">
-          <div>
-            <strong>Round ${round.round}</strong>
-            <p class="meta">Random draw bag; repeats only after everyone selected has been used</p>
-          </div>
-          <button type="button" data-clear-round="${round.round}">Clear Round</button>
-        </div>
-        ${round.matches.map((match, matchIndex) => `
-          <div class="match">
-            <p class="meta">Court ${match.court}</p>
-            <strong>${names(match.teamA)} vs ${names(match.teamB)}</strong>
-            <div class="round-edit-grid">
-              ${roundSlotSelect(round, match, matchIndex, "teamA", 0)}
-              ${roundSlotSelect(round, match, matchIndex, "teamA", 1)}
-              ${roundSlotSelect(round, match, matchIndex, "teamB", 0)}
-              ${roundSlotSelect(round, match, matchIndex, "teamB", 1)}
-            </div>
-          </div>
-        `).join("")}
-        ${round.sitting.length ? `<p class="meta">Sitting: ${names(round.sitting)}</p>` : ""}
-      </article>
-    `).join("")
-    : `<div class="empty">Generate round-robin assignments after check-in.</div>`;
-}
-
-function roundSlotSelect(round, match, matchIndex, teamKey, slotIndex) {
-  const selectedId = match[teamKey]?.[slotIndex] || "";
-  const label = `${teamKey === "teamA" ? "Team A" : "Team B"} ${slotIndex + 1}`;
-  return `
-    <label>${label}
-      <select data-round-slot="${round.round}" data-match-index="${matchIndex}" data-team-key="${teamKey}" data-slot-index="${slotIndex}">
-        ${roundPlayerOptions(round, selectedId)}
-      </select>
-    </label>
-  `;
-}
-
-function roundPlayerOptions(round, selectedId = "") {
-  const ids = new Set([
-    ...checkedPlayers().map((player) => player.id),
-    ...(round.sitting || []),
-    ...(round.matches || []).flatMap((match) => [...(match.teamA || []), ...(match.teamB || [])]),
-  ]);
-  const players = Array.from(ids)
-    .map((id) => state.players.find((player) => player.id === id))
-    .filter(Boolean)
-    .sort(skillSort);
-  return `<option value="">Empty</option>${players.map((player) => `
-    <option value="${player.id}" ${player.id === selectedId ? "selected" : ""}>${escapeHtml(player.firstName)} ${escapeHtml(player.lastName)} (${escapeHtml(player.skill || "Open")})</option>
-  `).join("")}`;
-}
-
-function handleRoundListClick(event) {
-  const clearButton = event.target.closest("[data-clear-round]");
-  if (!clearButton) return;
-  clearRound(Number(clearButton.dataset.clearRound));
-}
-
-function handleRoundListChange(event) {
-  const select = event.target.closest("[data-round-slot]");
-  if (!select) return;
-  updateRoundSlot({
-    roundNumber: Number(select.dataset.roundSlot),
-    matchIndex: Number(select.dataset.matchIndex),
-    teamKey: select.dataset.teamKey,
-    slotIndex: Number(select.dataset.slotIndex),
-    playerId: select.value,
-  });
-}
-
-function updateRoundSlot({ roundNumber, matchIndex, teamKey, slotIndex, playerId }) {
-  const round = state.rounds.find((item) => item.round === roundNumber);
-  const match = round?.matches?.[matchIndex];
-  if (!round || !match) return;
-
-  match.teamA = [...(match.teamA || [])];
-  match.teamB = [...(match.teamB || [])];
-  match[teamKey][slotIndex] = playerId;
-
-  if (playerId) {
-    round.matches.forEach((item, index) => {
-      ["teamA", "teamB"].forEach((key) => {
-        item[key] = (item[key] || []).map((id, playerIndex) =>
-          index === matchIndex && key === teamKey && playerIndex === slotIndex ? id : id === playerId ? "" : id
-        );
-      });
-    });
-  }
-
-  const roundPool = new Set([
-    ...(round.sitting || []),
-    ...(round.matches || []).flatMap((item) => [...(item.teamA || []), ...(item.teamB || [])]).filter(Boolean),
-  ]);
-  if (playerId) roundPool.add(playerId);
-  const assigned = new Set((round.matches || []).flatMap((item) => [...(item.teamA || []), ...(item.teamB || [])]).filter(Boolean));
-  round.sitting = Array.from(roundPool).filter((id) => !assigned.has(id));
-  round.matches = round.matches.filter((item) => (item.teamA || []).some(Boolean) || (item.teamB || []).some(Boolean));
-
-  saveState();
-  renderRounds();
-}
-
-function clearRound(roundNumber) {
-  const round = state.rounds.find((item) => item.round === roundNumber);
-  if (!round) return;
-  if (!window.confirm(`Clear Round ${roundNumber}?`)) return;
-  state.rounds = state.rounds.filter((item) => item.round !== roundNumber);
-  saveState();
-  renderRounds();
-}
-
-function clearAllRounds() {
-  if (!state.rounds.length) {
-    renderRounds();
-    return;
-  }
-  if (!window.confirm("Clear all generated round-robin assignments?")) return;
-  state.rounds = [];
-  saveState();
-  renderRounds();
-}
-
-function seedBracket() {
-  const players = checkedPlayers().sort(skillSort);
-  if (players.length < 2) {
-    document.querySelector("#bracket").innerHTML = `<div class="empty">Check in at least 2 players.</div>`;
-    return;
-  }
-
-  state.bracket = chunk(players.map((player) => player.id), 2).map((ids, index) => ({
-    round: 1,
-    match: index + 1,
-    players: ids,
-    winner: "",
-  }));
-  saveState();
-  renderBracket();
-}
-
-function renderBracket() {
-  const target = document.querySelector("#bracket");
-  if (!state.bracket.length) {
-    target.innerHTML = `<div class="empty">Seed a bracket from checked-in players.</div>`;
-    return;
-  }
-
-  const rounds = [...new Set(state.bracket.map((match) => match.round))];
-  target.innerHTML = rounds.map((round) => `
-    <article class="card">
-      <strong>Bracket Round ${round}</strong>
-      ${state.bracket.filter((match) => match.round === round).map((match) => `
-        <div class="match">
-          <p class="meta">Match ${match.match}</p>
-          <strong>${names(match.players)}</strong>
-          <select class="winner-select" data-round="${match.round}" data-match="${match.match}">
-            <option value="">Select winner</option>
-            ${match.players.map((id) => `<option value="${id}" ${match.winner === id ? "selected" : ""}>${names([id])}</option>`).join("")}
-          </select>
-        </div>
-      `).join("")}
-    </article>
-  `).join("");
-
-  document.querySelectorAll(".winner-select").forEach((select) => {
-    select.addEventListener("change", () => {
-      const match = state.bracket.find((item) => item.round === Number(select.dataset.round) && item.match === Number(select.dataset.match));
-      match.winner = select.value;
-      saveState();
-    });
-  });
-}
-
-function advanceBracket() {
-  const current = Math.max(0, ...state.bracket.map((match) => match.round));
-  const matches = state.bracket.filter((match) => match.round === current);
-  const winners = matches.map((match) => match.winner).filter(Boolean);
-
-  if (!matches.length || winners.length !== matches.length || winners.length === 1) return;
-
-  chunk(winners, 2).forEach((players, index) => {
-    state.bracket.push({ round: current + 1, match: index + 1, players, winner: "" });
-  });
-  saveState();
-  renderBracket();
-}
-
-function renderHost() {
-  const latest = state.events[0];
-  const capacity = latest ? Number(latest.capacity) : 0;
-  const checked = checkedPlayers().length;
-  const revenue = estimateRevenue();
-  text("#hostCapacity", capacity ? `${Math.round((checked / capacity) * 100)}%` : "0%");
-  text("#hostWaivers", state.players.filter((player) => player.waiver === "Needs Signature").length);
-  text("#hostCourts", latest ? latest.courts : "0");
-  document.querySelector("#hostActions").innerHTML = [
-    ["Player accounts", `${state.profiles.length} saved profiles ready for login/account expansion`],
-    ["Community matching", `${buildMatchRecommendations().length} match signals from profiles and posts`],
-    ["Tournament discovery", "Published ladder, tournament, and challenge events feed Discover"],
-    ["Commerce + payouts", `$${revenue.total} estimated event revenue / $${revenue.hostPayout} host payout`],
-  ].map(([title, body]) => `<article class="card"><strong>${title}</strong><p class="meta">${body}</p></article>`).join("");
-}
-
-function saveAdmin(event) {
-  event.preventDefault();
-  const data = Object.fromEntries(new FormData(els.adminForm).entries());
-  const existing = state.admins.find((admin) => admin.email.toLowerCase() === data.email.toLowerCase());
-
-  if (existing) Object.assign(existing, data);
-  else state.admins.push({ ...data, id: newId(), invitedAt: new Date().toISOString() });
-
-  els.adminForm.reset();
-  saveState();
-  renderAdmins();
-}
-
-function saveProfile(event) {
-  event.preventDefault();
-  const form = new FormData(els.profileForm);
-  const data = Object.fromEntries(form.entries());
-  data.interests = form.getAll("interests");
-  data.smsSubscriber = form.get("smsSubscriber") === "on";
-  const validation = validateProfile(data);
-  if (!validation.ok) {
-    showAdminMessage("#profileList", "notice", validation.message);
-    return;
-  }
-  const existing = state.profiles.find((profile) => profile.id === data.profileId)
-    || state.profiles.find((profile) => profile.email.toLowerCase() === data.email.toLowerCase());
-  const verified = existing?.verificationStatus === "Verified" || isCurrentProfileVerified();
-  const waiverAudit = buildWaiverAudit(data.waiver, existing, "Admin profile entry");
-  const profile = {
-    ...data,
-    id: existing?.id || newId(),
-    sport: state.mode,
-    ...waiverAudit,
-    verificationStatus: verified ? "Verified" : "Admin entered",
-    verifiedAt: verified ? (existing?.verifiedAt || new Date().toISOString()) : existing?.verifiedAt || "",
-    source: existing?.source || "Admin profile entry",
-    updatedAt: new Date().toISOString(),
-  };
-  delete profile.profileId;
-  delete profile.verificationCode;
-
-  if (existing) Object.assign(existing, profile);
-  else state.profiles.unshift(profile);
-
-  const existingPlayer = state.players.find((player) => player.email.toLowerCase() === data.email.toLowerCase());
-  if (!existingPlayer) {
-    state.players.unshift({
-      id: newId(),
-      firstName: data.firstName,
-      lastName: data.lastName,
-      email: data.email,
-      phone: data.phone || "",
-      skill: data.skill,
-      waiver: data.waiver || "Needs Signature",
+  const hasAccess = hasSociet…27873 tokens truncated…data.waiver || "Needs Signature",
       ...waiverAudit,
       status: "Profile",
       paid: "Not tracked",
@@ -3466,6 +1465,8 @@ function saveProfile(event) {
       sport: state.mode,
       source: "Admin profile entry",
     });
+  } else {
+    existingPlayer.gender = data.gender || existingPlayer.gender || "";
   }
 
   resetProfileForm();
@@ -3483,7 +1484,8 @@ function renderProfiles() {
         <strong>${escapeHtml(profile.firstName)} ${escapeHtml(profile.lastName)}</strong>
         <p class="meta">${escapeHtml(profile.skill)} | ${escapeHtml(profile.street || "")} ${escapeHtml(profile.city || "Local")}${profile.state ? `, ${escapeHtml(profile.state)}` : ""}${profile.zip ? ` ${escapeHtml(profile.zip)}` : ""}</p>
         <p>${escapeHtml(listText(profile.interests))} | ${escapeHtml(profile.availability)}</p>
-        <p class="meta">${escapeHtml(profile.phone || "No phone")} | SMS: ${profile.smsSubscriber ? "Yes" : "No"} | Waiver: ${escapeHtml(profile.waiver || "Needs Signature")}</p>
+        <p class="meta">${escapeHtml(profile.phone || "No phone")} | Gender: ${escapeHtml(profile.gender || "Not specified")} | SMS: ${profile.smsSubscriber ? "Yes" : "No"} | Waiver: ${escapeHtml(profile.waiver || "Needs Signature")}</p>
+        <p class="meta">Signup date: ${(profile.signupDate || profile.importedAt || profile.createdAt) ? escapeHtml(formatDateTime(profile.signupDate || profile.importedAt || profile.createdAt)) : "Not recorded"}</p>
         <p class="meta">Waiver proof: ${profile.waiverSignedAt ? `${escapeHtml(formatDateTime(profile.waiverSignedAt))} via ${escapeHtml(profile.waiverSource || "Profile")}` : "Not signed yet"}</p>
         <div class="card-actions">
           <button type="button" data-edit-profile="${escapeHtml(profile.id)}">Edit</button>
@@ -3497,6 +1499,7 @@ function renderProfiles() {
 function validateProfile(data) {
   if (!data.firstName?.trim() || !data.lastName?.trim()) return { ok: false, message: "First and last name are required." };
   if (!isValidEmail(data.email)) return { ok: false, message: "A valid email is required." };
+  if (!["Female", "Male"].includes(data.gender)) return { ok: false, message: "Select female or male for team balancing." };
   if (data.verificationMethod === "sms" && !isValidPhone(data.phone)) return { ok: false, message: "A valid phone number is required for SMS verification." };
   if (!data.city?.trim() || !data.state?.trim() || !data.zip?.trim()) return { ok: false, message: "City, state, and ZIP are required." };
   return { ok: true };
@@ -3593,20 +1596,6 @@ function isCurrentProfileVerified() {
   return els.profileForm.dataset.verified === "true";
 }
 
-function renderMatches() {
-  const items = buildMatchRecommendations();
-  document.querySelector("#matchList").innerHTML = items.length
-    ? items.map((item) => `
-      <article class="match-card">
-        <span class="status-pill">${escapeHtml(item.type)}</span>
-        <strong>${escapeHtml(item.title)}</strong>
-        <p class="meta">${escapeHtml(item.meta)}</p>
-        <p>${escapeHtml(item.body)}</p>
-      </article>
-    `).join("")
-    : `<div class="empty">Add player profiles or community posts to generate matches.</div>`;
-}
-
 function buildMatchRecommendations() {
   const profileMatches = state.profiles.filter((profile) => (profile.sport || "pickleball") === state.mode).slice(0, 6).map((profile) => ({
     type: "Player",
@@ -3621,20 +1610,6 @@ function buildMatchRecommendations() {
     body: post.body,
   }));
   return [...profileMatches, ...postMatches];
-}
-
-function renderTournamentDiscovery() {
-  const tournaments = state.events.filter((event) => (event.sport || "pickleball") === state.mode && event.published !== false && /tournament|ladder|challenge/i.test(`${event.format} ${event.name}`));
-  document.querySelector("#tournamentDiscoveryList").innerHTML = tournaments.length
-    ? tournaments.map((event) => `
-      <article class="card tournament-discovery-card">
-        <span class="status-pill">Challenge</span>
-        <strong>${escapeHtml(event.name)}</strong>
-        <p class="meta">${escapeHtml(event.venue)} | ${escapeHtml(event.date)} | ${escapeHtml(event.format)}</p>
-        <p>${escapeHtml(event.note || "Published competitive event.")}</p>
-      </article>
-    `).join("")
-    : `<div class="empty">Publish a tournament, ladder, or challenge event to list it here.</div>`;
 }
 
 function renderShopCollections() {
@@ -3786,12 +1761,13 @@ function exportArchiveCsv() {
 function exportSingleArchivedEventCsv(id) {
   const event = state.archivedEvents.find((item) => item.id === id);
   if (!event) return;
-  const headers = ["First Name", "Last Name", "Email", "Phone", "Skill", "Status", "Waiver", "Waiver Signed At", "Waiver Source", "Waiver Agreement", "Paid", "Checked In", "Checked In At"];
+  const headers = ["First Name", "Last Name", "Email", "Phone", "Gender", "Skill", "Status", "Waiver", "Waiver Signed At", "Waiver Source", "Waiver Agreement", "Paid", "Checked In", "Checked In At"];
   const rows = (event.players || []).map((player) => [
     player.firstName,
     player.lastName,
     player.email,
     player.phone,
+    player.gender || "",
     player.skill,
     player.status,
     player.waiver,
@@ -3874,11 +1850,6 @@ function renderPaddlePintSyncConfig() {
 }
 
 async function importPaddlePintSubmissions() {
-  if (!window.location.protocol.startsWith("http")) {
-    renderPaddlePintSyncStatus("Submission Sync must be run from the hosted admin dashboard because Cloudflare blocks local-file API calls for security. Open https://clubsocietyapp.com/admin and run Import Paddle + Pint RSVPs there.", "notice");
-    return;
-  }
-
   const config = {
     endpointUrl: PADDLE_PINT_ENDPOINT_URL,
     ...loadPaddlePintSyncConfig(),
@@ -3903,6 +1874,7 @@ async function importPaddlePintSubmissions() {
   try {
     const url = new URL(config.endpointUrl);
     url.searchParams.set("type", "round_robin_event");
+    url.searchParams.set("sync_version", "20260810");
     const response = await fetch(url.toString(), {
       headers: { "X-Admin-Key": config.adminKey },
     });
@@ -3912,10 +1884,12 @@ async function importPaddlePintSubmissions() {
       return;
     }
 
-    const stats = importRoundRobinSubmissions(result.submissions || []);
+    const submissions = result.submissions || [];
+    const stats = importRoundRobinSubmissions(submissions);
+    const latestSignup = submissions.map((submission) => submission.signup_date || submission.created_at).filter(Boolean).sort().at(-1);
     saveState();
     render();
-    renderPaddlePintSyncStatus(`Imported ${stats.playersCreated} player RSVP${stats.playersCreated === 1 ? "" : "s"} into ${stats.eventsTouched} event${stats.eventsTouched === 1 ? "" : "s"} and updated ${stats.profilesTouched} reusable player profile${stats.profilesTouched === 1 ? "" : "s"}. Skipped ${stats.skipped} already-imported submission${stats.skipped === 1 ? "" : "s"}.`, "success");
+    renderPaddlePintSyncStatus(`Imported ${stats.playersCreated} player RSVP${stats.playersCreated === 1 ? "" : "s"} into ${stats.eventsTouched} event${stats.eventsTouched === 1 ? "" : "s"} and updated ${stats.profilesTouched} reusable player profile${stats.profilesTouched === 1 ? "" : "s"}. Skipped ${stats.skipped} already-imported submission${stats.skipped === 1 ? "" : "s"}.${latestSignup ? ` Latest Cloudflare signup: ${formatDateTime(latestSignup)}.` : ""}`, "success");
   } catch (error) {
     renderPaddlePintSyncStatus(`Sync failed: ${error.message}`, "notice");
   }
@@ -4006,6 +1980,7 @@ function upsertImportedPlayer(submission, eventId) {
     optionalShirtChoice: submission.optional_shirt_choice || "",
     notes: submission.notes || "",
     source: submission.source || "paddleandpin.com",
+    signupDate: submission.signup_date || submission.created_at || "",
     importedSubmissionId: String(submission.id || ""),
   };
 
@@ -4041,6 +2016,7 @@ function upsertImportedGuestPlayer(guest, submission, eventId, index) {
     checkedIn: false,
     notes: `Additional player for ${submission.first_name || ""} ${submission.last_name || ""}`.trim(),
     source: submission.source || "paddleandpin.com",
+    signupDate: submission.signup_date || submission.created_at || "",
     importedSubmissionId: String(submission.id || ""),
     importedGuestKey: guestKey,
   });
@@ -4062,6 +2038,7 @@ function upsertDirectoryProfileFromSubmission(submission) {
     skill: "Open",
     interests: ["Social round robins"],
     source: submission.source || "paddleandpin.com",
+    signupDate: submission.signup_date || submission.created_at || "",
   });
 }
 
@@ -4078,6 +2055,7 @@ function upsertDirectoryProfileFromGuest(guest, submission) {
     skill: "Open",
     interests: ["Social round robins"],
     source: submission.source || "paddleandpin.com",
+    signupDate: submission.signup_date || submission.created_at || "",
   });
 }
 
@@ -4101,6 +2079,7 @@ function upsertPlayerDirectoryProfile(profile) {
     lastName,
     email,
     phone: profile.phone || "",
+    gender: profile.gender || existing?.gender || "",
     street: existing?.street || "",
     city: existing?.city || DEFAULT_LOCATION.city,
     state: existing?.state || DEFAULT_LOCATION.state,
@@ -4117,6 +2096,7 @@ function upsertPlayerDirectoryProfile(profile) {
     verificationStatus: existing?.verificationStatus || "Imported",
     verificationMethod: existing?.verificationMethod || "email",
     source: profile.source || existing?.source || "Club Society",
+    signupDate: profile.signupDate || existing?.signupDate || "",
     importedAt: existing?.importedAt || new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   };
@@ -4396,6 +2376,7 @@ function normalizeImportedPlayer(row) {
     lastName: titleCase(lastName),
     email: email.trim(),
     phone: phone.trim(),
+    gender: titleCase(row.gender || row.sex || ""),
     skill: row.skill || row.level || "Intermediate",
     waiver: normalizeWaiver(row.waiver || row.signedWaiver),
     ...buildWaiverAudit(normalizeWaiver(row.waiver || row.signedWaiver), {
@@ -4414,7 +2395,7 @@ function normalizeImportedPlayer(row) {
 }
 
 function exportPlayerCsv() {
-  const headers = ["First Name", "Last Name", "Email", "Phone", "Event", "Skill", "Waiver", "Waiver Signed At", "Waiver Source", "Waiver Agreement", "Status", "Paid", "Checked In", "Checked In At", "Notes"];
+  const headers = ["First Name", "Last Name", "Email", "Phone", "Gender", "Event", "Skill", "Waiver", "Waiver Signed At", "Waiver Source", "Waiver Agreement", "Status", "Paid", "Checked In", "Checked In At", "Notes"];
   const selectedEventId = els.playerEvent.value;
   const event = state.events.find((item) => item.id === selectedEventId);
   const attendees = state.players
@@ -4426,6 +2407,7 @@ function exportPlayerCsv() {
     player.lastName,
     player.email,
     player.phone,
+    player.gender || "",
     eventName(player.eventId),
     player.skill,
     player.waiver,
@@ -4448,6 +2430,7 @@ function exportProfilesCsv() {
     "Last Name",
     "Email",
     "Phone",
+    "Gender",
     "Street",
     "City",
     "State",
@@ -4482,6 +2465,7 @@ function exportProfilesCsv() {
       profile.lastName || "",
       profile.email || "",
       profile.phone || "",
+      profile.gender || "",
       profile.street || "",
       profile.city || "",
       profile.state || "",
@@ -4509,6 +2493,154 @@ function exportProfilesCsv() {
       profile.bio || "",
     ]);
   downloadText(`club-society-player-profiles-${todaySlug()}.csv`, [headers, ...rows].map(csvLine).join("\n"), "text/csv");
+}
+
+function importProfilesCsv() {
+  const file = els.profilesImport.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.addEventListener("load", () => {
+    const rows = parseCsv(String(reader.result || ""));
+    const stats = { created: 0, updated: 0, unchanged: 0, skipped: 0 };
+
+    rows.forEach((row) => {
+      const imported = normalizeImportedProfile(row);
+      if (!imported.firstName && !imported.lastName && !imported.email && !imported.phone) {
+        stats.skipped += 1;
+        return;
+      }
+
+      const existing = findImportedProfileMatch(imported);
+      if (!existing) {
+        const newProfile = {
+          id: newId(),
+          city: DEFAULT_LOCATION.city,
+          state: DEFAULT_LOCATION.state,
+          zip: DEFAULT_LOCATION.zip,
+          skill: "Open",
+          availability: "Flexible",
+          interests: [],
+          sport: state.mode,
+          verificationStatus: "Imported",
+          verificationMethod: "email",
+          source: "Member directory CSV import",
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
+        mergeImportedProfile(newProfile, imported);
+        state.profiles.unshift(newProfile);
+        stats.created += 1;
+        return;
+      }
+
+      const changed = mergeImportedProfile(existing, imported);
+      if (changed) {
+        existing.updatedAt = new Date().toISOString();
+        stats.updated += 1;
+      } else {
+        stats.unchanged += 1;
+      }
+    });
+
+    els.profilesImport.value = "";
+    saveState();
+    render();
+    showAdminMessage(
+      "#profileList",
+      "success",
+      `Import complete: ${stats.created} added, ${stats.updated} updated, ${stats.unchanged} unchanged, ${stats.skipped} skipped.`,
+    );
+  });
+  reader.readAsText(file);
+}
+
+function normalizeImportedProfile(row) {
+  const [nameFirst, nameLast] = splitName(row.name || row.fullName || "");
+  const list = (value) => String(value || "").split(/[|;,]/).map((item) => item.trim()).filter(Boolean);
+  const explicitBoolean = (value) => {
+    const normalized = String(value || "").trim().toLowerCase();
+    if (["yes", "true", "1", "on"].includes(normalized)) return true;
+    if (["no", "false", "0", "off"].includes(normalized)) return false;
+    return undefined;
+  };
+
+  return {
+    firstName: titleCase(row.firstName || row.firstname || row.first || nameFirst),
+    lastName: titleCase(row.lastName || row.lastname || row.last || nameLast),
+    email: String(row.email || row.emailAddress || "").trim().toLowerCase(),
+    phone: String(row.phone || row.phoneNumber || row.mobile || "").trim(),
+    gender: titleCase(row.gender || row.sex || ""),
+    street: String(row.street || row.address || row.address1 || "").trim(),
+    city: String(row.city || "").trim(),
+    state: String(row.state || row.province || row.region || "").trim(),
+    zip: String(row.zip || row.zipCode || row.postalCode || "").trim(),
+    sport: String(row.sport || "").trim().toLowerCase(),
+    preferredSport: String(row.preferredSport || "").trim(),
+    skill: String(row.skill || row.level || "").trim(),
+    pickleballLevel: String(row.pickleballLevel || "").trim(),
+    handicap: String(row.golfHandicap || row.handicap || "").trim(),
+    availability: String(row.availability || "").trim(),
+    interests: list(row.interests),
+    waiver: String(row.waiver || "").trim(),
+    waiverSignedAt: String(row.waiverSignedAt || "").trim(),
+    waiverSource: String(row.waiverSource || "").trim(),
+    waiverAgreementText: String(row.waiverAgreement || row.waiverAgreementText || "").trim(),
+    smsSubscriber: explicitBoolean(row.smsSubscriber),
+    discoverable: explicitBoolean(row.discoverable),
+    allowMessages: explicitBoolean(row.allowMessages),
+    verificationStatus: String(row.verificationStatus || "").trim(),
+    verificationMethod: String(row.verificationMethod || "").trim(),
+    verifiedAt: String(row.verifiedAt || "").trim(),
+    source: String(row.source || "").trim(),
+    bio: String(row.bio || "").trim(),
+  };
+}
+
+function findImportedProfileMatch(imported) {
+  const email = imported.email.toLowerCase();
+  const phone = digits(imported.phone);
+  const name = `${imported.firstName} ${imported.lastName}`.trim().toLowerCase();
+  return state.profiles.find((profile) => {
+    const profileEmail = String(profile.email || "").trim().toLowerCase();
+    const profilePhone = digits(profile.phone);
+    const profileName = `${profile.firstName || ""} ${profile.lastName || ""}`.trim().toLowerCase();
+    return (email && profileEmail === email)
+      || (phone && profilePhone === phone)
+      || (!email && !phone && name && profileName === name);
+  });
+}
+
+function mergeImportedProfile(existing, imported) {
+  let changed = false;
+  const preservedFields = [
+    "firstName", "lastName", "email", "phone", "gender", "street", "city", "state", "zip", "sport",
+    "preferredSport", "skill", "pickleballLevel", "handicap", "availability", "waiver",
+    "waiverSignedAt", "waiverSource", "waiverAgreementText", "verificationStatus",
+    "verificationMethod", "verifiedAt", "source", "bio",
+  ];
+
+  preservedFields.forEach((field) => {
+    const value = imported[field];
+    if (value === "" || value == null || existing[field] === value) return;
+    existing[field] = value;
+    changed = true;
+  });
+
+  ["smsSubscriber", "discoverable", "allowMessages"].forEach((field) => {
+    if (typeof imported[field] !== "boolean" || existing[field] === imported[field]) return;
+    existing[field] = imported[field];
+    changed = true;
+  });
+
+  if (imported.interests.length) {
+    const interests = Array.from(new Set([...(existing.interests || []), ...imported.interests]));
+    if (interests.length !== (existing.interests || []).length) {
+      existing.interests = interests;
+      changed = true;
+    }
+  }
+  return changed;
 }
 
 function parseCsv(input) {
@@ -4703,6 +2835,88 @@ function skillSort(a, b) {
   return (weight[a.skill] ?? 9) - (weight[b.skill] ?? 9) || a.lastName.localeCompare(b.lastName);
 }
 
+function checkinPrioritySort(a, b) {
+  const timeA = Date.parse(a.checkedInAt || "") || Number.MAX_SAFE_INTEGER;
+  const timeB = Date.parse(b.checkedInAt || "") || Number.MAX_SAFE_INTEGER;
+  return timeA - timeB || skillSort(a, b);
+}
+
+function skillScore(player) {
+  const normalized = String(player?.skill || player?.pickleballLevel || "Open").toLowerCase();
+  if (normalized.includes("advanced") || normalized.includes("4.")) return 4;
+  if (normalized.includes("intermediate") || normalized.includes("3.")) return 3;
+  if (normalized.includes("beginner") || normalized.includes("2.")) return 2;
+  return 3;
+}
+
+function normalizedGender(player) {
+  const value = String(player?.gender || "").trim().toLowerCase();
+  return value === "male" || value === "female" ? value : "";
+}
+
+function buildBalancedTeams(players) {
+  const pool = [...players].sort(checkinPrioritySort);
+  const averageSkill = pool.reduce((total, player) => total + skillScore(player), 0) / Math.max(1, pool.length);
+  const targetTeamSkill = averageSkill * 2;
+  const teams = [];
+
+  while (pool.length >= 2) {
+    const anchor = pool.shift();
+    const anchorGender = normalizedGender(anchor);
+    let bestIndex = 0;
+    let bestCost = Number.POSITIVE_INFINITY;
+    pool.forEach((candidate, index) => {
+      const candidateGender = normalizedGender(candidate);
+      const genderCost = anchorGender && candidateGender ? (anchorGender === candidateGender ? 1 : 0) : 0.35;
+      const skillCost = Math.abs(skillScore(anchor) + skillScore(candidate) - targetTeamSkill);
+      const checkinCost = index * 0.001;
+      const cost = skillCost * 4 + genderCost * 2 + checkinCost;
+      if (cost < bestCost) {
+        bestCost = cost;
+        bestIndex = index;
+      }
+    });
+    const partner = pool.splice(bestIndex, 1)[0];
+    teams.push({
+      id: `balanced-${anchor.id}-${partner.id}`,
+      name: `${anchor.firstName} & ${partner.firstName}`,
+      players: [anchor, partner],
+      skillTotal: skillScore(anchor) + skillScore(partner),
+      priorityTime: Math.min(checkinTime(anchor), checkinTime(partner)),
+    });
+  }
+  return teams;
+}
+
+function buildBalancedRoundMatches(players, courts) {
+  const availableTeams = buildBalancedTeams(players);
+  const matches = [];
+  for (let court = 1; court <= courts && availableTeams.length >= 2; court += 1) {
+    availableTeams.sort((a, b) => a.priorityTime - b.priorityTime);
+    const teamA = availableTeams.shift();
+    let opponentIndex = 0;
+    let opponentGap = Number.POSITIVE_INFINITY;
+    availableTeams.forEach((team, index) => {
+      const gap = Math.abs(team.skillTotal - teamA.skillTotal);
+      if (gap < opponentGap) {
+        opponentGap = gap;
+        opponentIndex = index;
+      }
+    });
+    const teamB = availableTeams.splice(opponentIndex, 1)[0];
+    matches.push({
+      court,
+      teamA: teamA.players.map((player) => player.id),
+      teamB: teamB.players.map((player) => player.id),
+    });
+  }
+  return matches;
+}
+
+function checkinTime(player) {
+  return Date.parse(player?.checkedInAt || "") || Number.MAX_SAFE_INTEGER;
+}
+
 function shuffle(items) {
   const copy = [...items];
   for (let i = copy.length - 1; i > 0; i -= 1) {
@@ -4736,4 +2950,5 @@ function escapeHtml(value) {
     "'": "&#039;",
   })[char]);
 }
+
 
