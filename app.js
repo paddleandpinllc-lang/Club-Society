@@ -455,6 +455,7 @@ function memberSignupSnapshot(profile) {
       lastName: profile.lastName,
       email: profile.email,
       phone: profile.phone,
+      gender: profile.gender || "",
       city: profile.city,
       state: profile.state,
       zip: profile.zip,
