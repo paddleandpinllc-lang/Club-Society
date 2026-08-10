@@ -1,5 +1,5 @@
-Warning: truncated output (original token count: 57873)
-Total output lines: 5451
+Warning: truncated output (original token count: 57917)
+Total output lines: 5452
 
 const STORAGE_KEY = "paddlePinClub.v1";
 const CLOUD_CONFIG_KEY = "clubSociety.cloudConfig.v1";
@@ -13,14 +13,15 @@ const currentHost = window.location.hostname.toLowerCase();
 const currentPath = window.location.pathname.toLowerCase();
 const DASHBOARD_HOSTS = new Set(["clubsocietyapp.com", "www.clubsocietyapp.com"]);
 const MEMBER_APP_HOSTS = new Set(["clubsociety.app", "www.clubsociety.app", "club-society.pages.dev"]);
-const isDashboardLaunch = urlParams.get("admin") === "1"
-  || currentPath.startsWith("/admin")
-  || DASHBOARD_HOSTS.has(currentHost);
-const isStandaloneLaunch = urlParams.get("app") === "1"
+const isExplicitDashboardLaunch = urlParams.get("admin") === "1" || currentPath.startsWith("/admin");
+const isExplicitMemberLaunch = urlParams.get("app") === "1"
   || currentPath.startsWith("/app")
-  || MEMBER_APP_HOSTS.has(currentHost)
   || window.matchMedia("(display-mode: standalone)").matches
   || window.navigator.standalone === true;
+const isDashboardLaunch = isExplicitDashboardLaunch
+  || (DASHBOARD_HOSTS.has(currentHost) && !isExplicitMemberLaunch);
+const isStandaloneLaunch = !isExplicitDashboardLaunch
+  && (isExplicitMemberLaunch || MEMBER_APP_HOSTS.has(currentHost));
 const DEFAULT_LOCATION = { street: "", city: "Watkinsville", state: "GA", zip: "30677" };
 const DEFAULT_PUBLIC_VIEW = {
   headline: "Find your next game",
@@ -578,19 +579,19 @@ function setView(id) {
 }
 
 function applyLaunchMode() {
-  if (isDashboardLaunch) {
-    document.body.classList.add("admin-mode");
-    document.title = "Club Society Dashboard";
-    setView("command");
-    return;
-  }
-
   if (isStandaloneLaunch) {
     document.body.classList.add("standalone-member-app");
     document.title = "Club Society App";
     setView("societyApp");
     setSocietyTab("home");
     preserveMemberStorage();
+    return;
+  }
+
+  if (isDashboardLaunch) {
+    document.body.classList.add("admin-mode");
+    document.title = "Club Society Dashboard";
+    setView("command");
   }
 }
 
@@ -1451,13 +1452,7 @@ function hasSocietyAccess() {
 
 function currentSocietyProfile() {
   const email = state.societySessionEmail?.toLowerCase();
-  return state.profiles.find((profile) => profile.email?.toLowerCase() === email)
-    || state.profiles.find((profile) => profile.stayLoggedIn)
-    || null;
-}
-
-function updateSocietyHome() {
-  const hasAccess = hasSociet…27873 tokens truncated…data.waiver || "Needs Signature",
+  return state.profiles.find((profile) => pro…27917 tokens truncated…data.waiver || "Needs Signature",
       ...waiverAudit,
       status: "Profile",
       paid: "Not tracked",
