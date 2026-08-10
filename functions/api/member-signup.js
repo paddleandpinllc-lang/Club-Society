@@ -56,6 +56,11 @@ export async function onRequest(context) {
     if (resetError) return json({ ok: false, error: resetError }, 400, corsHeaders);
     return sendPasswordReset(payload, request, env, corsHeaders);
   }
+  if (payload.action === "reset_password") {
+    const resetError = validatePasswordReset(payload);
+    if (resetError) return json({ ok: false, error: resetError }, 400, corsHeaders);
+    return resetMemberPassword(payload, env, corsHeaders);
+  }
 
   if (validationError) return json({ ok: false, error: validationError }, 400, corsHeaders);
   if (!env.DB) return json({ ok: false, error: "Database binding DB is not configured" }, 500, corsHeaders);
@@ -217,7 +222,14 @@ async function sendPasswordReset(payload, request, env, corsHeaders) {
     `).bind(email).first();
 
     if (result) {
-      const resetLink = makePasswordResetLink(request, env, result.email);
+      const resetToken = await makeToken(`${result.email}:password-reset`);
+      const resetExpiresAt = new Date(Date.now() + 60 * 60 * 1000).toISOString();
+      await env.DB.prepare(`
+        UPDATE club_members
+        SET password_reset_token = ?, password_reset_expires_at = ?, updated_at = CURRENT_TIMESTAMP
+        WHERE email = ?
+      `).bind(resetToken, resetExpiresAt, result.email).run();
+      const resetLink = makePasswordResetLink(request, env, resetToken, result.email);
       await sendPasswordResetEmail(env, {
         firstName: result.first_name || "",
         lastName: result.last_name || "",
@@ -229,6 +241,30 @@ async function sendPasswordReset(payload, request, env, corsHeaders) {
   } catch (error) {
     console.error("Club Society password reset request failed", error);
     return json({ ok: false, error: "Server error while starting password reset" }, 500, corsHeaders);
+  }
+}
+
+async function resetMemberPassword(payload, env, corsHeaders) {
+  if (!env.DB) return json({ ok: false, error: "Database binding DB is not configured" }, 500, corsHeaders);
+  try {
+    await ensureMemberTable(env.DB);
+    const token = cleanText(payload.token);
+    const member = await env.DB.prepare(`
+      SELECT id FROM club_members
+      WHERE password_reset_token = ? AND datetime(password_reset_expires_at) > CURRENT_TIMESTAMP
+      LIMIT 1
+    `).bind(token).first();
+    if (!member) return json({ ok: false, error: "This password reset link is invalid or has expired. Request a new link." }, 400, corsHeaders);
+    const passwordHash = await hashPassword(payload.password);
+    await env.DB.prepare(`
+      UPDATE club_members
+      SET password_hash = ?, password_reset_token = NULL, password_reset_expires_at = NULL, updated_at = CURRENT_TIMESTAMP
+      WHERE id = ?
+    `).bind(passwordHash, member.id).run();
+    return json({ ok: true }, 200, corsHeaders);
+  } catch (error) {
+    console.error("Club Society password reset failed", error);
+    return json({ ok: false, error: "Server error while resetting password" }, 500, corsHeaders);
   }
 }
 
@@ -279,6 +315,8 @@ async function ensureMemberTable(db) {
       state TEXT,
       zip TEXT,
       password_hash TEXT,
+      password_reset_token TEXT,
+      password_reset_expires_at TEXT,
       completion_token TEXT NOT NULL UNIQUE,
       sync_token TEXT,
       app_state_json TEXT,
@@ -290,6 +328,8 @@ async function ensureMemberTable(db) {
     )
   `).run();
   await ensureColumn(db, "club_members", "password_hash", "TEXT");
+  await ensureColumn(db, "club_members", "password_reset_token", "TEXT");
+  await ensureColumn(db, "club_members", "password_reset_expires_at", "TEXT");
   await ensureColumn(db, "club_members", "gender", "TEXT");
   await ensureColumn(db, "club_members", "email_verified_at", "TEXT");
   await ensureColumn(db, "club_members", "sync_token", "TEXT");
@@ -473,6 +513,13 @@ function validatePasswordResetRequest(payload) {
   return "";
 }
 
+function validatePasswordReset(payload) {
+  if (!payload || typeof payload !== "object") return "Invalid JSON body";
+  if (!payload.token) return "Missing password reset token";
+  if (!payload.password || String(payload.password).length < 8) return "Password must be at least 8 characters";
+  return "";
+}
+
 function validateAppStateSave(payload) {
   if (!payload || typeof payload !== "object") return "Invalid JSON body";
   if (!payload.email) return "Missing required field: email";
@@ -558,10 +605,11 @@ function makeProfileLink(request, env, token) {
   return url.toString();
 }
 
-function makePasswordResetLink(request, env, email) {
+function makePasswordResetLink(request, env, token, email) {
   const base = env.CLUB_SOCIETY_PROFILE_URL || new URL(request.url).origin;
   const url = new URL(base);
-  url.searchParams.set("resetPassword", email);
+  url.searchParams.set("resetPassword", token);
+  url.searchParams.set("email", email);
   return url.toString();
 }
 
