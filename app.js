@@ -1,4 +1,4 @@
-Warning: truncated output (original token count: 57917)
+Warning: truncated output (original token count: 57887)
 Total output lines: 5452
 
 const STORAGE_KEY = "paddlePinClub.v1";
@@ -8,20 +8,12 @@ const PADDLE_PINT_SYNC_CONFIG_KEY = "clubSociety.paddlePintSync.v1";
 const PADDLE_PINT_ENDPOINT_URL = "https://clubsociety.app/api/paddle-pint";
 const APP_VERSION = document.querySelector('meta[name="app-version"]')?.content || "local-dev";
 const STORAGE_SCHEMA_VERSION = 2;
-const urlParams = new URLSearchParams(window.location.search);
 const currentHost = window.location.hostname.toLowerCase();
-const currentPath = window.location.pathname.toLowerCase();
-const DASHBOARD_HOSTS = new Set(["clubsocietyapp.com", "www.clubsocietyapp.com"]);
 const MEMBER_APP_HOSTS = new Set(["clubsociety.app", "www.clubsociety.app", "club-society.pages.dev"]);
-const isExplicitDashboardLaunch = urlParams.get("admin") === "1" || currentPath.startsWith("/admin");
-const isExplicitMemberLaunch = urlParams.get("app") === "1"
-  || currentPath.startsWith("/app")
-  || window.matchMedia("(display-mode: standalone)").matches
-  || window.navigator.standalone === true;
-const isDashboardLaunch = isExplicitDashboardLaunch
-  || (DASHBOARD_HOSTS.has(currentHost) && !isExplicitMemberLaunch);
-const isStandaloneLaunch = !isExplicitDashboardLaunch
-  && (isExplicitMemberLaunch || MEMBER_APP_HOSTS.has(currentHost));
+const LOCAL_DASHBOARD_HOSTS = new Set(["", "localhost", "127.0.0.1", "0.0.0.0", "::1"]);
+const isStandaloneLaunch = MEMBER_APP_HOSTS.has(currentHost);
+const isDashboardLaunch = LOCAL_DASHBOARD_HOSTS.has(currentHost) || window.location.protocol === "file:";
+const isUnsupportedHostedLaunch = !isStandaloneLaunch && !isDashboardLaunch;
 const DEFAULT_LOCATION = { street: "", city: "Watkinsville", state: "GA", zip: "30677" };
 const DEFAULT_PUBLIC_VIEW = {
   headline: "Find your next game",
@@ -574,11 +566,18 @@ function mergeValues(localItems = [], cloudItems = []) {
 }
 
 function setView(id) {
+  if (id === "societyApp" && !isStandaloneLaunch) id = "command";
+  if (id !== "societyApp" && isStandaloneLaunch) id = "societyApp";
   els.navItems.forEach((item) => item.classList.toggle("active", item.dataset.view === id));
   els.views.forEach((view) => view.classList.toggle("active", view.id === id));
 }
 
 function applyLaunchMode() {
+  if (isUnsupportedHostedLaunch) {
+    window.location.replace("https://clubsociety.app");
+    return;
+  }
+
   if (isStandaloneLaunch) {
     document.body.classList.add("standalone-member-app");
     document.title = "Club Society App";
@@ -592,6 +591,7 @@ function applyLaunchMode() {
     document.body.classList.add("admin-mode");
     document.title = "Club Society Dashboard";
     setView("command");
+    document.querySelector("#societyApp")?.remove();
   }
 }
 
@@ -1452,7 +1452,12 @@ function hasSocietyAccess() {
 
 function currentSocietyProfile() {
   const email = state.societySessionEmail?.toLowerCase();
-  return state.profiles.find((profile) => pro…27917 tokens truncated…data.waiver || "Needs Signature",
+  return state.profiles.find((profile) => profile.email?.toLowerCase() === email)
+    || state.profiles.find((profile) => profile.stayLoggedIn)
+    || null;
+}
+
+functi…27887 tokens truncated…data.waiver || "Needs Signature",
       ...waiverAudit,
       status: "Profile",
       paid: "Not tracked",
