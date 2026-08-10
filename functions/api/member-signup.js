@@ -104,7 +104,7 @@ async function getMemberByToken(request, env, corsHeaders) {
   try {
     await ensureMemberTable(env.DB);
     const result = await env.DB.prepare(`
-      SELECT first_name, last_name, email, phone, sport, city, state, zip
+      SELECT first_name, last_name, email, phone, gender, sport, city, state, zip
       FROM club_members
       WHERE completion_token = ?
       LIMIT 1
@@ -126,6 +126,7 @@ async function getMemberByToken(request, env, corsHeaders) {
         lastName: result.last_name || "",
         email: result.email || "",
         phone: result.phone || "",
+        gender: result.gender || "",
         sport: result.sport || "both",
         city: result.city || "Watkinsville",
         state: result.state || "GA",
@@ -145,7 +146,7 @@ async function signInMember(payload, env, corsHeaders) {
   try {
     await ensureMemberTable(env.DB);
     const result = await env.DB.prepare(`
-      SELECT first_name, last_name, email, phone, sport, city, state, zip, password_hash, email_verified_at, app_state_json
+      SELECT first_name, last_name, email, phone, gender, sport, city, state, zip, password_hash, email_verified_at, app_state_json
       FROM club_members
       WHERE email = ?
       LIMIT 1
@@ -186,6 +187,7 @@ async function signInMember(payload, env, corsHeaders) {
         lastName: result.last_name || "",
         email: result.email || "",
         phone: result.phone || "",
+        gender: result.gender || "",
         sport: result.sport || "both",
         city: result.city || "Watkinsville",
         state: result.state || "GA",
@@ -271,6 +273,7 @@ async function ensureMemberTable(db) {
       last_name TEXT,
       email TEXT NOT NULL UNIQUE,
       phone TEXT,
+      gender TEXT,
       sport TEXT,
       city TEXT,
       state TEXT,
@@ -287,6 +290,7 @@ async function ensureMemberTable(db) {
     )
   `).run();
   await ensureColumn(db, "club_members", "password_hash", "TEXT");
+  await ensureColumn(db, "club_members", "gender", "TEXT");
   await ensureColumn(db, "club_members", "email_verified_at", "TEXT");
   await ensureColumn(db, "club_members", "sync_token", "TEXT");
   await ensureColumn(db, "club_members", "app_state_json", "TEXT");
@@ -314,12 +318,13 @@ async function upsertMember(db, member, token, password, syncToken, appState = {
   const appStateJson = safeAppStateJson(appState);
   await db.prepare(`
     INSERT INTO club_members (
-      first_name, last_name, email, phone, sport, city, state, zip, password_hash, completion_token, sync_token, app_state_json, app_state_updated_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+      first_name, last_name, email, phone, gender, sport, city, state, zip, password_hash, completion_token, sync_token, app_state_json, app_state_updated_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
     ON CONFLICT(email) DO UPDATE SET
       first_name = excluded.first_name,
       last_name = excluded.last_name,
       phone = excluded.phone,
+      gender = excluded.gender,
       sport = excluded.sport,
       city = excluded.city,
       state = excluded.state,
@@ -335,6 +340,7 @@ async function upsertMember(db, member, token, password, syncToken, appState = {
     member.lastName,
     member.email,
     member.phone,
+    member.gender,
     member.sport,
     member.city,
     member.state,
@@ -491,6 +497,7 @@ function normalizeMember(payload) {
     lastName: cleanText(payload.lastName || payload.last_name),
     email: cleanEmail(payload.email),
     phone: cleanText(payload.phone),
+    gender: cleanText(payload.gender),
     sport: cleanText(payload.sport || "both"),
     city: cleanText(payload.city || "Watkinsville"),
     state: cleanText(payload.state || "GA"),
@@ -657,3 +664,4 @@ function escapeHtml(value) {
 function json(body, status, headers) {
   return Response.json(body, { status, headers });
 }
+
