@@ -1,5 +1,6 @@
 const SHOPIFY_ORIGIN = "https://www.paddleandpin.com";
 const ALLOWED_ORIGINS = new Set([
+  "null",
   SHOPIFY_ORIGIN,
   "https://clubsociety.app",
   "https://www.clubsociety.app",
@@ -138,7 +139,8 @@ async function listSubmissions(request, env, corsHeaders) {
         additional_players_json,
         notes,
         source,
-        created_at
+        created_at,
+        created_at AS signup_date
       FROM paddle_pint_submissions
     `;
     const statement = type
@@ -207,3 +209,4 @@ function json(body, status, headers) {
     headers,
   });
 }
+
