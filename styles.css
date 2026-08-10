@@ -1283,7 +1283,8 @@ textarea {
   font-size: 0.76rem;
 }
 
-.round-edit-grid select {
+.round-edit-grid select,
+.round-edit-grid input {
   min-height: 36px;
   padding: 7px 9px;
   font-size: 0.84rem;
@@ -1385,9 +1386,7 @@ textarea {
   min-height: 820px;
   border: 1px solid rgba(11, 34, 49, 0.1);
   border-radius: 28px;
-  background:
-    linear-gradient(180deg, rgba(255, 247, 232, 0.88), rgba(255, 255, 255, 0.96)),
-    #fff;
+  background: #f6f3ec;
   box-shadow: var(--shadow);
   overflow: hidden;
   position: relative;
@@ -1402,21 +1401,22 @@ textarea {
   grid-template-columns: 48px 1fr 48px;
   gap: 10px;
   align-items: center;
-  background: rgba(255, 255, 255, 0.94);
-  border-bottom: 1px solid rgba(11, 34, 49, 0.08);
-  padding: 14px;
+  background: rgba(246, 243, 236, 0.9);
+  border-bottom: 1px solid rgba(11, 34, 49, 0.06);
+  padding: 12px 16px;
+  backdrop-filter: blur(18px);
 }
 
 .society-wordmark {
   display: grid;
   justify-items: center;
-  gap: 2px;
+  gap: 1px;
   text-align: center;
 }
 
 .society-wordmark img {
-  width: 42px;
-  height: 42px;
+  width: 38px;
+  height: 38px;
 }
 
 .society-wordmark strong {
@@ -1444,12 +1444,16 @@ textarea {
 }
 
 .society-hero-card {
-  border-radius: 18px;
+  position: relative;
+  overflow: hidden;
+  border-radius: 28px;
   background:
-    linear-gradient(135deg, rgba(11, 34, 49, 0.96), rgba(31, 138, 98, 0.92)),
+    radial-gradient(circle at 92% 8%, rgba(244, 181, 43, 0.32), transparent 30%),
+    linear-gradient(145deg, #071e2c 0%, #0c3e3b 58%, #126449 100%),
     var(--navy);
   color: #fff;
-  padding: 18px;
+  padding: 28px 22px 22px;
+  box-shadow: 0 24px 50px rgba(7, 30, 44, 0.24);
 }
 
 .society-hero-card .eyebrow {
@@ -1457,14 +1461,108 @@ textarea {
 }
 
 .society-hero-card h2 {
-  margin: 8px 0;
-  font-size: clamp(1.65rem, 8vw, 2.55rem);
-  line-height: 0.98;
+  position: relative;
+  z-index: 1;
+  margin: 14px 0 12px;
+  max-width: 360px;
+  font-size: clamp(2.55rem, 12vw, 4rem);
+  letter-spacing: -0.065em;
+  line-height: 0.88;
+}
+
+.society-hero-card h2 em {
+  color: var(--gold);
+  font-family: Georgia, "Times New Roman", serif;
+  font-weight: 500;
 }
 
 .society-hero-card p {
   color: rgba(255, 255, 255, 0.78);
-  margin: 0 0 14px;
+  margin: 0 0 18px;
+  max-width: 350px;
+  font-size: 0.98rem;
+  line-height: 1.5;
+}
+
+.society-hero-kicker {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 !important;
+  color: rgba(255, 255, 255, 0.82) !important;
+  font-size: 0.7rem !important;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.society-hero-kicker span {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: var(--gold);
+  box-shadow: 0 0 0 5px rgba(244, 181, 43, 0.15);
+}
+
+.society-live-strip {
+  display: flex;
+  gap: 7px;
+  overflow: hidden;
+  margin: 2px 0 20px;
+}
+
+.society-live-strip span {
+  flex: 0 0 auto;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.86);
+  font-size: 0.68rem;
+  font-weight: 850;
+  padding: 7px 10px;
+  backdrop-filter: blur(8px);
+}
+
+.society-live-strip b { color: #5ee1a1; }
+
+.society-hero-actions {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  gap: 9px;
+}
+
+.society-hero-actions button { width: 100%; min-height: 52px; }
+
+.society-join-cta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border: 0;
+  border-radius: 16px;
+  background: var(--gold);
+  color: var(--navy);
+  font-size: 0.94rem;
+  font-weight: 950;
+  box-shadow: 0 12px 26px rgba(244, 181, 43, 0.22);
+}
+
+.society-join-cta span { font-size: 1.4rem; }
+
+.society-signin-cta {
+  border-color: rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.78);
+}
+
+.society-signin-cta strong { color: #fff; }
+
+.society-hero-card .society-invite-note {
+  margin: 13px 0 0;
+  color: rgba(255, 255, 255, 0.52);
+  font-size: 0.67rem;
+  font-weight: 800;
+  text-align: center;
 }
 
 .society-sport-switch,
@@ -1520,16 +1618,17 @@ textarea {
 
 .society-guest-panel {
   overflow: hidden;
-  background:
-    radial-gradient(circle at 12% 0%, rgba(244, 181, 43, 0.22), transparent 34%),
-    linear-gradient(180deg, #ffffff, rgba(255, 247, 232, 0.78));
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  padding: 10px 4px 24px;
 }
 
 .society-pass-intro {
   display: grid;
   gap: 8px;
-  justify-items: center;
-  text-align: center;
+  justify-items: stretch;
+  text-align: left;
 }
 
 .society-pass-badge {
@@ -1566,6 +1665,33 @@ textarea {
   text-transform: uppercase;
 }
 
+.society-feature-grid {
+  display: grid;
+  gap: 9px;
+  margin-top: 12px;
+}
+
+.society-feature-grid article {
+  display: grid;
+  grid-template-columns: 34px 1fr;
+  column-gap: 10px;
+  align-items: center;
+  border: 1px solid rgba(11, 34, 49, 0.08);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.72);
+  padding: 12px;
+}
+
+.society-feature-grid article > span {
+  grid-row: 1 / span 2;
+  color: var(--gold);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.1rem;
+}
+
+.society-feature-grid strong { color: var(--navy); }
+.society-feature-grid article p { font-size: 0.76rem; }
+
 .society-join-card h3,
 .society-section h3 {
   margin: 2px 0 6px;
@@ -1583,6 +1709,11 @@ textarea {
 .society-form {
   display: grid;
   gap: 9px;
+  border: 1px solid rgba(11, 34, 49, 0.08);
+  border-radius: 24px;
+  background: #fff;
+  padding: 18px;
+  box-shadow: 0 20px 45px rgba(11, 34, 49, 0.12);
 }
 
 .society-entry-actions {
@@ -1641,6 +1772,44 @@ textarea {
 
 .auth-panel.active {
   display: grid;
+}
+
+.society-auth-heading {
+  margin-bottom: 8px;
+  text-align: left;
+}
+
+.society-auth-heading span {
+  color: var(--green);
+  font-size: 0.7rem;
+  font-weight: 950;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.society-auth-heading h3 { margin: 5px 0 3px; font-size: 1.65rem; }
+.society-auth-heading p { font-size: 0.84rem; }
+
+.society-form input,
+.society-form select {
+  min-height: 48px;
+  border-radius: 14px;
+  background: #f8f6f1;
+}
+
+.society-auth-submit {
+  min-height: 50px;
+  border-radius: 15px;
+  background: var(--navy);
+  color: #fff;
+}
+
+.society-auth-switch {
+  border: 0;
+  background: transparent;
+  color: var(--green);
+  box-shadow: none;
+  font-weight: 900;
 }
 
 .forgot-password-link {
@@ -2756,3 +2925,4 @@ textarea {
     grid-template-columns: 1fr;
   }
 }
+
