@@ -145,6 +145,8 @@ const els = {
   golfCourseList: document.querySelector("#golfCourseList"),
   golfCourseLocation: document.querySelector("#golfCourseLocation"),
   useCurrentGolfLocation: document.querySelector("#useCurrentGolfLocation"),
+  golfZipSearchForm: document.querySelector("#golfZipSearchForm"),
+  golfCourseZip: document.querySelector("#golfCourseZip"),
   adminForm: document.querySelector("#adminForm"),
   profileForm: document.querySelector("#profileForm"),
   shopForm: document.querySelector("#shopForm"),
@@ -259,6 +261,7 @@ els.golfPassBtn.addEventListener("click", passGolfMatch);
 els.golfMessageMatchBtn.addEventListener("click", messageGolfMatch);
 els.golfCourseDistance?.addEventListener("change", renderGolfCourses);
 els.useCurrentGolfLocation?.addEventListener("click", useCurrentGolfLocation);
+els.golfZipSearchForm?.addEventListener("submit", searchGolfCoursesByZip);
 els.adminForm.addEventListener("submit", saveAdmin);
 els.profileForm.addEventListener("submit", saveProfile);
 els.shopForm.addEventListener("submit", saveShopCollection);
@@ -371,6 +374,7 @@ function loadState() {
     courtDistance: "25",
     golfCourseDistance: "25",
     golfCourseCoordinates: null,
+    golfCourseZip: "",
     memberHostFormat: "round-robin",
     memberHostDrafts: { "round-robin": { format: "round-robin", matches: [] }, tournament: { format: "tournament", matches: [] } },
     memberHostArchives: [],
@@ -2651,7 +2655,9 @@ async function renderGolfCourses() {
   state.golfCourseDistance = String(distance);
   saveState();
   const profile = currentSocietyProfile();
-  const label = [profile?.city, profile?.state, profile?.zip].filter(Boolean).join(", ") || "Watkinsville, GA 30677";
+  const profileLabel = [profile?.city, profile?.state, profile?.zip].filter(Boolean).join(", ") || "Watkinsville, GA 30677";
+  const label = state.golfCourseZip || profileLabel;
+  if (els.golfCourseZip && !els.golfCourseZip.value) els.golfCourseZip.value = state.golfCourseZip || profile?.zip || "";
   els.golfCourseLocation.textContent = state.golfCourseCoordinates?.source === "device" ? "Using your current device location" : `Near ${label}`;
   els.golfCourseList.innerHTML = `<div class="empty">Finding courses within ${distance} miles of ${escapeHtml(label)}...</div>`;
   try {
@@ -2682,6 +2688,20 @@ async function renderGolfCourses() {
   }
 }
 
+function searchGolfCoursesByZip(event) {
+  event.preventDefault();
+  const zip = String(els.golfCourseZip?.value || "").trim();
+  if (!/^\d{5}$/.test(zip)) {
+    showSocietyAccountMessage("Enter a valid five-digit ZIP code.", "error");
+    els.golfCourseZip?.focus();
+    return;
+  }
+  state.golfCourseZip = zip;
+  state.golfCourseCoordinates = null;
+  saveState();
+  renderGolfCourses();
+}
+
 function useCurrentGolfLocation() {
   if (!navigator.geolocation) {
     showSocietyAccountMessage("Current location is not supported on this device.", "error");
@@ -2690,6 +2710,7 @@ function useCurrentGolfLocation() {
   els.golfCourseLocation.textContent = "Requesting your location...";
   navigator.geolocation.getCurrentPosition((position) => {
     state.golfCourseCoordinates = { lat: String(position.coords.latitude), lon: String(position.coords.longitude), source: "device" };
+    state.golfCourseZip = "";
     saveState();
     renderGolfCourses();
   }, () => {
