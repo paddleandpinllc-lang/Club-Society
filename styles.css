@@ -741,7 +741,8 @@ textarea {
 }
 
 .status-pill {
-  display: inline-flex;
+  dis
+play: inline-flex;
   width: fit-content;
   border-radius: 999px;
   background: rgba(31, 138, 98, 0.12);
@@ -1449,7 +1450,8 @@ textarea {
   border-radius: 28px;
   background:
     radial-gradient(circle at 92% 8%, rgba(244, 181, 43, 0.32), transparent 30%),
-    linear-gradient(145deg, #071e2c 0%, #0c3e3b 58%, #126449 100%),
+    linear-gradient(145deg, #071e2c 0%, #0c3e3b 58%, #126
+449 100%),
     var(--navy);
   color: #fff;
   padding: 28px 22px 22px;
@@ -2096,7 +2098,8 @@ textarea {
 }
 
 .society-direction-grid button {
-  display: grid;
+  display: g
+rid;
   align-content: end;
   min-height: 184px;
   padding: 14px;
@@ -2217,8 +2220,7 @@ textarea {
 .member-host-match input { min-width:0; text-align:center; }
 .member-host-match em { color:var(--muted); font-size:.7rem; }
 .charity-host-card { display:grid; gap:7px; border-radius:20px; background:#fff8e9; border:1px solid rgba(244,181,43,.42); padding:16px; }
-.charity-host-card span { color:#7a3351; font-size:.68rem; font-weight:95
-0; text-transform:uppercase; }
+.charity-host-card span { color:#7a3351; font-size:.68rem; font-weight:950; text-transform:uppercase; }
 .charity-host-card strong { color:var(--navy); font-size:1.1rem; }
 .charity-host-card p { margin:0; color:var(--muted); font-size:.82rem; }
 .charity-host-card button { justify-self:start; }
@@ -2652,7 +2654,8 @@ textarea {
   color: var(--green);
   font-size: 0.72rem;
   font-weight: 950;
-  text-transform: uppercase;
+  text-transform: u
+ppercase;
 }
 
 .society-post-card strong,
@@ -2717,9 +2720,22 @@ textarea {
 
 .golf-member-hub {
   background:
-    radial-gradient(circle at 88% 12%, rgba(246, 181, 44, 0.2), transparent 34%),
-    linear-gradient(150deg, #0b362c 0%, #0c4a3b 58%, #123246 100%);
+    radial-gradient(circle at 88% 12%, rgba(223, 185, 92, 0.3), transparent 34%),
+    linear-gradient(150deg, #183e24 0%, #376b32 56%, #75613d 100%);
 }
+
+.golf-member-hub .pickleball-hub-grid button { background: rgba(246, 239, 213, 0.13); border-color: rgba(235, 219, 167, 0.3); }
+.golf-member-hub .pickleball-hub-grid span { color: #f2d27e; }
+.pickleball-hub:not(.golf-member-hub) { background: radial-gradient(circle at 10% 0%, rgba(242, 225, 62, 0.28), transparent 31%), linear-gradient(150deg, #092b49, #087f86 58%, #55a744); }
+.pickleball-hub:not(.golf-member-hub) .pickleball-hub-grid span { color: #edf34c; }
+.course-location-bar { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:12px; border-radius:16px; background:#eef5e9; }
+.course-location-bar strong { color:#285c32; font-size:.82rem; }
+.course-location-bar button { min-height:38px; border-color:#487f45; color:#285c32; }
+.course-data-note { margin-top:12px; color:var(--muted); font-size:.75rem; }
+.course-card-actions { display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
+.course-card-actions a { display:inline-flex; align-items:center; min-height:38px; padding:0 13px; border:1px solid #487f45; border-radius:999px; color:#285c32; font-weight:850; text-decoration:none; }
+.course-card-actions a.primary { background:#285c32; color:#fff; }
+.course-card-actions span { color:var(--muted); font-size:.76rem; text-transform:none; }
 
 .golf-tournament-hero {
   background: linear-gradient(145deg, #0b362c, #123246);
