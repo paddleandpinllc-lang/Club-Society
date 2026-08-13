@@ -82,6 +82,7 @@ const MEMBER_SYNC_KEYS = [
   "courtFilter",
   "memberHostDrafts",
   "memberHostArchives",
+  "lessonListings",
 ];
 
 const state = loadState();
@@ -150,6 +151,7 @@ const els = {
   useCurrentGolfLocation: document.querySelector("#useCurrentGolfLocation"),
   golfZipSearchForm: document.querySelector("#golfZipSearchForm"),
   golfCourseZip: document.querySelector("#golfCourseZip"),
+  lessonForms: document.querySelectorAll("[data-lesson-form]"),
   adminForm: document.querySelector("#adminForm"),
   profileForm: document.querySelector("#profileForm"),
   shopForm: document.querySelector("#shopForm"),
@@ -265,6 +267,7 @@ els.golfMessageMatchBtn.addEventListener("click", messageGolfMatch);
 els.golfCourseDistance?.addEventListener("change", renderGolfCourses);
 els.useCurrentGolfLocation?.addEventListener("click", useCurrentGolfLocation);
 els.golfZipSearchForm?.addEventListener("submit", searchGolfCoursesByZip);
+els.lessonForms.forEach((form) => form.addEventListener("submit", saveLessonListing));
 els.adminForm.addEventListener("submit", saveAdmin);
 els.profileForm.addEventListener("submit", saveProfile);
 els.shopForm.addEventListener("submit", saveShopCollection);
@@ -383,6 +386,7 @@ function loadState() {
     memberHostFormat: "round-robin",
     memberHostDrafts: { "round-robin": { format: "round-robin", matches: [] }, tournament: { format: "tournament", matches: [] } },
     memberHostArchives: [],
+    lessonListings: [],
     paddlePintImportedIds: [],
     roundSettings: { selectedPlayerIds: [], teams: [], partnerTeams: [], teamMatchQueue: [], sequentialTeams: [], sequentialMatchesRemaining: 0 },
     selectedEventRosterId: "",
@@ -462,6 +466,7 @@ function normalizeState(data) {
     tournament: { format: "tournament", matches: [], ...(data.memberHostDrafts?.tournament || (legacyHostDraft.format === "tournament" ? legacyHostDraft : {})) },
   };
   data.memberHostArchives = data.memberHostArchives || [];
+  data.lessonListings = data.lessonListings || [];
   data.paddlePintImportedIds = data.paddlePintImportedIds || [];
   data.roundSettings = { selectedPlayerIds: [], teams: [], partnerTeams: [], teamMatchQueue: [], sequentialTeams: [], sequentialMatchesRemaining: 0, ...(data.roundSettings || {}) };
   data.selectedEventRosterId = data.selectedEventRosterId || "";
@@ -1364,6 +1369,14 @@ function handleSocietyAppClick(event) {
     return;
   }
 
+  const offerLessonsButton = event.target.closest("[data-offer-lessons]");
+  if (offerLessonsButton) {
+    const form = document.querySelector(`[data-lesson-form="${offerLessonsButton.dataset.offerLessons}"]`);
+    form?.classList.toggle("active");
+    form?.scrollIntoView({ behavior: "smooth", block: "center" });
+    return;
+  }
+
   const addFriendButton = event.target.closest("[data-friend-add]");
   if (addFriendButton) {
     addSocietyFriend(addFriendButton.dataset.friendAdd);
@@ -1624,6 +1637,32 @@ function setSocietyTab(tab) {
     if (els.golfCourseDistance) els.golfCourseDistance.value = state.golfCourseDistance || "25";
     renderGolfCourses();
   }
+  if (["learn", "golfLessons"].includes(tab)) renderLessonListings();
+}
+
+function saveLessonListing(event) {
+  event.preventDefault();
+  const form = event.currentTarget;
+  const sport = form.dataset.lessonForm;
+  const data = Object.fromEntries(new FormData(form).entries());
+  const profile = currentSocietyProfile();
+  const existing = state.lessonListings.find((item) => item.ownerEmail === profile?.email && item.sport === sport);
+  const listing = { ...(existing || {}), ...data, id: existing?.id || newId(), sport, ownerEmail: profile?.email || "", paymentStatus: existing?.paymentStatus || "pending", status: existing?.status || "Pending payment", updatedAt: new Date().toISOString() };
+  if (existing) Object.assign(existing, listing); else state.lessonListings.unshift(listing);
+  saveState();
+  renderLessonListings();
+  showSocietyAccountMessage("Your lesson listing is saved as Pending Payment. Secure $25 checkout will open here when the Club Society Stripe account is connected.", "notice");
+}
+
+function renderLessonListings() {
+  const render = (sport, id) => {
+    const target = document.querySelector(id); if (!target) return;
+    const listings = state.lessonListings.filter((item) => item.sport === sport && item.paymentStatus === "paid");
+    const existingDemo = target.querySelectorAll("article:not([data-paid-lesson])");
+    target.querySelectorAll("[data-paid-lesson]").forEach((item) => item.remove());
+    listings.forEach((item) => { const card = document.createElement("article"); card.className = "society-list-card"; card.dataset.paidLesson = item.id; card.innerHTML = `<strong>${escapeHtml(item.name)}</strong><span>${escapeHtml(item.location)} | ${escapeHtml(item.format)}</span><p>${escapeHtml(item.bio)}</p>`; target.prepend(card); });
+  };
+  render("pickleball", "#pickleballLessonList"); render("golf", "#golfLessonList");
 }
 
 function hasSocietyAccess() {
