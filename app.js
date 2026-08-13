@@ -227,7 +227,8 @@ els.modes.forEach((button) => button.addEventListener("click", () => {
 els.seedDemoBtn.addEventListener("click", seedDemo);
 els.saveSnapshotBtn.addEventListener("click", exportSnapshot);
 els.eventForm.addEventListener("submit", saveEvent);
-els.playerForm.addEventListener("submit", savePlayer);
+els.play
+erForm.addEventListener("submit", savePlayer);
 els.postForm.addEventListener("submit", savePost);
 els.publicRsvpForm.addEventListener("submit", savePublicRsvp);
 els.societyAccountForm.addEventListener("submit", saveSocietyAccount);
@@ -464,7 +465,8 @@ function normalizeState(data) {
     status: "Local only",
     ...(data.cloudMemberSync || {}),
   };
-  return data;
+  retu
+rn data;
 }
 
 function saveState() {
@@ -795,7 +797,8 @@ function savePlayer(event) {
   const waiverAudit = buildWaiverAudit(data.waiver, {
     ...existing,
     waiverSignedAt: existing?.waiverSignedAt || els.playerForm.dataset.waiverSignedAt,
-    waiverSource: existing?.waiverSource || els.playerForm.dataset.waiverSource,
+    waiverSource: existing?.waiverSource || els.playerForm.dataset.waive
+rSource,
   }, "Admin check-in waiver modal");
   const player = {
     ...data,
@@ -896,8 +899,7 @@ function resetPlayerForm() {
   els.playerForm.dataset.partnerWaiverSignedAt = "";
   els.playerForm.dataset.partnerWaiverSource = "";
   els.playerForm.elements.playerId.value = "";
-  els.playerForm.elements.status.value = "Checked in"
-;
+  els.playerForm.elements.status.value = "Checked in";
   els.playerForm.elements.paid.value = "Not tracked";
   els.playerForm.querySelector("button[type=submit]").textContent = "Check In";
   toggleCoupleCheckin();
@@ -1096,7 +1098,8 @@ async function signInSocietyMember(email, password) {
         if (result.needsPasswordSetup) {
           showSocietyAccountMessage(result.error, "notice");
           setAuthPanel("signup");
-          els.societyAccountForm.elements.email.value = normalizedEmail;
+          els.societyAccountForm.elements.email.va
+lue = normalizedEmail;
           els.societyAccountForm.elements.email.focus();
           return;
         }
@@ -1414,7 +1417,8 @@ function handleSocietyAppClick(event) {
   const matchMessageButton = event.target.closest("[data-match-message]");
   if (matchMessageButton) {
     messagePostCreator(matchMessageButton.dataset.matchMessage);
-    return;
+    
+return;
   }
 
   const quickGameFilterButton = event.target.closest("[data-quick-game-filter]");
@@ -1707,7 +1711,8 @@ async function saveSocietyProfileFromDrawer() {
     stayLoggedIn: true,
     preferredSport: profile?.preferredSport || "both",
     sport: profile?.sport || "pickleball",
-    source: profile?.source || "Society profile",
+   
+ source: profile?.source || "Society profile",
     updatedAt: new Date().toISOString(),
   };
   if (profile) Object.assign(profile, nextProfile);
@@ -1812,8 +1817,7 @@ function courtDirectory() {
     { name: "YWCO", city: "Athens", address: "562 Research Drive, Athens, GA 30605", access: "Membership/day fee", surface: "Indoor", courts: "3", note: "Members/Silver Sneakers free; non-member day fee listed by AAPA." },
     { name: "Mars Hill Baptist Church", city: "Watkinsville", address: "2661 Mars Hill Road, Watkinsville, GA 30677", access: "Church/community", surface: "Indoor", courts: "2 dedicated", note: "Tuesday sessions listed by AAPA; free to play." },
     { name: "Oconee Veterans Park", city: "Watkinsville", address: "3500A Hog Mountain Road, Watkinsville, GA 30677", access: "Oconee County public", surface: "Indoor", courts: "2+", note: "County facility; check current schedule and resident/non-resident fees." },
-    { name: "Ramsey Student Center", city: "Athens", address: 
-"330 River Road, Athens, GA 30602", access: "UGA students/faculty", surface: "Indoor", courts: "3", note: "UGA access only per AAPA listing." },
+    { name: "Ramsey Student Center", city: "Athens", address: "330 River Road, Athens, GA 30602", access: "UGA students/faculty", surface: "Indoor", courts: "3", note: "UGA access only per AAPA listing." },
     { name: "Jennings Mill Country Club", city: "Bogart", address: "Bogart, GA 30622", access: "Club/private", surface: "Outdoor", courts: "8", note: "Country club members only; pickleball memberships may be available." },
     { name: "Athens Country Club", city: "Athens", address: "2700 Jefferson Road, Athens, GA 30607", access: "Club/private", surface: "Outdoor", courts: "6 dedicated / 12 shared", note: "Member or member guest access." },
     { name: "The Georgia Club", city: "Statham", address: "1050 Chancellors Drive, Statham, GA 30666", access: "Club/private", surface: "Outdoor", courts: "4 dedicated / 4 shared", note: "Member or member guest access." },
@@ -1864,7 +1868,8 @@ function showSocietyProfilePreview(id) {
         <span>${escapeHtml(card.city)} | ${escapeHtml(card.sport)}</span>
         <strong>${escapeHtml(card.name)}</strong>
         <p>${escapeHtml(card.skill)}</p>
-        <p>${escapeHtml(card.bio || card.vibe || "Open to club play.")}</p>
+        <p>${escapeHtml(card.bio || car
+d.vibe || "Open to club play.")}</p>
       </div>
       <div class="society-friend-actions">
         <button data-friend-add="${escapeHtml(card.id)}" type="button">Add Friend</button>
@@ -2118,7 +2123,8 @@ function renderPickleDateProfiles() {
     { id: "date-jordan", name: "Jordan", age: 41, miles: 14, level: "3.0 social", bio: "Here for good games, good conversation, and no pressure.", idea: "A relaxed mixed-doubles social." },
     { id: "date-taylor", name: "Taylor", age: 29, miles: 22, level: "4.0", bio: "Serious about improving, equally serious about having fun.", idea: "Best-of-three then tacos." },
   ];
-  const profiles = demoDates.filter((profile) => profile.age >= minAge && profile.age <= maxAge && profile.miles <= maxMiles);
+  const profiles = demoDates.filter((profile) => profile.
+age >= minAge && profile.age <= maxAge && profile.miles <= maxMiles);
   els.pickleDateResults.innerHTML = profiles.length ? profiles.map((profile) => `
     <article class="pickle-date-profile">
       <div class="pickle-date-avatar">${escapeHtml(initials(profile.name))}</div>
@@ -2317,7 +2323,8 @@ function renderSocietyFriendCard(card) {
       <div>
         <span>${escapeHtml(card.city)} | ${escapeHtml(card.sport)}</span>
         <button class="profile-name-link" data-profile-view="${escapeHtml(card.id)}" type="button">${escapeHtml(card.name)}</button>
-        <p>${escapeHtml(card.skill)} - ${escapeHtml(card.vibe)}</p>
+        <p>${escapeHtm
+l(card.skill)} - ${escapeHtml(card.vibe)}</p>
       </div>
       <div class="society-friend-actions">
         <button class="${isFriend ? "active" : ""}" data-friend-add="${escapeHtml(card.id)}" type="button">${isFriend ? "Friends" : "Add"}</button>
@@ -2908,7 +2915,8 @@ function renderPublicEvents() {
     publicRsvpPanel.querySelector("h2").textContent = view.primaryLabel || "Reserve a spot";
     publicRsvpPanel.querySelector("button[type=submit]").textContent = view.primaryLabel || "Submit RSVP";
   }
-  document.querySelector("#publicEventList").innerHTML = published.length
+  document.querySelector("#publicEventList").inn
+erHTML = published.length
     ? published.map((event) => {
       const count = eventPlayers(event.id).filter((player) => player.status !== "Waitlist").length;
       const capacity = Number(event.capacity) || 0;
@@ -3163,7 +3171,8 @@ function renderPlayers() {
 }
 
 function handlePlayerListClick(event) {
-  const editButton = event.target.closest("[data-edit-player]");
+  cons
+t editButton = event.target.closest("[data-edit-player]");
   if (editButton) {
     editPlayer(editButton.dataset.editPlayer);
     return;
@@ -3467,7 +3476,8 @@ function openWaiverModal(context = "public") {
 }
 
 function closeWaiverModal() {
-  els.waiverModal.classList.remove("open");
+  els.waiverModal.classList
+.remove("open");
   els.waiverModal.setAttribute("aria-hidden", "true");
 }
 
@@ -3567,8 +3577,7 @@ function findProfileByPrivateLookup(value) {
 
 function clearPublicForm(keepMessage) {
   els.publicCheckinForm.reset();
-  els.publicCheckinForm.dataset.
-playerId = "";
+  els.publicCheckinForm.dataset.playerId = "";
   els.publicCheckinForm.dataset.profileId = "";
   els.publicCheckinForm.dataset.waiverSignedAt = "";
   els.publicCheckinForm.dataset.waiverSource = "";
@@ -3745,7 +3754,8 @@ function roundTeamPlayerSelect(players, selectedId, teamIndex, field) {
       <option value="">Select player</option>
       ${players.map((player) => `
         <option value="${player.id}" ${player.id === selectedId ? "selected" : ""}>${escapeHtml(player.firstName)} ${escapeHtml(player.lastName)} - ${escapeHtml(player.gender || "Gender not specified")} / ${escapeHtml(player.skill || "Open")}</option>
-      `).join("")}
+     
+ `).join("")}
     </select>
   `;
 }
@@ -4013,7 +4023,8 @@ function handleRoundListChange(event) {
   const winnerSelect = event.target.closest("[data-round-winner]");
   if (winnerSelect) {
     const round = state.rounds.find((item) => item.round === Number(winnerSelect.dataset.roundWinner));
-    const match = round?.matches?.[Number(winnerSelect.dataset.matchIndex)];
+    const match = round?.matches?.[Number(winnerSelect.dataset.matchInd
+ex)];
     if (match) {
       match.winner = winnerSelect.value;
       saveState();
@@ -4306,7 +4317,8 @@ function advanceBracket() {
   if (!matches.length || winners.length !== matches.length || winners.length === 1) return;
 
   chunk(winners, 2).forEach((players, index) => {
-    state.bracket.push({ round: current + 1, match: index + 1, players, winner: "", scoreA: "", scoreB: "", format: matches[0]?.format || "singles" });
+    state.bracket.push({ round: current + 1, match: index + 1, players, winner: "", scoreA: "", scoreB: "", for
+mat: matches[0]?.format || "singles" });
   });
   saveState();
   renderBracket();
@@ -4461,8 +4473,7 @@ function deleteProfile(id) {
   const profile = state.profiles.find((item) => item.id === id);
   if (!profile) return;
   if (!window.confirm(`Delete ${profile.firstName} ${profile.lastName}'s profile?`)) return;
-  state.profiles = state.profiles.fi
-lter((item) => item.id !== id);
+  state.profiles = state.profiles.filter((item) => item.id !== id);
   saveState();
   render();
   showAdminMessage("#profileList", "success", "Player profile deleted.");
@@ -4547,7 +4558,8 @@ function renderShopCollections() {
       <a href="${escapeHtml(collection.url || "https://www.paddleandpin.com")}" target="_blank" rel="noreferrer">Open shop</a>
       <div class="card-actions">
         <button type="button" data-edit-shop="${escapeHtml(collection.id)}">Edit</button>
-        <button class="danger" type="button" data-delete-shop="${escapeHtml(collection.id)}">Delete</button>
+        <button class="danger" type="button" data-delete-shop="${escapeHtml
+(collection.id)}">Delete</button>
       </div>
     </article>
   `).join("");
@@ -4815,7 +4827,8 @@ async function importPaddlePintSubmissions() {
     const latestSignup = submissions.map((submission) => submission.signup_date || submission.created_at).filter(Boolean).sort().at(-1);
     saveState();
     render();
-    renderPaddlePintSyncStatus(`Imported ${stats.playersCreated} player RSVP${stats.playersCreated === 1 ? "" : "s"} into ${stats.eventsTouched} event${stats.eventsTouched === 1 ? "" : "s"} and updated ${stats.profilesTouched} reusable player profile${stats.profilesTouched === 1 ? "" : "s"}. Skipped ${stats.skipped} already-imported submission${stats.skipped === 1 ? "" : "s"}.${latestSignup ? ` Latest Cloudflare signup: ${formatDateTime(latestSignup)}.` : ""}`, "success");
+    renderPaddlePintSyncStatus(`Imported ${stats.playersCreated} player RSVP${stats.playersCreated === 1 ? "" : "s"} into ${stats.eventsTouched} event${stats.eventsTouched === 1 ? "" : "s"} and updated ${stats.profilesTouched} reusable player profile${stats.profilesTouched === 1 ? "" : "s"}. Skipped ${stats.skipped} already-imported submission${stats.skipped === 1 ? "" : "s"}.${latestSign
+up ? ` Latest Cloudflare signup: ${formatDateTime(latestSignup)}.` : ""}`, "success");
   } catch (error) {
     renderPaddlePintSyncStatus(`Sync failed: ${error.message}`, "notice");
   }
@@ -5115,7 +5128,8 @@ async function pushCloudState() {
         updated_at: new Date().toISOString(),
       }),
     });
-    if (!response.ok) throw new Error(`Cloud push failed: ${response.status}`);
+    if (!response.ok) throw new Error(`Cloud push failed: 
+${response.status}`);
     state.sync = { ...(state.sync || {}), status: "Cloud push complete", lastSync: new Date().toISOString(), pending: 0 };
     saveState();
     renderSync();
@@ -5776,7 +5790,8 @@ function skillScore(player) {
   return 3;
 }
 
-function normalizedGender(player) {
+function normalizedGender(playe
+r) {
   const value = String(player?.gender || "").trim().toLowerCase();
   return value === "male" || value === "female" ? value : "";
 }
