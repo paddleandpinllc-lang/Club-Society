@@ -136,6 +136,8 @@ const els = {
   golfMatchDeck: document.querySelector("#golfMatchDeck"),
   golfPassBtn: document.querySelector("#golfPassBtn"),
   golfMessageMatchBtn: document.querySelector("#golfMessageMatchBtn"),
+  golfCourseDistance: document.querySelector("#golfCourseDistance"),
+  golfCourseList: document.querySelector("#golfCourseList"),
   adminForm: document.querySelector("#adminForm"),
   profileForm: document.querySelector("#profileForm"),
   shopForm: document.querySelector("#shopForm"),
@@ -247,6 +249,7 @@ els.golfMessageForm.addEventListener("submit", saveGolfMessage);
 els.golfMessageForm.elements.to.addEventListener("input", updateMemberSuggestions);
 els.golfPassBtn.addEventListener("click", passGolfMatch);
 els.golfMessageMatchBtn.addEventListener("click", messageGolfMatch);
+els.golfCourseDistance?.addEventListener("change", renderGolfCourses);
 els.adminForm.addEventListener("submit", saveAdmin);
 els.profileForm.addEventListener("submit", saveProfile);
 els.shopForm.addEventListener("submit", saveShopCollection);
@@ -356,6 +359,7 @@ function loadState() {
     quickGameFilter: "all",
     courtFilter: "all",
     courtDistance: "25",
+    golfCourseDistance: "25",
     memberHostDraft: { format: "round-robin", matches: [] },
     paddlePintImportedIds: [],
     roundSettings: { selectedPlayerIds: [], teams: [], partnerTeams: [], teamMatchQueue: [], sequentialTeams: [], sequentialMatchesRemaining: 0 },
@@ -908,7 +912,8 @@ async function sendSocietySignupConfirmation(profile) {
         firstName: profile.firstName,
         lastName: profile.lastName,
         email: profile.email,
-        password: profile.password,
+        password:
+ profile.password,
         phone: profile.phone,
         sport: profile.preferredSport,
         city: profile.city,
@@ -1454,6 +1459,11 @@ function handleSocietyAppClick(event) {
     return;
   }
 
+  if (event.target.closest("[data-golf-tournament-contact]")) {
+    showSocietyAccountMessage("Club Society tournament hosting is coming soon. The contact destination will be added here when it is ready.", "notice");
+    return;
+  }
+
   const hostWinnerButton = event.target.closest("[data-member-host-winner]");
   if (hostWinnerButton) {
     const match = state.memberHostDraft.matches.find((item) => item.id === hostWinnerButton.dataset.memberHostWinner);
@@ -1516,7 +1526,7 @@ function initializeAuthPanels() {
 }
 
 function setSocietyTab(tab) {
-  const protectedTabs = new Set(["pickleballHome", "games", "courts", "pickleDate", "memberHost", "events", "partners", "connectPlayers", "clubGroups", "myGroups", "host", "learn", "settings", "golfMessages"]);
+  const protectedTabs = new Set(["pickleballHome", "games", "courts", "pickleDate", "memberHost", "events", "partners", "connectPlayers", "clubGroups", "myGroups", "host", "learn", "settings", "golfHome", "golfFindGame", "golfPostTee", "golfCreateGroup", "golfLessons", "golfCourses", "golfTournament", "golfMessages"]);
   if (protectedTabs.has(tab) && !hasSocietyAccess()) {
     setSocietyTab("home");
     els.societyAccountMessage.textContent = "Sign in or Join to access";
@@ -1544,6 +1554,10 @@ function setSocietyTab(tab) {
   }
   if (tab === "pickleDate") renderPickleDateProfiles();
   if (tab === "memberHost") renderMemberHostBoard();
+  if (tab === "golfCourses") {
+    if (els.golfCourseDistance) els.golfCourseDistance.value = state.golfCourseDistance || "25";
+    renderGolfCourses();
+  }
 }
 
 function hasSocietyAccess() {
@@ -1698,7 +1712,6 @@ function readFileAsDataUrl(file) {
   });
 }
 
-
 function societyDirectoryCards() {
   const currentEmail = state.societySessionEmail?.toLowerCase();
   const savedProfiles = state.profiles
@@ -1771,7 +1784,8 @@ function renderSocietyFriends() {
   const filter = state.societyFriendFilter || "all";
   const cards = societyDirectoryCards().filter((card) => {
     const haystack = `${card.name} ${card.city} ${card.sport} ${card.skill} ${card.vibe}`.toLowerCase();
-    const matchesQuery = !query || haystack.includes(query);
+    const matchesQuery = !query || haystack.inc
+ludes(query);
     const matchesFilter = filter === "all"
       || (filter === "social" ? card.socialPlay : String(card.sport).toLowerCase().includes(filter) || card.sport === "both");
     return matchesQuery && matchesFilter;
@@ -2458,6 +2472,32 @@ function renderGolf() {
   renderGolfTeeTimes();
   renderGolfGroups();
   renderGolfMessages();
+  renderGolfCourses();
+}
+
+function renderGolfCourses() {
+  if (!els.golfCourseList) return;
+  const courses = [
+    { name: "Lane Creek Golf Club", city: "Bishop", miles: 8, access: "Public", note: "A close-to-home option for Oconee and Watkinsville players." },
+    { name: "Jennings Mill Country Club", city: "Watkinsville", miles: 10, access: "Private", note: "A local club option for member-hosted invites and groups." },
+    { name: "University of Georgia Golf Course", city: "Athens", miles: 12, access: "Public access", note: "A strong Athens-area anchor for Club Society rounds." },
+    { name: "Athens Country Club", city: "Athens", miles: 15, access: "Private", note: "A member course suited to invitations and organized outings." },
+    { name: "The Georgia Club", city: "Statham", miles: 19, access: "Private", note: "A nearby destination for member-hosted golf events." },
+    { name: "Hard Labor Creek", city: "Rutledge", miles: 38, access: "Public", note: "A weekend road-trip round for groups and tournaments." },
+  ];
+  const distance = Number(els.golfCourseDistance?.value || state.golfCourseDistance || 25);
+  state.golfCourseDistance = String(distance);
+  saveState();
+  const matches = courses.filter((course) => course.miles <= distance);
+  els.golfCourseList.innerHTML = matches.length
+    ? matches.map((course) => `
+      <article class="society-list-card">
+        <strong>${escapeHtml(course.name)}</strong>
+        <span>${escapeHtml(course.city)} | ${course.miles} miles away | ${escapeHtml(course.access)}</span>
+        <p>${escapeHtml(course.note)}</p>
+      </article>
+    `).join("")
+    : `<div class="empty">No courses are listed inside ${distance} miles yet. Try a wider distance.</div>`;
 }
 
 function renderGolfMatchDeck() {
@@ -2615,7 +2655,8 @@ function savePublicRsvp(event) {
     return;
   }
 
-  const reserved = eventPlayers(selectedEvent.id).filter((player) => player.status !== "Waitlist").length;
+  const reserved = eventPlayers(selectedEvent.id)
+.filter((player) => player.status !== "Waitlist").length;
   const capacity = Number(selectedEvent.capacity) || 0;
   const status = capacity > 0 && reserved >= capacity ? "Waitlist" : "RSVP";
   const existing = state.players.find((player) => player.email.toLowerCase() === data.email.toLowerCase());
@@ -3399,7 +3440,6 @@ function roundEligiblePlayers() {
 
 function renderRoundPlayerPicker() {
   const players = checkedPlayers().sort(checkinPrioritySort);
-
   const mode = els.roundPlayerSource.value;
   const manual = mode === "manual";
   const teamsMode = mode === "teams";
@@ -3545,6 +3585,7 @@ function saveRoundTeams() {
   if (els.roundPlayerSource.value === "partners") {
     const linked = (state.roundSettings.partnerTeams || []).filter((team) => team.locked);
     const manualMap = new Map((state.roundSettings.partnerTeams || []).filter((team) => !team.locked).map((team, index) => [String(index), { ...team }]));
+
     els.roundPlayerPicker.querySelectorAll("[data-partner-team-index]").forEach((field) => {
       const team = manualMap.get(field.dataset.partnerTeamIndex) || { id: newId(), name: `Singles Team ${Number(field.dataset.partnerTeamIndex) + 1}`, playerA: "", playerB: "", locked: false };
       team[field.dataset.teamField] = field.value;
@@ -4448,7 +4489,8 @@ function renderArchive() {
           <button type="button" data-export-event-csv="${escapeHtml(event.id)}">Export CSV</button>
           <button type="button" data-export-event-report="${escapeHtml(event.id)}">Printable Report</button>
         </div>
-      </article>
+      </a
+rticle>
     `).join("")
     : `<div class="empty">Archive ended events from the Events tab.</div>`;
   document.querySelector("#archiveExportPanel").innerHTML = `
@@ -5100,7 +5142,6 @@ function normalizeImportedPlayer(row) {
       waiverSource: row.waiverSource || row.source || "CSV import",
       waiverAgreementText: row.waiverAgreement || row.waiverAgreementText || "",
     }, "CSV import"),
-
     status: row.status || "RSVP",
     paid: row.paid || row.payment || row.paymentStatus || "Not tracked",
     eventId,
@@ -5447,7 +5488,8 @@ function names(ids) {
   const list = ids
     .map((id) => state.players.find((player) => player.id === id))
     .filter(Boolean)
-    .map((player) => `${player.firstName} ${player.lastName}`)
+    .map((player) => 
+`${player.firstName} ${player.lastName}`)
     .join(" / ");
   return list || "Open slot";
 }
