@@ -2768,6 +2768,18 @@ textarea {
 .member-join-card > p { margin: 0; color: rgba(255, 255, 255, 0.76); }
 .member-host-archives { margin-top: 22px; }
 
+.dating-interest-check {
+  padding: 13px;
+  border: 1px solid rgba(246, 181, 44, 0.42);
+  border-radius: 16px;
+  background: rgba(246, 181, 44, 0.09);
+}
+
+.dating-interest-check strong {
+  display: block;
+  color: var(--green);
+}
+
 .society-section-head {
   display: flex;
   justify-content: space-between;
