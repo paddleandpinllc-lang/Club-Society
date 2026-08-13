@@ -143,6 +143,8 @@ const els = {
   golfMessageMatchBtn: document.querySelector("#golfMessageMatchBtn"),
   golfCourseDistance: document.querySelector("#golfCourseDistance"),
   golfCourseList: document.querySelector("#golfCourseList"),
+  golfCourseLocation: document.querySelector("#golfCourseLocation"),
+  useCurrentGolfLocation: document.querySelector("#useCurrentGolfLocation"),
   adminForm: document.querySelector("#adminForm"),
   profileForm: document.querySelector("#profileForm"),
   shopForm: document.querySelector("#shopForm"),
@@ -256,6 +258,7 @@ els.golfMessageForm.elements.to.addEventListener("input", updateMemberSuggestion
 els.golfPassBtn.addEventListener("click", passGolfMatch);
 els.golfMessageMatchBtn.addEventListener("click", messageGolfMatch);
 els.golfCourseDistance?.addEventListener("change", renderGolfCourses);
+els.useCurrentGolfLocation?.addEventListener("click", useCurrentGolfLocation);
 els.adminForm.addEventListener("submit", saveAdmin);
 els.profileForm.addEventListener("submit", saveProfile);
 els.shopForm.addEventListener("submit", saveShopCollection);
@@ -367,6 +370,7 @@ function loadState() {
     courtFilter: "all",
     courtDistance: "25",
     golfCourseDistance: "25",
+    golfCourseCoordinates: null,
     memberHostFormat: "round-robin",
     memberHostDrafts: { "round-robin": { format: "round-robin", matches: [] }, tournament: { format: "tournament", matches: [] } },
     memberHostArchives: [],
@@ -2641,29 +2645,57 @@ function renderGolf() {
   renderGolfCourses();
 }
 
-function renderGolfCourses() {
+async function renderGolfCourses() {
   if (!els.golfCourseList) return;
-  const courses = [
-    { name: "Lane Creek Golf Club", city: "Bishop", miles: 8, access: "Public", note: "A close-to-home option for Oconee and Watkinsville players." },
-    { name: "Jennings Mill Country Club", city: "Watkinsville", miles: 10, access: "Private", note: "A local club option for member-hosted invites and groups." },
-    { name: "University of Georgia Golf Course", city: "Athens", miles: 12, access: "Public access", note: "A strong Athens-area anchor for Club Society rounds." },
-    { name: "Athens Country Club", city: "Athens", miles: 15, access: "Private", note: "A member course suited to invitations and organized outings." },
-    { name: "The Georgia Club", city: "Statham", miles: 19, access: "Private", note: "A nearby destination for member-hosted golf events." },
-    { name: "Hard Labor Creek", city: "Rutledge", miles: 38, access: "Public", note: "A weekend road-trip round for groups and tournaments." },
-  ];
   const distance = Number(els.golfCourseDistance?.value || state.golfCourseDistance || 25);
   state.golfCourseDistance = String(distance);
   saveState();
-  const matches = courses.filter((course) => course.miles <= distance);
-  els.golfCourseList.innerHTML = matches.length
-    ? matches.map((course) => `
+  const profile = currentSocietyProfile();
+  const label = [profile?.city, profile?.state, profile?.zip].filter(Boolean).join(", ") || "Watkinsville, GA 30677";
+  els.golfCourseLocation.textContent = state.golfCourseCoordinates?.source === "device" ? "Using your current device location" : `Near ${label}`;
+  els.golfCourseList.innerHTML = `<div class="empty">Finding courses within ${distance} miles of ${escapeHtml(label)}...</div>`;
+  try {
+    const params = new URLSearchParams({ miles: String(distance) });
+    if (state.golfCourseCoordinates?.lat && state.golfCourseCoordinates?.lon) {
+      params.set("lat", state.golfCourseCoordinates.lat);
+      params.set("lon", state.golfCourseCoordinates.lon);
+    } else {
+      params.set("location", label);
+    }
+    const response = await fetch(`/api/golf-courses?${params}`);
+    const result = await response.json();
+    if (!response.ok || !result.ok) throw new Error(result.error || "Course search is unavailable.");
+    els.golfCourseLocation.textContent = `Near ${result.locationLabel || label}`;
+    els.golfCourseList.innerHTML = result.courses.length ? result.courses.map((course) => `
       <article class="society-list-card">
         <strong>${escapeHtml(course.name)}</strong>
-        <span>${escapeHtml(course.city)} | ${course.miles} miles away | ${escapeHtml(course.access)}</span>
-        <p>${escapeHtml(course.note)}</p>
+        <span>${course.miles} miles away | ${escapeHtml(course.access)}</span>
+        <p>${escapeHtml(course.address || "Course details available from the course.")}</p>
+        <div class="course-card-actions">
+          ${course.website ? `<a href="${escapeHtml(course.website)}" target="_blank" rel="noopener">Course Website</a>` : ""}
+          ${course.bookingUrl && course.access !== "Private" ? `<a class="primary" href="${escapeHtml(course.bookingUrl)}" target="_blank" rel="noopener">View Tee Times</a>` : `<span>${course.access === "Private" ? "Member access only" : "Call course for tee times"}</span>`}
+        </div>
       </article>
-    `).join("")
-    : `<div class="empty">No courses are listed inside ${distance} miles yet. Try a wider distance.</div>`;
+    `).join("") : `<div class="empty">No mapped golf courses were found inside ${distance} miles. Try a wider distance.</div>`;
+  } catch (error) {
+    els.golfCourseList.innerHTML = `<div class="empty">${escapeHtml(error.message)} Check your profile city/ZIP or try Use My Current Location.</div>`;
+  }
+}
+
+function useCurrentGolfLocation() {
+  if (!navigator.geolocation) {
+    showSocietyAccountMessage("Current location is not supported on this device.", "error");
+    return;
+  }
+  els.golfCourseLocation.textContent = "Requesting your location...";
+  navigator.geolocation.getCurrentPosition((position) => {
+    state.golfCourseCoordinates = { lat: String(position.coords.latitude), lon: String(position.coords.longitude), source: "device" };
+    saveState();
+    renderGolfCourses();
+  }, () => {
+    showSocietyAccountMessage("Location was not shared. Course search will use the city and ZIP in your profile.", "notice");
+    renderGolfCourses();
+  }, { enableHighAccuracy: false, timeout: 10000, maximumAge: 300000 });
 }
 
 function renderGolfMatchDeck() {
