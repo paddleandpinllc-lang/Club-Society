@@ -24,7 +24,7 @@ export async function onRequestGet({ request }) {
     const access = accessValue === "private" || /country club/i.test(tags.name || "") ? "Private" : "Public / verify access";
     const website = safeUrl(tags.website || tags["contact:website"]);
     const bookingUrl = access === "Private" ? "" : safeUrl(tags.booking || tags["contact:booking"] || tags.reservation || website);
-    return { name: tags.name || "Golf course", miles: haversine(lat, lon, courseLat, courseLon).toFixed(1), access, address: [tags["addr:housenumber"], tags["addr:street"], tags["addr:city"], tags["addr:state"]].filter(Boolean).join(" "), website, bookingUrl };
+    return { name: tags.name || "Golf course", miles: haversine(lat, lon, courseLat, courseLon).toFixed(1), access, address: [tags["addr:housenumber"], tags["addr:street"], tags["addr:city"], tags["addr:state"]].filter(Boolean).join(" "), lat: courseLat, lon: courseLon, website, bookingUrl };
   }).filter((course) => course.name !== "Golf course").sort((a, b) => Number(a.miles) - Number(b.miles));
   return Response.json({ ok: true, locationLabel, courses });
 }
