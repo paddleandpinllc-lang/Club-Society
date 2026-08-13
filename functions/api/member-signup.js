@@ -569,6 +569,8 @@ function sanitizeAppState(value) {
     "quickGameFilter",
     "casualMatchFilter",
     "courtFilter",
+    "memberHostDrafts",
+    "memberHostArchives",
     "savedAt",
     "schemaVersion",
   ]);
