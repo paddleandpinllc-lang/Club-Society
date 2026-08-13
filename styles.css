@@ -2763,6 +2763,20 @@ textarea {
 .pickle-date-filters input, .pickle-date-filters select { width: 100%; min-width: 0; min-height: 42px; padding: 8px; }
 .pickle-date-form { margin-bottom: 14px; }
 
+.pickle-date-event {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 14px;
+  border: 1px solid rgba(244,181,43,.38);
+  border-radius: 18px;
+  background: #fff8e9;
+  padding: 14px;
+}
+.pickle-date-event span { color: #7a3351; font-size: .68rem; font-weight: 950; letter-spacing: .08em; text-transform: uppercase; }
+.pickle-date-event strong { display: block; margin: 3px 0; color: var(--navy); }
+.pickle-date-event p { margin: 0; color: var(--muted); font-size: .8rem; }
+.pickle-date-event button { justify-self: start; }
+
 .pickle-date-profile {
   display: grid;
   grid-template-columns: 48px 1fr;
