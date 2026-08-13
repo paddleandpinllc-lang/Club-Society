@@ -4,12 +4,12 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="theme-color" content="#0b2231">
-    <meta name="app-version" content="2026-08-13-member-host-1">
+    <meta name="app-version" content="2026-08-13-golf-hub-1">
     <title>Club Society</title>
-    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png?v=2026-08-13-member-host-1">
-    <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=2026-08-13-member-host-1">
-    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png?v=2026-08-13-member-host-1">
-    <link rel="manifest" href="/manifest.webmanifest?v=2026-08-13-member-host-1">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png?v=2026-08-13-golf-hub-1">
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=2026-08-13-golf-hub-1">
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png?v=2026-08-13-golf-hub-1">
+    <link rel="manifest" href="/manifest.webmanifest?v=2026-08-13-golf-hub-1">
     <script>
       if (["clubsociety.app", "www.clubsociety.app", "club-society.pages.dev"].includes(window.location.hostname.toLowerCase())) {
         document.documentElement.classList.add("member-host");
@@ -23,7 +23,7 @@
       .member-host main > .view { display: none !important; }
       .member-host main > #societyApp { display: block !important; }
     </style>
-    <link rel="stylesheet" href="styles.css?v=2026-08-13-member-host-1">
+    <link rel="stylesheet" href="styles.css?v=2026-08-13-golf-hub-1">
   </head>
   <body>
     <aside class="sidebar">
@@ -161,7 +161,7 @@
                     <div class="society-auth-heading">
                       <span>Your player card &middot; 1 minute</span>
                       <h3>Join people who show up to play.</h3>
-                      <p>Club Society is a real community for committed golf and pickleball playersâ€”competitive, social, and local.</p>
+                      <p>Club Society is a real community for committed golf and pickleball players—competitive, social, and local.</p>
                     </div>
                     <div class="form-pair">
                       <input name="firstName" placeholder="First name" required>
@@ -390,6 +390,7 @@
                   <button data-society-tab="courts" type="button"><span>05 &middot; Courts</span><strong>Find a court nearby</strong><i>Set your distance &rarr;</i></button>
                   <button class="pickle-date-card" data-society-tab="pickleDate" type="button"><span>06 &middot; Social</span><strong>It&rsquo;s Just Pickleball</strong><i>Meet beyond the match &rarr;</i></button>
                   <button class="member-host-card" data-society-tab="memberHost" type="button"><span>07 &middot; Host</span><strong>Your own round robin or tournament</strong><i>Build the competition &rarr;</i></button>
+                  <button data-society-tab="myGroups" type="button"><span>08 &middot; Groups</span><strong>My Groups</strong><i>Create or find a group &rarr;</i></button>
                 </div>
               </section>
             </div>
@@ -476,7 +477,7 @@
 
             <div class="society-tab" data-society-panel="clubGroups">
               <section class="society-section">
-                <button class="society-back-button" data-society-tab="pickleballHome" type="button">Back</button>
+                <button class="society-back-button" data-society-tab="home" type="button">Sports</button>
                 <p class="eyebrow">Club Groups</p>
                 <h3>Public groups posted by members.</h3>
                 <p class="section-copy">Browse open groups and join the ones that fit how you like to play.</p>
@@ -505,9 +506,13 @@
 
             <div class="society-tab" data-society-panel="myGroups">
               <section class="society-section">
-                <button class="society-back-button" data-society-tab="pickleballHome" type="button">Back</button>
+                <button class="society-back-button" data-society-tab="home" type="button">Sports</button>
                 <p class="eyebrow">My Groups</p>
-                <h3>Groups you created or joined.</h3>
+                <h3>Find your people or start something new.</h3>
+                <div class="member-host-format-tabs group-choice-tabs">
+                  <button data-society-tab="clubGroups" type="button">Find a Group</button>
+                  <button class="active" type="button">Create a Group</button>
+                </div>
                 <form id="clubGroupForm" class="society-form society-post-form">
                   <input name="name" placeholder="Group name" required>
                   <div class="form-pair">
@@ -609,7 +614,8 @@
                 <form id="pickleDateProfileForm" class="society-form pickle-date-form">
                   <div class="society-auth-heading"><span>Private opt-in profile</span><h3>Create your date profile</h3><p>Only members who opt in can appear here.</p></div>
                   <textarea name="dateBio" rows="3" placeholder="A little about you, your playing style, and your ideal pickleball date..."></textarea>
-                  <input name="dateIdea" placeholder="Ideal first rally: coffee, open play, doubles event...">
+                  <inpu
+t name="dateIdea" placeholder="Ideal first rally: coffee, open play, doubles event...">
                   <label class="checkbox-line society-check"><input name="dateProfileActive" type="checkbox"> Show my profile in It&rsquo;s Just Pickleball.</label>
                   <button class="primary" type="submit">Save Date Profile</button>
                 </form>
@@ -658,55 +664,18 @@
             </div>
 
             <div class="society-tab" data-society-panel="golfHome">
-              <button class="society-back-button society-hub-back" data-society-tab="home" type="button">Back</button>
-              <section class="golf-app-hero">
-                <p class="eyebrow">Golf Society</p>
-                <h3>Your next round starts with the Society.</h3>
-                <p>Post an open tee time, join a group, message members, compare local courses, and keep the golf side of your club moving.</p>
-                <div class="golf-hero-actions">
-                  <button data-society-tab="golfFindGame" type="button">Find Game</button>
-                  <button data-society-tab="golfPostTee" type="button">Post tee time</button>
-                </div>
-              </section>
-              <section class="society-quick-grid golf-quick-grid" aria-label="Golf shortcuts">
-                <button data-society-tab="golfFindGame" type="button"><span>Swipe</span><strong>Find Game</strong></button>
-                <button data-society-tab="golfPostTee" type="button"><span>Open slot</span><strong>Post tee time</strong></button>
-                <button data-society-tab="golfCreateGroup" type="button"><span>Crew</span><strong>Create Group</strong></button>
-                <button data-society-tab="golfLessons" type="button"><span>Level up</span><strong>Lessons</strong></button>
-                <button data-society-tab="golfCourses" type="button"><span>Nearby</span><strong>Courses</strong></button>
-                <button data-society-tab="golfMessages" type="button"><span>Chat</span><strong>Messages</strong></button>
-              </section>
-              <section class="society-section golf-feed-section">
-                <p class="eyebrow">Member posts</p>
-                <h3>From the clubhouse</h3>
-                <div class="golf-member-feed">
-                  <article class="golf-feed-post">
-                    <div class="feed-avatar">BC</div>
-                    <div>
-                      <strong>Blake C.</strong>
-                      <span>Today | Lane Creek</span>
-                      <p>Have one spot open around 4:20. Easy pace, cart booked, grabbing a bite after.</p>
-                      <button data-society-tab="golfMessages" type="button">Reply</button>
-                    </div>
-                  </article>
-                  <article class="golf-feed-post">
-                    <div class="feed-avatar">JM</div>
-                    <div>
-                      <strong>Jordan M.</strong>
-                      <span>Tomorrow morning | UGA Golf Course</span>
-                      <p>Looking for two more for a social round. New members welcome.</p>
-                      <button data-society-tab="golfMessages" type="button">Reply</button>
-                    </div>
-                  </article>
-                  <article class="golf-feed-post">
-                    <div class="feed-avatar">TR</div>
-                    <div>
-                      <strong>Taylor R.</strong>
-                      <span>This weekend | Golf Society</span>
-                      <p>Building a regular Sunday group. Casual but competitive enough to keep it interesting.</p>
-                      <button data-society-tab="golfCreateGroup" type="button">View group</button>
-                    </div>
-                  </article>
+              <section class="pickleball-hub golf-member-hub">
+                <button class="society-back-button" data-society-tab="home" type="button">Sports</button>
+                <div><p class="eyebrow">Golf &middot; Club Society</p><h3>Your next round starts here.</h3><p>Find golfers, post an open tee time, explore events, courses, groups, and instruction.</p></div>
+                <div class="pickleball-hub-grid" aria-label="Golf actions">
+                  <button data-society-tab="golfFindGame" type="button"><span>01 &middot; Find</span><strong>Golfers &amp; rounds</strong><i>See who is playing &rarr;</i></button>
+                  <button data-society-tab="golfPostTee" type="button"><span>02 &middot; Post</span><strong>Share an open tee time</strong><i>Fill your group &rarr;</i></button>
+                  <button data-society-tab="events" type="button"><span>03 &middot; Events</span><strong>Golf events nearby</strong><i>Browse the calendar &rarr;</i></button>
+                  <button data-society-tab="golfLessons" type="button"><span>04 &middot; Lessons</span><strong>Work on your game</strong><i>Find instruction &rarr;</i></button>
+                  <button data-society-tab="golfCourses" type="button"><span>05 &middot; Courses</span><strong>Find a course nearby</strong><i>Set your distance &rarr;</i></button>
+                  <button class="pickle-date-card" data-society-tab="pickleDate" type="button"><span>06 &middot; Social</span><strong>It&rsquo;s Just Golf</strong><i>Meet beyond the round &rarr;</i></button>
+                  <button class="member-host-card" data-society-tab="golfTournament" type="button"><span>07 &middot; Tournament</span><strong>Host a golf tournament</strong><i>Contact Club Society &rarr;</i></button>
+                  <button data-society-tab="myGroups" type="button"><span>08 &middot; Groups</span><strong>My Groups</strong><i>Create or find a group &rarr;</i></button>
                 </div>
               </section>
             </div>
@@ -782,14 +751,25 @@
             <div class="society-tab" data-society-panel="golfCourses">
               <section class="society-section">
                 <button class="society-back-button" data-society-tab="golfHome" type="button">Back</button>
-                <p class="eyebrow">Courses</p>
-                <h3>Inside 50 miles of 30677</h3>
-                <div class="society-stack">
-                  <article class="society-list-card"><strong>Lane Creek Golf Club</strong><span>Bishop | Public | Nearby</span><p>Great fit for Oconee and Watkinsville players.</p></article>
-                  <article class="society-list-card"><strong>University of Georgia Golf Course</strong><span>Athens | Public access</span><p>Strong local anchor for Athens-area golfers.</p></article>
-                  <article class="society-list-card"><strong>Jennings Mill Country Club</strong><span>Watkinsville/Athens area</span><p>Private club option for member-hosted invites.</p></article>
-                  <article class="society-list-card"><strong>Hard Labor Creek</strong><span>Social road-trip round</span><p>Worth tracking for weekend groups and outings.</p></article>
-                </div>
+                <p class="eyebrow">Nearby courses</p>
+                <h3>Find a Course</h3>
+                <p class="society-section-intro">Choose how far you want to travel and see courses inside that range.</p>
+                <label class="society-range-control">Distance from me
+                  <select id="golfCourseDistance">
+                    <option value="10">Within 10 miles</option>
+                    <option value="25" selected>Within 25 miles</option>
+                    <option value="50">Within 50 miles</option>
+                  </select>
+                </label>
+                <div id="golfCourseList" class="society-stack"></div>
+              </section>
+            </div>
+
+            <div class="society-tab" data-society-panel="golfTournament">
+              <section class="society-section member-host-section">
+                <button class="society-back-button" data-society-tab="golfHome" type="button">Back</button>
+                <div class="member-host-hero golf-tournament-hero"><span>Golf Tournament Hosting</span><h3>Bring the players. We&rsquo;ll help run the tournament.</h3><p>Club Society can help with registration, pairings, scoring, and event operations.</p></div>
+                <article class="charity-host-card"><span>Ready to plan?</span><strong>Contact Club Society</strong><p>Tell us about your golf tournament and the hosting support you need.</p><button data-golf-tournament-contact type="button">Contact Club Society</button><em>Destination site to be determined.</em></article>
               </section>
             </div>
 
@@ -1382,7 +1362,8 @@
             </div>
             <div id="hostActions" class="action-grid"></div>
           </section>
-          <div class="workspace two host-phase-two">
+        
+  <div class="workspace two host-phase-two">
             <section class="panel">
               <div class="panel-head">
                 <div>
@@ -1646,7 +1627,7 @@
       </section>
     </div>
 
-    <script src="app.js?v=2026-08-13-member-host-1"></script>
+    <script src="app.js?v=2026-08-13-golf-hub-1"></script>
   </body>
 </html>
 
