@@ -4,12 +4,12 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="theme-color" content="#0b2231">
-    <meta name="app-version" content="2026-08-13-pickle-date-2">
+    <meta name="app-version" content="2026-08-13-member-host-1">
     <title>Club Society</title>
-    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png?v=2026-08-13-pickle-date-2">
-    <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=2026-08-13-pickle-date-2">
-    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png?v=2026-08-13-pickle-date-2">
-    <link rel="manifest" href="/manifest.webmanifest?v=2026-08-13-pickle-date-2">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png?v=2026-08-13-member-host-1">
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=2026-08-13-member-host-1">
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png?v=2026-08-13-member-host-1">
+    <link rel="manifest" href="/manifest.webmanifest?v=2026-08-13-member-host-1">
     <script>
       if (["clubsociety.app", "www.clubsociety.app", "club-society.pages.dev"].includes(window.location.hostname.toLowerCase())) {
         document.documentElement.classList.add("member-host");
@@ -23,7 +23,7 @@
       .member-host main > .view { display: none !important; }
       .member-host main > #societyApp { display: block !important; }
     </style>
-    <link rel="stylesheet" href="styles.css?v=2026-08-13-pickle-date-2">
+    <link rel="stylesheet" href="styles.css?v=2026-08-13-member-host-1">
   </head>
   <body>
     <aside class="sidebar">
@@ -279,6 +279,10 @@
                     <button class="mini-icon-button" data-profile-toggle type="button" aria-label="Edit profile">+</button>
                   </div>
                   <form class="society-profile-drawer" id="societyProfileDrawer">
+                    <div class="face-photo-requirement">
+                      <strong>Required before you post or message</strong>
+                      <p>Add a clear, current photo of your face. This helps keep Club Society personal, recognizable, and safer for everyone.</p>
+                    </div>
                     <label class="society-photo-drop">
                       <span id="societyPhotoPreview">Add photo</span>
                       <input id="societyPhotoInput" name="photo" type="file" accept="image/*">
@@ -385,6 +389,7 @@
                   <button data-society-tab="learn" type="button"><span>04 &middot; Lessons</span><strong>Work on your game</strong><i>Find instruction &rarr;</i></button>
                   <button data-society-tab="courts" type="button"><span>05 &middot; Courts</span><strong>Find a court nearby</strong><i>Set your distance &rarr;</i></button>
                   <button class="pickle-date-card" data-society-tab="pickleDate" type="button"><span>06 &middot; Social</span><strong>It&rsquo;s Just Pickleball</strong><i>Meet beyond the match &rarr;</i></button>
+                  <button class="member-host-card" data-society-tab="memberHost" type="button"><span>07 &middot; Host</span><strong>Your own round robin or tournament</strong><i>Build the competition &rarr;</i></button>
                 </div>
               </section>
             </div>
@@ -476,6 +481,25 @@
                 <h3>Public groups posted by members.</h3>
                 <p class="section-copy">Browse open groups and join the ones that fit how you like to play.</p>
                 <div id="clubGroupList" class="society-stack"></div>
+              </section>
+            </div>
+
+            <div class="society-tab" data-society-panel="memberHost">
+              <section class="society-section member-host-section">
+                <button class="society-back-button" data-society-tab="pickleballHome" type="button">Back</button>
+                <div class="member-host-hero"><span>Club Society Host</span><h3>Run the games. We&rsquo;ll help with the format.</h3><p>Create a casual round robin or a scored singles or doubles tournament from your phone.</p></div>
+                <div class="member-host-format-tabs">
+                  <button class="active" data-member-host-format="round-robin" type="button">Round Robin</button>
+                  <button data-member-host-format="tournament" type="button">Tournament</button>
+                </div>
+                <form id="memberHostForm" class="society-form member-host-form">
+                  <input name="eventName" placeholder="Event name" required>
+                  <div class="form-pair"><select name="playType"><option value="singles">Singles</option><option value="doubles">Doubles</option></select><input name="courts" type="number" min="1" value="2" placeholder="Courts"></div>
+                  <textarea name="participants" rows="4" placeholder="Enter player or team names, one per line" required></textarea>
+                  <button class="primary" type="submit">Create Round Robin</button>
+                </form>
+                <div id="memberHostBoard" class="member-host-board"></div>
+                <article class="charity-host-card"><span>Planning something bigger?</span><strong>Hosting a charity event or full tournament?</strong><p>Apply for the Club Society hosting dashboard for registration, waivers, check-in, brackets, and event operations.</p><button data-host-dashboard-interest type="button">Sign Up for the Hosting Dashboard</button></article>
               </section>
             </div>
 
@@ -1622,7 +1646,7 @@
       </section>
     </div>
 
-    <script src="app.js?v=2026-08-13-pickle-date-2"></script>
+    <script src="app.js?v=2026-08-13-member-host-1"></script>
   </body>
 </html>
 
