@@ -4,12 +4,12 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="theme-color" content="#0b2231">
-    <meta name="app-version" content="2026-08-13-member-flow-3">
+    <meta name="app-version" content="2026-08-13-pickle-date-1">
     <title>Club Society</title>
-    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png?v=2026-08-13-member-flow-3">
-    <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=2026-08-13-member-flow-3">
-    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png?v=2026-08-13-member-flow-3">
-    <link rel="manifest" href="/manifest.webmanifest?v=2026-08-13-member-flow-3">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png?v=2026-08-13-pickle-date-1">
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=2026-08-13-pickle-date-1">
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png?v=2026-08-13-pickle-date-1">
+    <link rel="manifest" href="/manifest.webmanifest?v=2026-08-13-pickle-date-1">
     <script>
       if (["clubsociety.app", "www.clubsociety.app", "club-society.pages.dev"].includes(window.location.hostname.toLowerCase())) {
         document.documentElement.classList.add("member-host");
@@ -23,7 +23,7 @@
       .member-host main > .view { display: none !important; }
       .member-host main > #societyApp { display: block !important; }
     </style>
-    <link rel="stylesheet" href="styles.css?v=2026-08-13-member-flow-3">
+    <link rel="stylesheet" href="styles.css?v=2026-08-13-pickle-date-1">
   </head>
   <body>
     <aside class="sidebar">
@@ -208,6 +208,10 @@
                       <input name="discoverableSignup" type="checkbox">
                       List me in Connect Players so members can find me.
                     </label>
+                    <label class="society-date-optin">
+                      <input name="dateInterested" type="checkbox">
+                      <span><strong>Open to a sporting spark?</strong> I may be interested in meeting someone for a pickleball or golf date.</span>
+                    </label>
                     <button class="primary society-auth-submit" data-signup-submit type="submit">Create My Society Pass &rarr;</button>
                     <p class="society-auth-trust">Real players. Local games. Your information stays within Club Society.</p>
                     <button class="society-auth-switch" data-auth-panel="signin" type="button">Already joined? Sign in instead</button>
@@ -379,6 +383,8 @@
                   <button data-society-tab="games" type="button"><span>02 &middot; Post</span><strong>Put a game out there</strong><i>Invite local players &rarr;</i></button>
                   <button data-society-tab="events" type="button"><span>03 &middot; Events</span><strong>Play something bigger</strong><i>Browse the calendar &rarr;</i></button>
                   <button data-society-tab="learn" type="button"><span>04 &middot; Lessons</span><strong>Work on your game</strong><i>Find instruction &rarr;</i></button>
+                  <button data-society-tab="courts" type="button"><span>05 &middot; Courts</span><strong>Find a court nearby</strong><i>Set your distance &rarr;</i></button>
+                  <button class="pickle-date-card" data-society-tab="pickleDate" type="button"><span>06 &middot; Social</span><strong>It&rsquo;s Just Pickleball</strong><i>Meet beyond the match &rarr;</i></button>
                 </div>
               </section>
             </div>
@@ -538,7 +544,15 @@
                 <button class="society-back-button" data-society-tab="pickleballHome" type="button">Back</button>
                 <p class="eyebrow">Nearby courts</p>
                 <h3>Find a Court</h3>
-                <p class="section-copy">A growing 50-mile directory around your ZIP. Public, city/county, church, college, country club, and private-access courts are tagged separately.</p>
+                <p class="section-copy">Choose how far you want to travel, then browse public, indoor, outdoor, and private-access courts near your profile location.</p>
+                <label class="society-range-control">Distance from me
+                  <select id="courtDistance">
+                    <option value="5">Within 5 miles</option>
+                    <option value="10">Within 10 miles</option>
+                    <option value="25" selected>Within 25 miles</option>
+                    <option value="50">Within 50 miles</option>
+                  </select>
+                </label>
                 <input id="courtSearch" type="search" placeholder="Search courts, city, access, indoor/outdoor">
                 <div class="society-filter-row court-filter-row">
                   <button class="active" data-court-filter="all" type="button">All</button>
@@ -548,6 +562,30 @@
                   <button data-court-filter="club" type="button">Club/private</button>
                 </div>
                 <div id="courtDirectoryList" class="society-stack"></div>
+              </section>
+            </div>
+
+            <div class="society-tab" data-society-panel="pickleDate">
+              <section class="society-section pickle-date-section">
+                <button class="society-back-button" data-society-tab="pickleballHome" type="button">Back</button>
+                <div class="pickle-date-hero">
+                  <span>It&rsquo;s Just Pickleball</span>
+                  <h3>A little chemistry. A friendly rally.</h3>
+                  <p>Discover dating events or meet another opted-in player for a low-pressure pickleball date.</p>
+                </div>
+                <div class="pickle-date-filters">
+                  <label>Age from<input id="pickleDateAgeMin" type="number" min="18" max="99" value="25"></label>
+                  <label>Age to<input id="pickleDateAgeMax" type="number" min="18" max="99" value="55"></label>
+                  <label>Miles away<select id="pickleDateMiles"><option value="10">10 miles</option><option value="25" selected>25 miles</option><option value="50">50 miles</option></select></label>
+                </div>
+                <form id="pickleDateProfileForm" class="society-form pickle-date-form">
+                  <div class="society-auth-heading"><span>Private opt-in profile</span><h3>Create your date profile</h3><p>Only members who opt in can appear here.</p></div>
+                  <textarea name="dateBio" rows="3" placeholder="A little about you, your playing style, and your ideal pickleball date..."></textarea>
+                  <input name="dateIdea" placeholder="Ideal first rally: coffee, open play, doubles event...">
+                  <label class="checkbox-line society-check"><input name="dateProfileActive" type="checkbox"> Show my profile in It&rsquo;s Just Pickleball.</label>
+                  <button class="primary" type="submit">Save Date Profile</button>
+                </form>
+                <div id="pickleDateResults" class="society-friend-stack"></div>
               </section>
             </div>
 
@@ -1580,7 +1618,7 @@
       </section>
     </div>
 
-    <script src="app.js?v=2026-08-13-member-flow-3"></script>
+    <script src="app.js?v=2026-08-13-pickle-date-1"></script>
   </body>
 </html>
 
