@@ -4,12 +4,12 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="theme-color" content="#0b2231">
-    <meta name="app-version" content="2026-08-13-shared-events-1">
+    <meta name="app-version" content="2026-08-13-profile-dating-1">
     <title>Club Society</title>
-    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png?v=2026-08-13-shared-events-1">
-    <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=2026-08-13-shared-events-1">
-    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png?v=2026-08-13-shared-events-1">
-    <link rel="manifest" href="/manifest.webmanifest?v=2026-08-13-shared-events-1">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png?v=2026-08-13-profile-dating-1">
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=2026-08-13-profile-dating-1">
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png?v=2026-08-13-profile-dating-1">
+    <link rel="manifest" href="/manifest.webmanifest?v=2026-08-13-profile-dating-1">
     <script>
       if (["clubsociety.app", "www.clubsociety.app", "club-society.pages.dev"].includes(window.location.hostname.toLowerCase())) {
         document.documentElement.classList.add("member-host");
@@ -23,7 +23,7 @@
       .member-host main > .view { display: none !important; }
       .member-host main > #societyApp { display: block !important; }
     </style>
-    <link rel="stylesheet" href="styles.css?v=2026-08-13-shared-events-1">
+    <link rel="stylesheet" href="styles.css?v=2026-08-13-profile-dating-1">
   </head>
   <body>
     <aside class="sidebar">
@@ -306,6 +306,10 @@
                     <label class="checkbox-line society-check">
                       <input name="discoverable" type="checkbox">
                       Make my profile discoverable to other members.
+                    </label>
+                    <label class="checkbox-line society-check dating-interest-check">
+                      <input name="dateInterested" type="checkbox">
+                      <span><strong>Open to a sporting spark?</strong> I&rsquo;m interested in the Club Society pickleball or golf dating experience.</span>
                     </label>
                     <button class="primary" data-profile-save type="button">Save Profile</button>
                     <p class="meta">A profile photo is required before messaging or posting events.</p>
@@ -614,13 +618,13 @@
               <section class="society-section pickle-date-section">
                 <button class="society-back-button" data-society-tab="pickleballHome" type="button">Back</button>
                 <div class="pickle-date-hero">
-                  <span>It&rsquo;s Just Pickleball</span>
+                  <span>It&rsquo;s Just Pickl
+eball</span>
                   <h3>A little chemistry. A friendly rally.</h3>
                   <p>Discover dating events or meet another opted-in player for a low-pressure pickleball date.</p>
                 </div>
                 <div class="pickle-date-filters">
-                  <label>Age from<input id="pickleDateAgeMin" type="number"
- min="18" max="99" value="25"></label>
+                  <label>Age from<input id="pickleDateAgeMin" type="number" min="18" max="99" value="25"></label>
                   <label>Age to<input id="pickleDateAgeMax" type="number" min="18" max="99" value="55"></label>
                   <label>Miles away<select id="pickleDateMiles"><option value="10">10 miles</option><option value="25" selected>25 miles</option><option value="50">50 miles</option></select></label>
                 </div>
@@ -1344,13 +1348,13 @@
                     <option>Golf foursome</option>
                   </select>
                 </label>
-                <label>Location<input name="location" required></label>
+                <label>Location<input name="loca
+tion" required></label>
                 <label>Skill / vibe<input name="skill" value="Social intermediate"></label>
                 <label class="full">Post<textarea name="body" rows="3" required></textarea></label>
                 <button class="primary full" type="submit">Post Match Request</button>
               </form>
-            
-</section>
+            </section>
             <section class="panel">
               <div class="panel-head">
                 <div>
@@ -1643,7 +1647,7 @@
       </section>
     </div>
 
-    <script src="app.js?v=2026-08-13-shared-events-1"></script>
+    <script src="app.js?v=2026-08-13-profile-dating-1"></script>
   </body>
 </html>
 
