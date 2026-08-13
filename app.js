@@ -1699,9 +1699,16 @@ function toggleSocietyProfileDrawer(forceOpen) {
 async function previewSocietyPhoto() {
   const file = els.societyPhotoInput.files?.[0];
   if (!file) return;
-  const photo = await readFileAsDataUrl(file);
-  els.societyPhotoPreview.style.backgroundImage = `url("${photo}")`;
-  els.societyPhotoPreview.textContent = "Photo selected";
+  try {
+    const photo = await resizeProfilePhoto(file);
+    els.societyPhotoInput.dataset.resizedPhoto = photo;
+    els.societyPhotoPreview.style.backgroundImage = `url("${photo}")`;
+    els.societyPhotoPreview.textContent = "Photo ready";
+    showSocietyAccountMessage("Photo ready. Tap Save Profile to finish.", "success");
+  } catch {
+    els.societyPhotoInput.dataset.resizedPhoto = "";
+    showSocietyAccountMessage("That photo could not be prepared. Try a JPG or PNG image under 15 MB.", "error");
+  }
 }
 
 async function saveSocietyProfileFromDrawer() {
@@ -1711,8 +1718,15 @@ async function saveSocietyProfileFromDrawer() {
     return;
   }
   let profile = currentSocietyProfile() || state.profiles.find((item) => item.email?.toLowerCase() === data.email.toLowerCase());
+  const previousProfile = profile ? { ...profile } : null;
   const photoFile = els.societyPhotoInput.files?.[0];
-  const photoDataUrl = photoFile ? await readFileAsDataUrl(photoFile) : profile?.photoDataUrl || "";
+  let photoDataUrl = profile?.photoDataUrl || "";
+  try {
+    if (photoFile) photoDataUrl = els.societyPhotoInput.dataset.resizedPhoto || await resizeProfilePhoto(photoFile);
+  } catch {
+    showSocietyAccountMessage("The photo could not be saved. Try another image.", "error");
+    return;
+  }
   const nextProfile = {
     ...(profile || {}),
     id: profile?.id || newId(),
@@ -1737,7 +1751,14 @@ async function saveSocietyProfileFromDrawer() {
   if (profile) Object.assign(profile, nextProfile);
   else state.profiles.unshift(nextProfile);
   state.societySessionEmail = nextProfile.email;
-  saveState();
+  try {
+    saveState();
+  } catch (error) {
+    if (profile && previousProfile) Object.assign(profile, previousProfile);
+    else state.profiles = state.profiles.filter((item) => item.id !== nextProfile.id);
+    showSocietyAccountMessage("This device could not store the profile photo. Try a smaller image or clear old website data, then try again.", "error");
+    return;
+  }
   updateSocietyHome();
   toggleSocietyProfileDrawer(false);
   els.societyAccountMessage.textContent = photoDataUrl
@@ -1778,6 +1799,27 @@ function readFileAsDataUrl(file) {
     reader.onerror = reject;
     reader.readAsDataURL(file);
   });
+}
+
+async function resizeProfilePhoto(file) {
+  if (!file?.type?.startsWith("image/")) throw new Error("Unsupported image");
+  if (file.size > 15 * 1024 * 1024) throw new Error("Image too large");
+  const source = await readFileAsDataUrl(file);
+  const image = await new Promise((resolve, reject) => {
+    const element = new Image();
+    element.onload = () => resolve(element);
+    element.onerror = reject;
+    element.src = source;
+  });
+  const maxSize = 720;
+  const scale = Math.min(1, maxSize / Math.max(image.naturalWidth, image.naturalHeight));
+  const width = Math.max(1, Math.round(image.naturalWidth * scale));
+  const height = Math.max(1, Math.round(image.naturalHeight * scale));
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  canvas.getContext("2d", { alpha: false }).drawImage(image, 0, 0, width, height);
+  return canvas.toDataURL("image/jpeg", 0.78);
 }
 
 function societyDirectoryCards() {
