@@ -4,12 +4,12 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="theme-color" content="#0b2231">
-    <meta name="app-version" content="2026-08-13-golf-hub-1">
+    <meta name="app-version" content="2026-08-13-shared-events-1">
     <title>Club Society</title>
-    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png?v=2026-08-13-golf-hub-1">
-    <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=2026-08-13-golf-hub-1">
-    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png?v=2026-08-13-golf-hub-1">
-    <link rel="manifest" href="/manifest.webmanifest?v=2026-08-13-golf-hub-1">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png?v=2026-08-13-shared-events-1">
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=2026-08-13-shared-events-1">
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png?v=2026-08-13-shared-events-1">
+    <link rel="manifest" href="/manifest.webmanifest?v=2026-08-13-shared-events-1">
     <script>
       if (["clubsociety.app", "www.clubsociety.app", "club-society.pages.dev"].includes(window.location.hostname.toLowerCase())) {
         document.documentElement.classList.add("member-host");
@@ -23,7 +23,7 @@
       .member-host main > .view { display: none !important; }
       .member-host main > #societyApp { display: block !important; }
     </style>
-    <link rel="stylesheet" href="styles.css?v=2026-08-13-golf-hub-1">
+    <link rel="stylesheet" href="styles.css?v=2026-08-13-shared-events-1">
   </head>
   <body>
     <aside class="sidebar">
@@ -495,11 +495,27 @@
                 </div>
                 <form id="memberHostForm" class="society-form member-host-form">
                   <input name="eventName" placeholder="Event name" required>
+                  <input name="passcode" placeholder="Optional private passcode">
                   <div class="form-pair"><select name="playType"><option value="singles">Singles</option><option value="doubles">Doubles</option></select><input name="courts" type="number" min="1" value="2" placeholder="Courts"></div>
                   <textarea name="participants" rows="4" placeholder="Enter player or team names, one per line" required></textarea>
                   <button class="primary" type="submit">Create Round Robin</button>
                 </form>
+                <div class="member-host-board-actions">
+                  <button data-member-host-clear type="button">Clear / Start Over</button>
+                  <button data-member-host-archive type="button">Archive Event</button>
+                </div>
                 <div id="memberHostBoard" class="member-host-board"></div>
+                <article class="member-join-card">
+                  <span>Join from another phone</span>
+                  <strong>Join a hosted event</strong>
+                  <p>Sign in, then enter the event name or join code. Use the passcode too when the host made it private.</p>
+                  <form id="memberHostJoinForm" class="society-form">
+                    <input name="eventKey" placeholder="Event name or join code" required>
+                    <input name="passcode" placeholder="Passcode, if required">
+                    <button class="primary" type="submit">Join Event</button>
+                  </form>
+                </article>
+                <section class="member-host-archives"><p class="eyebrow">Saved on this phone</p><h3>Archived events</h3><div id="memberHostArchiveList" class="society-stack"></div></section>
                 <article class="charity-host-card"><span>Planning something bigger?</span><strong>Hosting a charity event or full tournament?</strong><p>Apply for the Club Society hosting dashboard for registration, waivers, check-in, brackets, and event operations.</p><button data-host-dashboard-interest type="button">Sign Up for the Hosting Dashboard</button></article>
               </section>
             </div>
@@ -603,7 +619,8 @@
                   <p>Discover dating events or meet another opted-in player for a low-pressure pickleball date.</p>
                 </div>
                 <div class="pickle-date-filters">
-                  <label>Age from<input id="pickleDateAgeMin" type="number" min="18" max="99" value="25"></label>
+                  <label>Age from<input id="pickleDateAgeMin" type="number"
+ min="18" max="99" value="25"></label>
                   <label>Age to<input id="pickleDateAgeMax" type="number" min="18" max="99" value="55"></label>
                   <label>Miles away<select id="pickleDateMiles"><option value="10">10 miles</option><option value="25" selected>25 miles</option><option value="50">50 miles</option></select></label>
                 </div>
@@ -614,8 +631,7 @@
                 <form id="pickleDateProfileForm" class="society-form pickle-date-form">
                   <div class="society-auth-heading"><span>Private opt-in profile</span><h3>Create your date profile</h3><p>Only members who opt in can appear here.</p></div>
                   <textarea name="dateBio" rows="3" placeholder="A little about you, your playing style, and your ideal pickleball date..."></textarea>
-                  <inpu
-t name="dateIdea" placeholder="Ideal first rally: coffee, open play, doubles event...">
+                  <input name="dateIdea" placeholder="Ideal first rally: coffee, open play, doubles event...">
                   <label class="checkbox-line society-check"><input name="dateProfileActive" type="checkbox"> Show my profile in It&rsquo;s Just Pickleball.</label>
                   <button class="primary" type="submit">Save Date Profile</button>
                 </form>
@@ -1333,7 +1349,8 @@ t name="dateIdea" placeholder="Ideal first rally: coffee, open play, doubles eve
                 <label class="full">Post<textarea name="body" rows="3" required></textarea></label>
                 <button class="primary full" type="submit">Post Match Request</button>
               </form>
-            </section>
+            
+</section>
             <section class="panel">
               <div class="panel-head">
                 <div>
@@ -1362,8 +1379,7 @@ t name="dateIdea" placeholder="Ideal first rally: coffee, open play, doubles eve
             </div>
             <div id="hostActions" class="action-grid"></div>
           </section>
-        
-  <div class="workspace two host-phase-two">
+          <div class="workspace two host-phase-two">
             <section class="panel">
               <div class="panel-head">
                 <div>
@@ -1627,7 +1643,7 @@ t name="dateIdea" placeholder="Ideal first rally: coffee, open play, doubles eve
       </section>
     </div>
 
-    <script src="app.js?v=2026-08-13-golf-hub-1"></script>
+    <script src="app.js?v=2026-08-13-shared-events-1"></script>
   </body>
 </html>
 
