@@ -1648,6 +1648,7 @@ function fillSocietyProfileDrawer(profile) {
   fields.bio.value = profile?.bio || "";
   fields.allowMessages.checked = profile?.allowMessages !== false;
   fields.discoverable.checked = profile?.discoverable === true;
+  fields.dateInterested.checked = profile?.dateInterested === true;
 }
 
 function updateSocietyAvatar(profile = currentSocietyProfile()) {
@@ -1702,6 +1703,7 @@ async function saveSocietyProfileFromDrawer() {
     photoDataUrl,
     allowMessages: data.allowMessages === "on",
     discoverable: data.discoverable === "on",
+    dateInterested: data.dateInterested === "on",
     stayLoggedIn: true,
     preferredSport: profile?.preferredSport || "both",
     sport: profile?.sport || "pickleball",
@@ -1810,8 +1812,8 @@ function courtDirectory() {
     { name: "YWCO", city: "Athens", address: "562 Research Drive, Athens, GA 30605", access: "Membership/day fee", surface: "Indoor", courts: "3", note: "Members/Silver Sneakers free; non-member day fee listed by AAPA." },
     { name: "Mars Hill Baptist Church", city: "Watkinsville", address: "2661 Mars Hill Road, Watkinsville, GA 30677", access: "Church/community", surface: "Indoor", courts: "2 dedicated", note: "Tuesday sessions listed by AAPA; free to play." },
     { name: "Oconee Veterans Park", city: "Watkinsville", address: "3500A Hog Mountain Road, Watkinsville, GA 30677", access: "Oconee County public", surface: "Indoor", courts: "2+", note: "County facility; check current schedule and resident/non-resident fees." },
-    { name: "Ramsey Student Center", city: "Athens", address: "330 River Road, Athens, GA 30602", access: "UGA students/faculty", surface: "Indoor", courts: "3", note: "UGA access 
-only per AAPA listing." },
+    { name: "Ramsey Student Center", city: "Athens", address: 
+"330 River Road, Athens, GA 30602", access: "UGA students/faculty", surface: "Indoor", courts: "3", note: "UGA access only per AAPA listing." },
     { name: "Jennings Mill Country Club", city: "Bogart", address: "Bogart, GA 30622", access: "Club/private", surface: "Outdoor", courts: "8", note: "Country club members only; pickleball memberships may be available." },
     { name: "Athens Country Club", city: "Athens", address: "2700 Jefferson Road, Athens, GA 30607", access: "Club/private", surface: "Outdoor", courts: "6 dedicated / 12 shared", note: "Member or member guest access." },
     { name: "The Georgia Club", city: "Statham", address: "1050 Chancellors Drive, Statham, GA 30666", access: "Club/private", surface: "Outdoor", courts: "4 dedicated / 4 shared", note: "Member or member guest access." },
@@ -2644,9 +2646,9 @@ function renderGolf() {
 function renderGolfCourses() {
   if (!els.golfCourseList) return;
   const courses = [
-    { name: "Lane Creek Golf Club", city: "Bishop", miles: 8, access: "Public", note: "A close-to-home option for Oconee and Watkinsville players." },
-    { name: "
-Jennings Mill Country Club", city: "Watkinsville", miles: 10, access: "Private", note: "A local club option for member-hosted invites and groups." },
+    { name: "Lane Creek Golf Club", city: "Bis
+hop", miles: 8, access: "Public", note: "A close-to-home option for Oconee and Watkinsville players." },
+    { name: "Jennings Mill Country Club", city: "Watkinsville", miles: 10, access: "Private", note: "A local club option for member-hosted invites and groups." },
     { name: "University of Georgia Golf Course", city: "Athens", miles: 12, access: "Public access", note: "A strong Athens-area anchor for Club Society rounds." },
     { name: "Athens Country Club", city: "Athens", miles: 15, access: "Private", note: "A member course suited to invitations and organized outings." },
     { name: "The Georgia Club", city: "Statham", miles: 19, access: "Private", note: "A nearby destination for member-hosted golf events." },
@@ -3565,11 +3567,11 @@ function findProfileByPrivateLookup(value) {
 
 function clearPublicForm(keepMessage) {
   els.publicCheckinForm.reset();
-  els.publicCheckinForm.dataset.playerId = "";
+  els.publicCheckinForm.dataset.
+playerId = "";
   els.publicCheckinForm.dataset.profileId = "";
   els.publicCheckinForm.dataset.waiverSignedAt = "";
-  
-els.publicCheckinForm.dataset.waiverSource = "";
+  els.publicCheckinForm.dataset.waiverSource = "";
   els.publicCheckinForm.dataset.pendingSubmit = "";
   setPublicWaiverStatus("Needs Signature");
   if (!keepMessage) {
@@ -4459,11 +4461,11 @@ function deleteProfile(id) {
   const profile = state.profiles.find((item) => item.id === id);
   if (!profile) return;
   if (!window.confirm(`Delete ${profile.firstName} ${profile.lastName}'s profile?`)) return;
-  state.profiles = state.profiles.filter((item) => item.id !== id);
+  state.profiles = state.profiles.fi
+lter((item) => item.id !== id);
   saveState();
   render();
-  showAdminMessage("#profileList", "success", "Player profi
-le deleted.");
+  showAdminMessage("#profileList", "success", "Player profile deleted.");
 }
 
 function resetProfileForm() {
@@ -5416,11 +5418,11 @@ function exportProfilesCsv() {
       profile.updatedAt || "",
       profile.bio || "",
     ]);
-  downloadText(`club-society-player-profiles-${todaySlug()}.csv`, [headers, ...rows].map(csvLine).join("\n"), "text/csv");
+  downloadText(`club-soc
+iety-player-profiles-${todaySlug()}.csv`, [headers, ...rows].map(csvLine).join("\n"), "text/csv");
 }
 
-function importP
-rofilesCsv() {
+function importProfilesCsv() {
   const file = els.profilesImport.files[0];
   if (!file) return;
 
