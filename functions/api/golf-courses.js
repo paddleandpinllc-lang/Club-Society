@@ -1,8 +1,10 @@
 export async function onRequestGet({ request }) {
   const url = new URL(request.url);
   const miles = Math.min(75, Math.max(5, Number(url.searchParams.get("miles")) || 25));
-  let lat = Number(url.searchParams.get("lat"));
-  let lon = Number(url.searchParams.get("lon"));
+  const rawLat = url.searchParams.get("lat");
+  const rawLon = url.searchParams.get("lon");
+  let lat = rawLat === null || rawLat === "" ? NaN : Number(rawLat);
+  let lon = rawLon === null || rawLon === "" ? NaN : Number(rawLon);
   let locationLabel = "Current location";
   if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
     const location = String(url.searchParams.get("location") || "Watkinsville, GA 30677").slice(0, 160);
