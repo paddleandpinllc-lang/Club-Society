@@ -2179,6 +2179,49 @@ textarea {
   background: linear-gradient(145deg, rgba(122, 51, 81, 0.72), rgba(255, 255, 255, 0.1));
 }
 
+.pickleball-hub-grid .member-host-card {
+  border-color: rgba(244,181,43,.42);
+  background: linear-gradient(145deg, rgba(8,27,40,.92), rgba(218,158,51,.34));
+}
+
+.face-photo-requirement {
+  border: 1px solid rgba(244,181,43,.45);
+  border-radius: 16px;
+  background: #fff8e9;
+  padding: 13px;
+}
+.face-photo-requirement strong { color: var(--navy); }
+.face-photo-requirement p { margin: 4px 0 0; color: var(--muted); font-size: .8rem; line-height: 1.45; }
+
+.member-host-hero {
+  margin: 10px 0 14px;
+  border-radius: 24px;
+  background: radial-gradient(circle at 90% 0%, rgba(244,181,43,.32), transparent 34%), linear-gradient(145deg,#071e2c,#126449);
+  color: #fff;
+  padding: 22px;
+}
+.member-host-hero span { color: var(--gold); font-size: .7rem; font-weight: 950; letter-spacing: .1em; text-transform: uppercase; }
+.member-host-hero h3 { margin: 8px 0; font-size: 2rem; line-height: 1; }
+.member-host-hero p { margin: 0; color: rgba(255,255,255,.76); }
+.member-host-format-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
+.member-host-format-tabs button.active { border-color: var(--gold); background: var(--gold); color: var(--navy); }
+.member-host-form { margin-bottom: 14px; }
+.member-host-board { display: grid; gap: 10px; margin-bottom: 14px; }
+.member-host-board-head { display: grid; border-radius: 17px; background: var(--navy); color: #fff; padding: 13px; }
+.member-host-board-head span { color: var(--gold); font-size: .68rem; font-weight: 900; text-transform: uppercase; }
+.member-host-match { display: grid; gap: 7px; border: 1px solid rgba(11,34,49,.1); border-radius: 18px; background:#fff; padding: 12px; }
+.member-host-match > span { color: var(--green); font-size:.68rem; font-weight:950; text-transform:uppercase; }
+.member-host-match > div { display:grid; grid-template-columns:1fr 58px; gap:8px; }
+.member-host-match button { text-align:left; }
+.member-host-match button.winner { border-color:var(--gold); background:#fff4cf; }
+.member-host-match input { min-width:0; text-align:center; }
+.member-host-match em { color:var(--muted); font-size:.7rem; }
+.charity-host-card { display:grid; gap:7px; border-radius:20px; background:#fff8e9; border:1px solid rgba(244,181,43,.42); padding:16px; }
+.charity-host-card span { color:#7a3351; font-size:.68rem; font-weight:950; text-transform:uppercase; }
+.charity-host-card strong { color:var(--navy); font-size:1.1rem; }
+.charity-host-card p { margin:0; color:var(--muted); font-size:.82rem; }
+.charity-host-card button { justify-self:start; }
+
 .pickleball-hub-grid span {
   color: var(--gold);
   font-size: 0.72rem;
