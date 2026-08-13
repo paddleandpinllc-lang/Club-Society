@@ -113,7 +113,13 @@ const els = {
   quickGameForm: document.querySelector("#quickGameForm"),
   quickGameList: document.querySelector("#quickGameList"),
   courtSearch: document.querySelector("#courtSearch"),
+  courtDistance: document.querySelector("#courtDistance"),
   courtDirectoryList: document.querySelector("#courtDirectoryList"),
+  pickleDateProfileForm: document.querySelector("#pickleDateProfileForm"),
+  pickleDateResults: document.querySelector("#pickleDateResults"),
+  pickleDateAgeMin: document.querySelector("#pickleDateAgeMin"),
+  pickleDateAgeMax: document.querySelector("#pickleDateAgeMax"),
+  pickleDateMiles: document.querySelector("#pickleDateMiles"),
   societyAvatar: document.querySelector(".society-avatar"),
   societyProfileDrawer: document.querySelector("#societyProfileDrawer"),
   societyPhotoPreview: document.querySelector("#societyPhotoPreview"),
@@ -227,6 +233,11 @@ els.casualMatchForm?.addEventListener("submit", saveCasualMatch);
 els.clubGroupForm.addEventListener("submit", saveClubGroup);
 els.quickGameForm.addEventListener("submit", saveQuickGame);
 els.courtSearch.addEventListener("input", renderCourtDirectory);
+els.courtDistance?.addEventListener("change", renderCourtDirectory);
+els.pickleDateProfileForm?.addEventListener("submit", savePickleDateProfile);
+els.pickleDateAgeMin?.addEventListener("input", renderPickleDateProfiles);
+els.pickleDateAgeMax?.addEventListener("input", renderPickleDateProfiles);
+els.pickleDateMiles?.addEventListener("change", renderPickleDateProfiles);
 els.golfTeeTimeForm.addEventListener("submit", saveGolfTeeTime);
 els.golfGroupForm.addEventListener("submit", saveGolfGroup);
 els.golfMessageForm.addEventListener("submit", saveGolfMessage);
@@ -341,6 +352,7 @@ function loadState() {
     quickGames: [],
     quickGameFilter: "all",
     courtFilter: "all",
+    courtDistance: "25",
     paddlePintImportedIds: [],
     roundSettings: { selectedPlayerIds: [], teams: [], partnerTeams: [], teamMatchQueue: [], sequentialTeams: [], sequentialMatchesRemaining: 0 },
     selectedEventRosterId: "",
@@ -410,6 +422,7 @@ function normalizeState(data) {
   data.quickGames = data.quickGames || [];
   data.quickGameFilter = data.quickGameFilter || "all";
   data.courtFilter = data.courtFilter || "all";
+  data.courtDistance = data.courtDistance || "25";
   data.paddlePintImportedIds = data.paddlePintImportedIds || [];
   data.roundSettings = { selectedPlayerIds: [], teams: [], partnerTeams: [], teamMatchQueue: [], sequentialTeams: [], sequentialMatchesRemaining: 0, ...(data.roundSettings || {}) };
   data.selectedEventRosterId = data.selectedEventRosterId || "";
@@ -471,6 +484,7 @@ function memberSignupSnapshot(profile) {
       email: profile.email,
       phone: profile.phone,
       gender: profile.gender || "",
+      dateInterested: profile.dateInterested === true,
       city: profile.city,
       state: profile.state,
       zip: profile.zip,
@@ -1136,6 +1150,7 @@ async function saveSocietyAccount(event) {
     state: data.state || existing?.state || "GA",
     zip: data.zip || existing?.zip || "30677",
     age: data.age || existing?.age || "",
+    dateInterested: data.dateInterested === "on" || existing?.dateInterested === true,
     gender: data.gender || existing?.gender || "",
     preferredSport: data.sport || "both",
     passwordSet: true,
@@ -1410,6 +1425,14 @@ function handleSocietyAppClick(event) {
     return;
   }
 
+  const pickleDateMessageButton = event.target.closest("[data-pickle-date-message]");
+  if (pickleDateMessageButton) {
+    const names = { "date-maya": "Maya", "date-jordan": "Jordan", "date-taylor": "Taylor" };
+    const name = names[pickleDateMessageButton.dataset.pickleDateMessage] || "Club Society member";
+    openPrefilledMessage(name, `Hi ${name}, I found your profile in It's Just Pickleball and would like to connect.`);
+    return;
+  }
+
   const courtFilterButton = event.target.closest("[data-court-filter]");
   if (courtFilterButton) {
     state.courtFilter = courtFilterButton.dataset.courtFilter;
@@ -1458,7 +1481,7 @@ function initializeAuthPanels() {
 }
 
 function setSocietyTab(tab) {
-  const protectedTabs = new Set(["pickleballHome", "games", "courts", "events", "partners", "connectPlayers", "clubGroups", "myGroups", "host", "learn", "settings", "golfMessages"]);
+  const protectedTabs = new Set(["pickleballHome", "games", "courts", "pickleDate", "events", "partners", "connectPlayers", "clubGroups", "myGroups", "host", "learn", "settings", "golfMessages"]);
   if (protectedTabs.has(tab) && !hasSocietyAccess()) {
     setSocietyTab("home");
     els.societyAccountMessage.textContent = "Sign in or Join to access";
@@ -1480,7 +1503,11 @@ function setSocietyTab(tab) {
   if (tab === "clubGroups") renderClubGroups();
   if (tab === "myGroups") renderMyGroups();
   if (tab === "games") renderQuickGames();
-  if (tab === "courts") renderCourtDirectory();
+  if (tab === "courts") {
+    if (els.courtDistance) els.courtDistance.value = state.courtDistance || "25";
+    renderCourtDirectory();
+  }
+  if (tab === "pickleDate") renderPickleDateProfiles();
 }
 
 function hasSocietyAccess() {
@@ -1671,6 +1698,7 @@ function defaultCasualMatches() {
 }
 
 function defaultQuickGames() {
+
   return [
     { id: "quick-today-singles", title: "Singles hit around", day: "Today", time: "16:30", location: "Satterfield Park", note: "One player, 45 minutes, any level.", ownerName: "Maya T.", ownerEmail: "demo-maya@example.com", rsvps: [] },
     { id: "quick-tomorrow-open", title: "Need 1 for doubles", day: "Tomorrow", time: "07:45", location: "Southeast Clarke Park", note: "Casual doubles before work.", ownerName: "Jordan R.", ownerEmail: "demo-jordan@example.com", rsvps: [] },
@@ -1798,7 +1826,6 @@ function saveQuickGame(event) {
 function renderQuickGames() {
   if (!els.quickGameList) return;
   const filter = state.quickGameFilter || "all";
-
   document.querySelectorAll("[data-quick-game-filter]").forEach((button) => {
     button.classList.toggle("active", button.dataset.quickGameFilter === filter);
   });
@@ -1938,23 +1965,73 @@ function renderCourtDirectory() {
   if (!els.courtDirectoryList) return;
   const query = (els.courtSearch?.value || "").trim().toLowerCase();
   const filter = state.courtFilter || "all";
+  const maxMiles = Number(els.courtDistance?.value || state.courtDistance || 25);
+  state.courtDistance = String(maxMiles);
   document.querySelectorAll("[data-court-filter]").forEach((button) => {
     button.classList.toggle("active", button.dataset.courtFilter === filter);
   });
-  const courts = courtDirectory().filter((court) => {
+  const courts = courtDirectory().map((court) => ({ ...court, miles: courtMilesFromProfile(court) })).filter((court) => {
     const text = `${court.name} ${court.city} ${court.address} ${court.access} ${court.surface} ${court.courts} ${court.note}`.toLowerCase();
     const filterMatch = filter === "all"
       || (filter === "club" ? court.access.toLowerCase().includes("club") || court.access.toLowerCase().includes("private") : text.includes(filter));
-    return filterMatch && (!query || text.includes(query));
+    return court.miles <= maxMiles && filterMatch && (!query || text.includes(query));
   });
   els.courtDirectoryList.innerHTML = courts.map((court) => `
     <article class="society-court-card">
-      <span>${escapeHtml(court.city)} | ${escapeHtml(court.surface)} | ${escapeHtml(court.access)}</span>
+      <span>${court.miles} miles away | ${escapeHtml(court.city)} | ${escapeHtml(court.surface)} | ${escapeHtml(court.access)}</span>
       <strong>${escapeHtml(court.name)}</strong>
       <p>${escapeHtml(court.address)}</p>
       <p>${escapeHtml(court.courts)} - ${escapeHtml(court.note)}</p>
     </article>
-  `).join("");
+  `).join("") || `<article class="society-list-card"><strong>No courts inside ${maxMiles} miles</strong><p>Increase your distance to see more options.</p></article>`;
+  saveState();
+}
+
+function courtMilesFromProfile(court) {
+  const profileCity = String(currentSocietyProfile()?.city || "Watkinsville").toLowerCase();
+  const city = String(court.city || "").toLowerCase();
+  if (city === profileCity) return 3;
+  const estimates = { athens: 12, bishop: 8, bogart: 10, statham: 18, winder: 27, jefferson: 31, bethlehem: 29 };
+  return estimates[city] || 35;
+}
+
+function savePickleDateProfile(event) {
+  event.preventDefault();
+  const profile = currentSocietyProfile();
+  if (!profile) return;
+  const data = Object.fromEntries(new FormData(els.pickleDateProfileForm).entries());
+  profile.dateBio = String(data.dateBio || "").trim();
+  profile.dateIdea = String(data.dateIdea || "").trim();
+  profile.dateProfileActive = data.dateProfileActive === "on";
+  profile.dateInterested = profile.dateInterested || profile.dateProfileActive;
+  profile.updatedAt = new Date().toISOString();
+  saveState();
+  renderPickleDateProfiles();
+  showSocietyAccountMessage(profile.dateProfileActive ? "Your private pickleball date profile is live." : "Your date profile is saved but hidden.", "success");
+}
+
+function renderPickleDateProfiles() {
+  if (!els.pickleDateResults || !els.pickleDateProfileForm) return;
+  const current = currentSocietyProfile();
+  els.pickleDateProfileForm.elements.dateBio.value = current?.dateBio || "";
+  els.pickleDateProfileForm.elements.dateIdea.value = current?.dateIdea || "";
+  els.pickleDateProfileForm.elements.dateProfileActive.checked = current?.dateProfileActive === true;
+  const minAge = Math.max(18, Number(els.pickleDateAgeMin?.value || 18));
+  const maxAge = Math.max(minAge, Number(els.pickleDateAgeMax?.value || 99));
+  const maxMiles = Number(els.pickleDateMiles?.value || 25);
+  const demoDates = [
+    { id: "date-maya", name: "Maya", age: 34, miles: 6, level: "3.5 doubles", bio: "Competitive rallies, easy laughs, and coffee after the match.", idea: "Saturday morning open play and brunch." },
+    { id: "date-jordan", name: "Jordan", age: 41, miles: 14, level: "3.0 social", bio: "Here for good games, good conversation, and no pressure.", idea: "A relaxed mixed-doubles social." },
+    { id: "date-taylor", name: "Taylor", age: 29, miles: 22, level: "4.0", bio: "Serious about improving, equally serious about having fun.", idea: "Best-of-three then tacos." },
+  ];
+  const profiles = demoDates.filter((profile) => profile.age >= minAge && profile.age <= maxAge && profile.miles <= maxMiles);
+  els.pickleDateResults.innerHTML = profiles.length ? profiles.map((profile) => `
+    <article class="pickle-date-profile">
+      <div class="pickle-date-avatar">${escapeHtml(initials(profile.name))}</div>
+      <div><span>${profile.age} | ${profile.miles} miles away | ${escapeHtml(profile.level)}</span><strong>${escapeHtml(profile.name)}</strong><p>${escapeHtml(profile.bio)}</p><em>${escapeHtml(profile.idea)}</em></div>
+      <button data-pickle-date-message="${escapeHtml(profile.id)}" type="button">Message</button>
+    </article>
+  `).join("") : `<article class="society-list-card"><strong>No matches in this range yet</strong><p>Try widening the age or distance filters.</p></article>`;
 }
 
 function renderSocietyFriendCard(card) {
@@ -3322,6 +3399,7 @@ function renderPartnerAwareTeamBuilder(players) {
 
 function partnerSingleSelect(players, selectedId, teamIndex, field) {
   return `
+
     <select data-partner-team-index="${teamIndex}" data-team-field="${field}">
       <option value="">Assign single player</option>
       ${players.map((player) => `<option value="${player.id}" ${player.id === selectedId ? "selected" : ""}>${escapeHtml(player.firstName)} ${escapeHtml(player.lastName)}</option>`).join("")}
@@ -3599,7 +3677,6 @@ function roundSlotSelect(round, match, matchIndex, teamKey, slotIndex) {
       <select data-round-slot="${round.round}" data-match-index="${matchIndex}" data-team-key="${teamKey}" data-slot-index="${slotIndex}">
         ${roundPlayerOptions(round, selectedId)}
       </select>
-
     </label>
   `;
 }
@@ -5023,6 +5100,7 @@ function exportProfilesCsv() {
       profile.waiverSource || "",
       profile.waiverAgreementText || "",
       profile.smsSubscriber ? "Yes" : "No",
+
       profile.discoverable ? "Yes" : "No",
       profile.allowMessages === false ? "No" : "Yes",
       profile.verificationStatus || "",
@@ -5400,7 +5478,6 @@ function buildBalancedTeams(players) {
   const averageSkill = pool.reduce((total, player) => total + skillScore(player), 0) / Math.max(1, pool.length);
   const targetTeamSkill = averageSkill * 2;
   const teams = [];
-
 
   while (pool.length >= 2) {
     const anchor = pool.shift();
