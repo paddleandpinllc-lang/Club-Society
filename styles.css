@@ -1820,6 +1820,18 @@ textarea {
   font-weight: 900;
 }
 
+.society-auth-trust {
+  color: var(--muted) !important;
+  font-size: 0.72rem;
+  line-height: 1.45;
+  text-align: center;
+}
+
+.society-auth-submit:disabled {
+  cursor: wait;
+  opacity: 0.72;
+}
+
 .forgot-password-link {
   justify-self: center;
   min-height: 34px;
@@ -1933,6 +1945,24 @@ textarea {
 
 .society-member-dashboard.active {
   display: grid;
+}
+
+.society-member-welcome {
+  padding: 10px 4px 2px;
+}
+
+.society-member-welcome h2 {
+  margin: 6px 0 8px;
+  color: var(--navy);
+  font-size: clamp(2rem, 9vw, 3rem);
+  letter-spacing: -0.055em;
+  line-height: 0.98;
+}
+
+.society-member-welcome p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.5;
 }
 
 .society-profile-card,
@@ -2051,7 +2081,7 @@ textarea {
 .society-direction-grid button {
   display: grid;
   align-content: end;
-  min-height: 152px;
+  min-height: 184px;
   padding: 14px;
   border: 0;
   border-radius: 20px;
@@ -2070,6 +2100,14 @@ textarea {
 .society-direction-grid strong {
   margin-top: 6px;
   line-height: 1.08;
+}
+
+.society-direction-grid i {
+  margin-top: 13px;
+  color: rgba(255, 255, 255, 0.76);
+  font-size: 0.72rem;
+  font-style: normal;
+  font-weight: 850;
 }
 
 .pickleball-hub {
@@ -2106,7 +2144,7 @@ textarea {
   display: grid;
   gap: 8px;
   justify-items: start;
-  min-height: 96px;
+  min-height: 142px;
   padding: 13px;
   border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 17px;
@@ -2127,7 +2165,16 @@ textarea {
 }
 
 .pickleball-hub-grid strong {
+  font-size: 1.02rem;
   line-height: 1.05;
+}
+
+.pickleball-hub-grid i {
+  align-self: end;
+  color: rgba(255, 255, 255, 0.62);
+  font-size: 0.68rem;
+  font-style: normal;
+  font-weight: 800;
 }
 
 .pickleball-card {
@@ -2646,7 +2693,7 @@ textarea {
   left: 12px;
   right: 12px;
   bottom: 12px;
-  display: grid;
+  display: none;
   grid-template-columns: repeat(5, 1fr);
   gap: 6px;
   border: 1px solid rgba(11, 34, 49, 0.1);
@@ -2654,6 +2701,10 @@ textarea {
   background: rgba(255, 255, 255, 0.94);
   box-shadow: 0 12px 28px rgba(11, 34, 49, 0.16);
   padding: 7px;
+}
+
+.society-bottom-nav.active {
+  display: grid;
 }
 
 .society-bottom-nav button {
