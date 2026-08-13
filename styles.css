@@ -1467,6 +1467,8 @@ textarea {
 .connection-request-panel { display:grid; gap:10px; padding:14px; border-radius:18px; background:#eef7f1; border:1px solid rgba(31,138,98,.22); }
 .connection-request-panel > div { display:grid; grid-template-columns:1fr auto auto; gap:8px; align-items:center; }
 .danger-link { color:#9d2d2d !important; border-color:rgba(157,45,45,.28) !important; }
+.lesson-offer-card{display:grid;gap:8px;margin:14px 0;padding:18px;border:1px solid rgba(244,181,43,.5);border-radius:20px;background:linear-gradient(145deg,#fff8e9,#eef7f1)}
+.lesson-offer-card>span{color:var(--green);font-size:.7rem;font-weight:950;text-transform:uppercase;letter-spacing:.08em}.lesson-offer-card>strong{font-size:1.25rem}.lesson-offer-card>p{margin:0;color:var(--muted)}.lesson-offer-card>button{justify-self:start;margin-top:5px}.lesson-listing-form{display:none;margin:12px 0 18px;padding:16px;border:1px solid rgba(11,34,49,.1);border-radius:19px;background:#fff}.lesson-listing-form.active{display:grid}
 
 .society-hero-card .eyebrow {
   color: var(--gold);
