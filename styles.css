@@ -2733,6 +2733,41 @@ textarea {
   font-style: normal;
 }
 
+.member-host-board-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin: 12px 0;
+}
+
+.member-host-board-actions button {
+  min-height: 44px;
+  border-radius: 14px;
+}
+
+.member-join-card {
+  display: grid;
+  gap: 8px;
+  margin-top: 18px;
+  padding: 18px;
+  border: 1px solid rgba(246, 181, 44, 0.45);
+  border-radius: 22px;
+  background: linear-gradient(145deg, rgba(11, 54, 44, 0.98), rgba(18, 50, 70, 0.98));
+  color: #fff;
+}
+
+.member-join-card > span {
+  color: var(--gold);
+  font-size: 0.74rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.member-join-card > strong { font-size: 1.28rem; }
+.member-join-card > p { margin: 0; color: rgba(255, 255, 255, 0.76); }
+.member-host-archives { margin-top: 22px; }
+
 .society-section-head {
   display: flex;
   justify-content: space-between;
