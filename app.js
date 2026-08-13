@@ -66,6 +66,8 @@ const MEMBER_SYNC_KEYS = [
   "profiles",
   "societyFavorites",
   "societyFriends",
+  "societyFriendRequests",
+  "societyBlockedMembers",
   "clubGroups",
   "casualMatches",
   "quickGames",
@@ -104,6 +106,7 @@ const els = {
   societyGroupCount: document.querySelector("#societyGroupCount"),
   societyFriendSearch: document.querySelector("#societyFriendSearch"),
   societyFriendResults: document.querySelector("#societyFriendResults"),
+  societyConnectionRequests: document.querySelector("#societyConnectionRequests"),
   societyProfilePreview: document.querySelector("#societyProfilePreview"),
   societySinglesToggle: document.querySelector("#societySinglesToggle"),
   myRsvpList: document.querySelector("#myRsvpList"),
@@ -363,6 +366,8 @@ function loadState() {
     societySessionEmail: "",
     societyFavorites: [],
     societyFriends: [],
+    societyFriendRequests: [],
+    societyBlockedMembers: [],
     societyFriendFilter: "all",
     selectedSocietyProfileId: "",
     clubGroups: [],
@@ -439,6 +444,8 @@ function normalizeState(data) {
   data.societySessionEmail = data.societySessionEmail || "";
   data.societyFavorites = data.societyFavorites || [];
   data.societyFriends = data.societyFriends || [];
+  data.societyFriendRequests = data.societyFriendRequests || [];
+  data.societyBlockedMembers = data.societyBlockedMembers || [];
   data.societyFriendFilter = data.societyFriendFilter || "all";
   data.selectedSocietyProfileId = data.selectedSocietyProfileId || "";
   data.clubGroups = data.clubGroups || [];
@@ -1193,6 +1200,7 @@ async function saveSocietyAccount(event) {
     passwordSet: true,
     pickleballLevel: data.pickleballLevel || existing?.pickleballLevel || "",
     handicap: data.handicap || existing?.handicap || "",
+    bio: data.bio.trim(),
     skill: level,
     availability: existing?.availability || "Flexible",
     interests: Array.from(new Set([...(existing?.interests || []), "Find local games", "Social round robins", "Golf groups"])),
@@ -1361,6 +1369,15 @@ function handleSocietyAppClick(event) {
     addSocietyFriend(addFriendButton.dataset.friendAdd);
     return;
   }
+
+  const acceptFriendButton = event.target.closest("[data-friend-accept]");
+  if (acceptFriendButton) { acceptSocietyFriend(acceptFriendButton.dataset.friendAccept); return; }
+  const declineFriendButton = event.target.closest("[data-friend-decline]");
+  if (declineFriendButton) { declineSocietyFriend(declineFriendButton.dataset.friendDecline); return; }
+  const removeFriendButton = event.target.closest("[data-friend-remove]");
+  if (removeFriendButton) { removeSocietyFriend(removeFriendButton.dataset.friendRemove); return; }
+  const blockFriendButton = event.target.closest("[data-friend-block]");
+  if (blockFriendButton) { blockSocietyFriend(blockFriendButton.dataset.friendBlock); return; }
 
   const profileViewButton = event.target.closest("[data-profile-view]");
   if (profileViewButton) {
@@ -1783,9 +1800,9 @@ function societyDirectoryCards() {
       discoverable: true,
     }));
   const demoProfiles = [
-    { id: "demo-maya", name: "Maya Thompson", city: "Watkinsville", sport: "pickleball", skill: "3.5 doubles", vibe: "Weeknight games, mixed doubles, and post-match hangouts.", socialPlay: true, allowMessages: true, discoverable: true },
-    { id: "demo-eli", name: "Eli Parker", city: "Athens", sport: "golf", skill: "12 handicap", vibe: "Last-minute tee times, relaxed pace, good playlists.", socialPlay: true, allowMessages: true, discoverable: true },
-    { id: "demo-jordan", name: "Jordan Reese", city: "Oconee", sport: "both", skill: "Pickleball 3.0 | Golf 18", vibe: "Down for social play, beginner-friendly groups, and club events.", socialPlay: true, allowMessages: true, discoverable: true },
+    { id: "demo-maya", email: "demo-maya@example.com", name: "Maya Thompson", city: "Watkinsville", sport: "pickleball", skill: "3.5 doubles", vibe: "Weeknight games, mixed doubles, and post-match hangouts.", socialPlay: true, allowMessages: true, discoverable: true },
+    { id: "demo-eli", email: "demo-eli@example.com", name: "Eli Parker", city: "Athens", sport: "golf", skill: "12 handicap", vibe: "Last-minute tee times, relaxed pace, good playlists.", socialPlay: true, allowMessages: true, discoverable: true },
+    { id: "demo-jordan", email: "demo-jordan@example.com", name: "Jordan Reese", city: "Oconee", sport: "both", skill: "Pickleball 3.0 | Golf 18", vibe: "Down for social play, beginner-friendly groups, and club events.", socialPlay: true, allowMessages: true, discoverable: true },
   ];
   return [...savedProfiles, ...demoProfiles];
 }
@@ -1831,9 +1848,15 @@ function courtDirectory() {
 
 function renderSocietyFriends() {
   if (!els.societyFriendResults) return;
+  const profile = currentSocietyProfile();
+  if (!profile?.bio?.trim()) {
+    els.societyFriendResults.innerHTML = `<article class="society-list-card profile-required-card"><strong>Create your brief player profile first</strong><p>Tell members how you play, when you are available, and what kind of connection you want. A profile is required before sending connection requests.</p><button data-profile-toggle type="button">Complete My Profile</button></article>`;
+    if (els.societyConnectionRequests) els.societyConnectionRequests.innerHTML = "";
+    return;
+  }
   const query = (els.societyFriendSearch?.value || "").trim().toLowerCase();
   const filter = state.societyFriendFilter || "all";
-  const cards = societyDirectoryCards().filter((card) => {
+  const cards = societyDirectoryCards().filter((card) => !state.societyBlockedMembers.includes(card.id)).filter((card) => {
     const haystack = `${card.name} ${card.city} ${card.sport} ${card.skill} ${card.vibe}`.toLowerCase();
     const matchesQuery = !query || haystack.includes(query);
     const matchesFilter = filter === "all"
@@ -1853,6 +1876,13 @@ function renderSocietyFriends() {
     els.societyProfilePreview.innerHTML = `<article class="society-list-card"><strong>Tap a member</strong><p>Click a profile photo or name to preview details and connection options.</p></article>`;
   }
   updateSinglesToggle();
+  renderSocietyConnectionRequests();
+}
+
+function renderSocietyConnectionRequests() {
+  if (!els.societyConnectionRequests) return;
+  const incoming = state.societyFriendRequests.filter((request) => request.direction === "incoming");
+  els.societyConnectionRequests.innerHTML = incoming.length ? `<article class="connection-request-panel"><strong>Connection requests</strong>${incoming.map((request) => `<div><span>${escapeHtml(request.name || "Club Society member")}</span><button data-friend-accept="${escapeHtml(request.id)}" type="button">Approve</button><button data-friend-decline="${escapeHtml(request.id)}" type="button">Decline</button></div>`).join("")}</article>` : "";
 }
 
 function showSocietyProfilePreview(id) {
@@ -2314,6 +2344,7 @@ async function refreshMemberHostedEvent() {
 
 function renderSocietyFriendCard(card) {
   const isFriend = state.societyFriends.includes(card.id);
+  const pending = state.societyFriendRequests.some((request) => request.memberId === card.id && request.direction === "outgoing");
   const photo = card.photoDataUrl
     ? `style="background-image:url('${escapeHtml(card.photoDataUrl)}')"`
     : "";
@@ -2326,7 +2357,8 @@ function renderSocietyFriendCard(card) {
         <p>${escapeHtml(card.skill)} - ${escapeHtml(card.vibe)}</p>
       </div>
       <div class="society-friend-actions">
-        <button class="${isFriend ? "active" : ""}" data-friend-add="${escapeHtml(card.id)}" type="button">${isFriend ? "Friends" : "Add"}</button>
+        ${isFriend ? `<button class="active" data-friend-remove="${escapeHtml(card.id)}" type="button">Remove</button>` : `<button class="${pending ? "active" : ""}" data-friend-add="${escapeHtml(card.id)}" type="button" ${pending ? "disabled" : ""}>${pending ? "Requested" : "Connect"}</button>`}
+        <button class="danger-link" data-friend-block="${escapeHtml(card.id)}" type="button">Block</button>
         <button ${card.allowMessages === false ? "disabled" : `data-friend-message="${escapeHtml(card.id)}"`} type="button">${card.allowMessages === false ? "No messages" : "Message"}</button>
       </div>
     </article>
@@ -2335,11 +2367,29 @@ function renderSocietyFriendCard(card) {
 
 function addSocietyFriend(id) {
   if (!id) return;
-  if (!state.societyFriends.includes(id)) state.societyFriends.push(id);
+  const profile = currentSocietyProfile();
+  if (!profile?.bio?.trim()) {
+    showSocietyAccountMessage("Complete your brief player profile before connecting with members.", "notice");
+    toggleSocietyProfileDrawer(true);
+    return;
+  }
+  if (!state.societyFriendRequests.some((request) => request.memberId === id && request.direction === "outgoing")) state.societyFriendRequests.push({ id: newId(), memberId: id, direction: "outgoing", status: "pending", createdAt: new Date().toISOString() });
   saveState();
+  syncSocietyConnection("request", id);
   renderSocietyFriends();
-  updateSocietyHome();
-  els.societyAccountMessage.textContent = "Added to Club Friends.";
+  showSocietyAccountMessage("Connection request sent. They must approve it before you are connected.", "success");
+}
+
+function acceptSocietyFriend(requestId) { const request = state.societyFriendRequests.find((item) => item.id === requestId); if (!request) return; if (!state.societyFriends.includes(request.memberId)) state.societyFriends.push(request.memberId); state.societyFriendRequests = state.societyFriendRequests.filter((item) => item.id !== requestId); syncSocietyConnection("approve", request.memberId); saveState(); renderSocietyFriends(); updateSocietyHome(); }
+function declineSocietyFriend(requestId) { const request = state.societyFriendRequests.find((item) => item.id === requestId); if (request) syncSocietyConnection("decline", request.memberId); state.societyFriendRequests = state.societyFriendRequests.filter((item) => item.id !== requestId); saveState(); renderSocietyFriends(); }
+function removeSocietyFriend(id) { syncSocietyConnection("remove", id); state.societyFriends = state.societyFriends.filter((item) => item !== id); saveState(); renderSocietyFriends(); updateSocietyHome(); }
+function blockSocietyFriend(id) { if (!window.confirm("Block this member? They will disappear from Connect Players and will not be able to connect with you.")) return; syncSocietyConnection("block", id); state.societyBlockedMembers = Array.from(new Set([...state.societyBlockedMembers, id])); state.societyFriends = state.societyFriends.filter((item) => item !== id); state.societyFriendRequests = state.societyFriendRequests.filter((item) => item.memberId !== id); saveState(); renderSocietyFriends(); updateSocietyHome(); }
+
+async function syncSocietyConnection(action, memberId) {
+  if (!canUseMemberCloudSync()) return;
+  const card = societyDirectoryCards().find((item) => item.id === memberId);
+  if (!card?.email) return;
+  try { await fetch("/api/member-connections", { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({ action, email:state.cloudMemberSync.email, syncToken:state.cloudMemberSync.token, targetEmail:card.email }) }); } catch { /* Keep local request queued in account sync. */ }
 }
 
 function messageSocietyFriend(id) {
