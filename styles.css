@@ -741,8 +741,7 @@ textarea {
 }
 
 .status-pill {
-  dis
-play: inline-flex;
+  display: inline-flex;
   width: fit-content;
   border-radius: 999px;
   background: rgba(31, 138, 98, 0.12);
@@ -1450,8 +1449,7 @@ play: inline-flex;
   border-radius: 28px;
   background:
     radial-gradient(circle at 92% 8%, rgba(244, 181, 43, 0.32), transparent 30%),
-    linear-gradient(145deg, #071e2c 0%, #0c3e3b 58%, #126
-449 100%),
+    linear-gradient(145deg, #071e2c 0%, #0c3e3b 58%, #126449 100%),
     var(--navy);
   color: #fff;
   padding: 28px 22px 22px;
@@ -2098,8 +2096,7 @@ play: inline-flex;
 }
 
 .society-direction-grid button {
-  display: g
-rid;
+  display: grid;
   align-content: end;
   min-height: 184px;
   padding: 14px;
@@ -2654,8 +2651,7 @@ rid;
   color: var(--green);
   font-size: 0.72rem;
   font-weight: 950;
-  text-transform: u
-ppercase;
+  text-transform: uppercase;
 }
 
 .society-post-card strong,
@@ -2729,6 +2725,10 @@ ppercase;
 .pickleball-hub:not(.golf-member-hub) { background: radial-gradient(circle at 10% 0%, rgba(242, 225, 62, 0.28), transparent 31%), linear-gradient(150deg, #092b49, #087f86 58%, #55a744); }
 .pickleball-hub:not(.golf-member-hub) .pickleball-hub-grid span { color: #edf34c; }
 .course-location-bar { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:12px; border-radius:16px; background:#eef5e9; }
+.course-location-options { display:grid; gap:10px; margin:12px 0 8px; }
+.course-location-options > button { min-height:48px; border-radius:15px; background:#285c32; color:#fff; }
+.course-zip-form { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:8px; }
+.course-zip-form input, .course-zip-form button { min-height:46px; border-radius:14px; }
 .course-location-bar strong { color:#285c32; font-size:.82rem; }
 .course-location-bar button { min-height:38px; border-color:#487f45; color:#285c32; }
 .course-data-note { margin-top:12px; color:var(--muted); font-size:.75rem; }
