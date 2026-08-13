@@ -78,11 +78,14 @@ const MEMBER_SYNC_KEYS = [
   "quickGameFilter",
   "casualMatchFilter",
   "courtFilter",
+  "memberHostDrafts",
+  "memberHostArchives",
 ];
 
 const state = loadState();
 let memberCloudSyncTimer = 0;
 let suppressMemberCloudSync = false;
+let memberHostRefreshBusy = false;
 const els = {
   navItems: document.querySelectorAll(".nav-item"),
   views: document.querySelectorAll(".view"),
@@ -122,6 +125,8 @@ const els = {
   pickleDateMiles: document.querySelector("#pickleDateMiles"),
   memberHostForm: document.querySelector("#memberHostForm"),
   memberHostBoard: document.querySelector("#memberHostBoard"),
+  memberHostJoinForm: document.querySelector("#memberHostJoinForm"),
+  memberHostArchiveList: document.querySelector("#memberHostArchiveList"),
   societyAvatar: document.querySelector(".society-avatar"),
   societyProfileDrawer: document.querySelector("#societyProfileDrawer"),
   societyPhotoPreview: document.querySelector("#societyPhotoPreview"),
@@ -243,6 +248,7 @@ els.pickleDateAgeMin?.addEventListener("input", renderPickleDateProfiles);
 els.pickleDateAgeMax?.addEventListener("input", renderPickleDateProfiles);
 els.pickleDateMiles?.addEventListener("change", renderPickleDateProfiles);
 els.memberHostForm?.addEventListener("submit", buildMemberHostedEvent);
+els.memberHostJoinForm?.addEventListener("submit", joinMemberHostedEvent);
 els.golfTeeTimeForm.addEventListener("submit", saveGolfTeeTime);
 els.golfGroupForm.addEventListener("submit", saveGolfGroup);
 els.golfMessageForm.addEventListener("submit", saveGolfMessage);
@@ -327,6 +333,7 @@ initializeAuthPanels();
 applyLaunchMode();
 render();
 initProfileCompletionLink();
+window.setInterval(refreshMemberHostedEvent, 8000);
 
 function loadState() {
   const fallback = {
@@ -360,7 +367,9 @@ function loadState() {
     courtFilter: "all",
     courtDistance: "25",
     golfCourseDistance: "25",
-    memberHostDraft: { format: "round-robin", matches: [] },
+    memberHostFormat: "round-robin",
+    memberHostDrafts: { "round-robin": { format: "round-robin", matches: [] }, tournament: { format: "tournament", matches: [] } },
+    memberHostArchives: [],
     paddlePintImportedIds: [],
     roundSettings: { selectedPlayerIds: [], teams: [], partnerTeams: [], teamMatchQueue: [], sequentialTeams: [], sequentialMatchesRemaining: 0 },
     selectedEventRosterId: "",
@@ -431,7 +440,13 @@ function normalizeState(data) {
   data.quickGameFilter = data.quickGameFilter || "all";
   data.courtFilter = data.courtFilter || "all";
   data.courtDistance = data.courtDistance || "25";
-  data.memberHostDraft = { format: "round-robin", matches: [], ...(data.memberHostDraft || {}) };
+  const legacyHostDraft = data.memberHostDraft || {};
+  data.memberHostFormat = data.memberHostFormat || legacyHostDraft.format || "round-robin";
+  data.memberHostDrafts = {
+    "round-robin": { format: "round-robin", matches: [], ...(data.memberHostDrafts?.["round-robin"] || (legacyHostDraft.format === "round-robin" ? legacyHostDraft : {})) },
+    tournament: { format: "tournament", matches: [], ...(data.memberHostDrafts?.tournament || (legacyHostDraft.format === "tournament" ? legacyHostDraft : {})) },
+  };
+  data.memberHostArchives = data.memberHostArchives || [];
   data.paddlePintImportedIds = data.paddlePintImportedIds || [];
   data.roundSettings = { selectedPlayerIds: [], teams: [], partnerTeams: [], teamMatchQueue: [], sequentialTeams: [], sequentialMatchesRemaining: 0, ...(data.roundSettings || {}) };
   data.selectedEventRosterId = data.selectedEventRosterId || "";
@@ -561,6 +576,10 @@ function mergeMemberCloudState(appState) {
   state.golfTeeTimes = mergeRecords(state.golfTeeTimes, appState.golfTeeTimes, (item) => item.id);
   state.golfGroups = mergeRecords(state.golfGroups, appState.golfGroups, (item) => item.id);
   state.golfMessages = mergeRecords(state.golfMessages, appState.golfMessages, (item) => item.id);
+  if (appState.memberHostDrafts && typeof appState.memberHostDrafts === "object") {
+    state.memberHostDrafts = { ...state.memberHostDrafts, ...appState.memberHostDrafts };
+  }
+  state.memberHostArchives = mergeRecords(state.memberHostArchives, appState.memberHostArchives, (item) => item.sharedEventId || item.updatedAt);
   state.societyFavorites = mergeValues(state.societyFavorites, appState.societyFavorites);
   state.societyFriends = mergeValues(state.societyFriends, appState.societyFriends);
   ["golfMatchIndex", "societyFriendFilter", "quickGameFilter", "casualMatchFilter", "courtFilter"].forEach((key) => {
@@ -877,7 +896,8 @@ function resetPlayerForm() {
   els.playerForm.dataset.partnerWaiverSignedAt = "";
   els.playerForm.dataset.partnerWaiverSource = "";
   els.playerForm.elements.playerId.value = "";
-  els.playerForm.elements.status.value = "Checked in";
+  els.playerForm.elements.status.value = "Checked in"
+;
   els.playerForm.elements.paid.value = "Not tracked";
   els.playerForm.querySelector("button[type=submit]").textContent = "Check In";
   toggleCoupleCheckin();
@@ -912,8 +932,7 @@ async function sendSocietySignupConfirmation(profile) {
         firstName: profile.firstName,
         lastName: profile.lastName,
         email: profile.email,
-        password:
- profile.password,
+        password: profile.password,
         phone: profile.phone,
         sport: profile.preferredSport,
         city: profile.city,
@@ -1446,10 +1465,13 @@ function handleSocietyAppClick(event) {
 
   const hostFormatButton = event.target.closest("[data-member-host-format]");
   if (hostFormatButton) {
-    state.memberHostDraft.format = hostFormatButton.dataset.memberHostFormat;
+    state.memberHostFormat = hostFormatButton.dataset.memberHostFormat;
     document.querySelectorAll("[data-member-host-format]").forEach((button) => button.classList.toggle("active", button === hostFormatButton));
     const submit = els.memberHostForm?.querySelector('[type="submit"]');
-    if (submit) submit.textContent = state.memberHostDraft.format === "tournament" ? "Create Tournament" : "Create Round Robin";
+    if (submit) submit.textContent = state.memberHostFormat === "tournament" ? "Create Tournament" : "Create Round Robin";
+    fillMemberHostForm();
+    renderMemberHostBoard();
+    saveState();
     return;
   }
 
@@ -1466,10 +1488,27 @@ function handleSocietyAppClick(event) {
 
   const hostWinnerButton = event.target.closest("[data-member-host-winner]");
   if (hostWinnerButton) {
-    const match = state.memberHostDraft.matches.find((item) => item.id === hostWinnerButton.dataset.memberHostWinner);
+    const match = activeMemberHostDraft().matches.find((item) => item.id === hostWinnerButton.dataset.memberHostWinner);
     if (match) match.winner = hostWinnerButton.dataset.side === "a" ? match.playerA : match.playerB;
     saveState();
+    publishMemberHostedEvent();
     renderMemberHostBoard();
+    return;
+  }
+
+  if (event.target.closest("[data-member-host-clear]")) {
+    clearMemberHostedEvent();
+    return;
+  }
+
+  if (event.target.closest("[data-member-host-archive]")) {
+    archiveMemberHostedEvent();
+    return;
+  }
+
+  const restoreHostedEvent = event.target.closest("[data-member-host-restore]");
+  if (restoreHostedEvent) {
+    restoreMemberHostedEvent(restoreHostedEvent.dataset.memberHostRestore);
     return;
   }
 
@@ -1553,7 +1592,10 @@ function setSocietyTab(tab) {
     renderCourtDirectory();
   }
   if (tab === "pickleDate") renderPickleDateProfiles();
-  if (tab === "memberHost") renderMemberHostBoard();
+  if (tab === "memberHost") {
+    fillMemberHostForm();
+    renderMemberHostBoard();
+  }
   if (tab === "golfCourses") {
     if (els.golfCourseDistance) els.golfCourseDistance.value = state.golfCourseDistance || "25";
     renderGolfCourses();
@@ -1768,7 +1810,8 @@ function courtDirectory() {
     { name: "YWCO", city: "Athens", address: "562 Research Drive, Athens, GA 30605", access: "Membership/day fee", surface: "Indoor", courts: "3", note: "Members/Silver Sneakers free; non-member day fee listed by AAPA." },
     { name: "Mars Hill Baptist Church", city: "Watkinsville", address: "2661 Mars Hill Road, Watkinsville, GA 30677", access: "Church/community", surface: "Indoor", courts: "2 dedicated", note: "Tuesday sessions listed by AAPA; free to play." },
     { name: "Oconee Veterans Park", city: "Watkinsville", address: "3500A Hog Mountain Road, Watkinsville, GA 30677", access: "Oconee County public", surface: "Indoor", courts: "2+", note: "County facility; check current schedule and resident/non-resident fees." },
-    { name: "Ramsey Student Center", city: "Athens", address: "330 River Road, Athens, GA 30602", access: "UGA students/faculty", surface: "Indoor", courts: "3", note: "UGA access only per AAPA listing." },
+    { name: "Ramsey Student Center", city: "Athens", address: "330 River Road, Athens, GA 30602", access: "UGA students/faculty", surface: "Indoor", courts: "3", note: "UGA access 
+only per AAPA listing." },
     { name: "Jennings Mill Country Club", city: "Bogart", address: "Bogart, GA 30622", access: "Club/private", surface: "Outdoor", courts: "8", note: "Country club members only; pickleball memberships may be available." },
     { name: "Athens Country Club", city: "Athens", address: "2700 Jefferson Road, Athens, GA 30607", access: "Club/private", surface: "Outdoor", courts: "6 dedicated / 12 shared", note: "Member or member guest access." },
     { name: "The Georgia Club", city: "Statham", address: "1050 Chancellors Drive, Statham, GA 30666", access: "Club/private", surface: "Outdoor", courts: "4 dedicated / 4 shared", note: "Member or member guest access." },
@@ -1784,8 +1827,7 @@ function renderSocietyFriends() {
   const filter = state.societyFriendFilter || "all";
   const cards = societyDirectoryCards().filter((card) => {
     const haystack = `${card.name} ${card.city} ${card.sport} ${card.skill} ${card.vibe}`.toLowerCase();
-    const matchesQuery = !query || haystack.inc
-ludes(query);
+    const matchesQuery = !query || haystack.includes(query);
     const matchesFilter = filter === "all"
       || (filter === "social" ? card.socialPlay : String(card.sport).toLowerCase().includes(filter) || card.sport === "both");
     return matchesQuery && matchesFilter;
@@ -2084,7 +2126,25 @@ function renderPickleDateProfiles() {
   `).join("") : `<article class="society-list-card"><strong>No matches in this range yet</strong><p>Try widening the age or distance filters.</p></article>`;
 }
 
-function buildMemberHostedEvent(event) {
+function activeMemberHostDraft() {
+  const format = state.memberHostFormat || "round-robin";
+  state.memberHostDrafts ||= {};
+  state.memberHostDrafts[format] ||= { format, matches: [] };
+  return state.memberHostDrafts[format];
+}
+
+function fillMemberHostForm() {
+  if (!els.memberHostForm) return;
+  const draft = activeMemberHostDraft();
+  els.memberHostForm.elements.eventName.value = draft.eventName || "";
+  els.memberHostForm.elements.passcode.value = draft.passcode || "";
+  els.memberHostForm.elements.playType.value = draft.playType || "singles";
+  els.memberHostForm.elements.courts.value = draft.courts || "2";
+  els.memberHostForm.elements.participants.value = (draft.participants || []).join("\n");
+  document.querySelectorAll("[data-member-host-format]").forEach((button) => button.classList.toggle("active", button.dataset.memberHostFormat === state.memberHostFormat));
+}
+
+async function buildMemberHostedEvent(event) {
   event.preventDefault();
   const data = Object.fromEntries(new FormData(els.memberHostForm).entries());
   const participants = String(data.participants || "").split(/\r?\n/).map((name) => name.trim()).filter(Boolean);
@@ -2093,20 +2153,22 @@ function buildMemberHostedEvent(event) {
     return;
   }
   const matches = [];
-  if (state.memberHostDraft.format === "tournament") {
+  if (state.memberHostFormat === "tournament") {
     for (let index = 0; index < participants.length; index += 2) matches.push({ id: newId(), round: 1, playerA: participants[index], playerB: participants[index + 1] || "Bye", scoreA: "", scoreB: "", winner: participants[index + 1] ? "" : participants[index] });
   } else {
     for (let left = 0; left < participants.length; left += 1) for (let right = left + 1; right < participants.length; right += 1) matches.push({ id: newId(), round: matches.length + 1, playerA: participants[left], playerB: participants[right], scoreA: "", scoreB: "", winner: "" });
   }
-  state.memberHostDraft = { ...state.memberHostDraft, ...data, participants, matches };
+  const previous = activeMemberHostDraft();
+  state.memberHostDrafts[state.memberHostFormat] = { ...previous, ...data, format: state.memberHostFormat, participants, matches, updatedAt: new Date().toISOString() };
   saveState();
   renderMemberHostBoard();
+  await publishMemberHostedEvent(true);
 }
 
 function renderMemberHostBoard() {
   if (!els.memberHostBoard) return;
-  const draft = state.memberHostDraft || { matches: [] };
-  els.memberHostBoard.innerHTML = draft.matches?.length ? `<div class="member-host-board-head"><span>${escapeHtml(draft.playType || "singles")}</span><strong>${escapeHtml(draft.eventName || "Hosted Event")}</strong></div>${draft.matches.map((match) => `
+  const draft = activeMemberHostDraft();
+  els.memberHostBoard.innerHTML = draft.matches?.length ? `<div class="member-host-board-head"><span>${escapeHtml(draft.playType || "singles")} | ${draft.joinCode ? `Join code ${escapeHtml(draft.joinCode)}` : "Saving join code..."}</span><strong>${escapeHtml(draft.eventName || "Hosted Event")}</strong></div>${draft.matches.map((match) => `
     <article class="member-host-match">
       <span>${draft.format === "tournament" ? `Round ${match.round}` : `Match ${match.round}`}</span>
       <div><button data-member-host-winner="${match.id}" data-side="a" type="button" class="${match.winner === match.playerA ? "winner" : ""}">${escapeHtml(match.playerA)}</button><input data-member-score="${match.id}" data-side="a" type="number" min="0" value="${escapeHtml(match.scoreA)}" placeholder="0"></div>
@@ -2114,14 +2176,16 @@ function renderMemberHostBoard() {
       <em>${match.winner ? `${escapeHtml(match.winner)} advances / wins` : "Enter scores, then tap the winner"}</em>
     </article>`).join("")}${draft.format === "tournament" ? '<button class="primary member-advance-button" data-member-host-advance type="button">Advance Winners</button>' : ""}` : `<article class="society-list-card"><strong>Your event board will appear here</strong><p>Choose a format, add players or teams, and create the event.</p></article>`;
   els.memberHostBoard.querySelectorAll("[data-member-score]").forEach((input) => input.addEventListener("change", () => {
-    const match = state.memberHostDraft.matches.find((item) => item.id === input.dataset.memberScore);
+    const match = activeMemberHostDraft().matches.find((item) => item.id === input.dataset.memberScore);
     if (match) match[input.dataset.side === "a" ? "scoreA" : "scoreB"] = input.value;
     saveState();
+    publishMemberHostedEvent();
   }));
+  renderMemberHostArchives();
 }
 
 function advanceMemberTournament() {
-  const draft = state.memberHostDraft;
+  const draft = activeMemberHostDraft();
   const currentRound = Math.max(0, ...draft.matches.map((match) => Number(match.round) || 0));
   const currentMatches = draft.matches.filter((match) => Number(match.round) === currentRound);
   if (!currentMatches.length || currentMatches.some((match) => !match.winner)) {
@@ -2135,7 +2199,109 @@ function advanceMemberTournament() {
   const winners = currentMatches.map((match) => match.winner);
   for (let index = 0; index < winners.length; index += 2) draft.matches.push({ id: newId(), round: currentRound + 1, playerA: winners[index], playerB: winners[index + 1] || "Bye", scoreA: "", scoreB: "", winner: winners[index + 1] ? "" : winners[index] });
   saveState();
+  publishMemberHostedEvent();
   renderMemberHostBoard();
+}
+
+function clearMemberHostedEvent() {
+  const draft = activeMemberHostDraft();
+  if (draft.matches?.length && !window.confirm(`Start over and clear ${draft.eventName || "this event"}?`)) return;
+  state.memberHostDrafts[state.memberHostFormat] = { format: state.memberHostFormat, matches: [] };
+  saveState();
+  fillMemberHostForm();
+  renderMemberHostBoard();
+}
+
+function archiveMemberHostedEvent() {
+  const draft = activeMemberHostDraft();
+  if (!draft.matches?.length) {
+    showSocietyAccountMessage("Create an event before archiving it.", "error");
+    return;
+  }
+  state.memberHostArchives.unshift({ ...structuredClone(draft), archivedAt: new Date().toISOString() });
+  state.memberHostDrafts[state.memberHostFormat] = { format: state.memberHostFormat, matches: [] };
+  saveState();
+  fillMemberHostForm();
+  renderMemberHostBoard();
+  showSocietyAccountMessage("Event archived on this phone and in your account backup.", "success");
+}
+
+function restoreMemberHostedEvent(id) {
+  const archived = state.memberHostArchives.find((item) => (item.sharedEventId || item.updatedAt) === id);
+  if (!archived) return;
+  state.memberHostFormat = archived.format || "round-robin";
+  state.memberHostDrafts[state.memberHostFormat] = structuredClone(archived);
+  saveState();
+  fillMemberHostForm();
+  renderMemberHostBoard();
+}
+
+function renderMemberHostArchives() {
+  if (!els.memberHostArchiveList) return;
+  els.memberHostArchiveList.innerHTML = state.memberHostArchives.length ? state.memberHostArchives.map((item) => `
+    <article class="society-list-card"><strong>${escapeHtml(item.eventName || "Hosted Event")}</strong><span>${escapeHtml(item.format || "event")} | ${formatDateTime(item.archivedAt)}</span><p>${item.matches?.length || 0} matches saved</p><button data-member-host-restore="${escapeHtml(item.sharedEventId || item.updatedAt)}" type="button">Open Archived Event</button></article>
+  `).join("") : `<div class="empty">No archived events on this phone yet.</div>`;
+}
+
+async function publishMemberHostedEvent(announce = false) {
+  const draft = activeMemberHostDraft();
+  if (!draft.eventName || !draft.matches?.length || !canUseMemberCloudSync()) return;
+  try {
+    const response = await fetch("/api/member-event", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "save", email: state.cloudMemberSync.email, syncToken: state.cloudMemberSync.token, event: draft }) });
+    const result = await response.json();
+    if (!response.ok || !result.ok) throw new Error(result.error || "Shared event could not be saved");
+    draft.sharedEventId = result.event.id;
+    draft.joinCode = result.event.joinCode;
+    draft.updatedAt = result.event.updatedAt;
+    saveState();
+    renderMemberHostBoard();
+    if (announce) showSocietyAccountMessage(`Event ready. Players can join with ${result.event.joinCode}${draft.passcode ? " and your passcode" : " or the event name"}.`, "success");
+  } catch (error) {
+    if (announce) showSocietyAccountMessage(error.message, "error");
+  }
+}
+
+async function joinMemberHostedEvent(event) {
+  event.preventDefault();
+  if (!canUseMemberCloudSync()) {
+    showSocietyAccountMessage("Sign in before joining a shared event.", "error");
+    return;
+  }
+  const data = Object.fromEntries(new FormData(els.memberHostJoinForm).entries());
+  try {
+    const response = await fetch("/api/member-event", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "join", email: state.cloudMemberSync.email, syncToken: state.cloudMemberSync.token, eventKey: data.eventKey, passcode: data.passcode }) });
+    const result = await response.json();
+    if (!response.ok || !result.ok) throw new Error(result.error || "Event not found");
+    state.memberHostFormat = result.event.format;
+    state.memberHostDrafts[result.event.format] = result.event;
+    saveState();
+    fillMemberHostForm();
+    renderMemberHostBoard();
+    showSocietyAccountMessage(`Joined ${result.event.eventName}. Scores now sync for joined players.`, "success");
+  } catch (error) {
+    showSocietyAccountMessage(error.message, "error");
+  }
+}
+
+async function refreshMemberHostedEvent() {
+  if (memberHostRefreshBusy || !canUseMemberCloudSync() || !document.querySelector('[data-society-panel="memberHost"]')?.classList.contains("active")) return;
+  const draft = activeMemberHostDraft();
+  if (!draft.sharedEventId) return;
+  memberHostRefreshBusy = true;
+  try {
+    const response = await fetch("/api/member-event", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "get", email: state.cloudMemberSync.email, syncToken: state.cloudMemberSync.token, eventId: draft.sharedEventId }) });
+    const result = await response.json();
+    if (response.ok && result.ok && result.event.updatedAt !== draft.updatedAt) {
+      state.memberHostDrafts[result.event.format] = result.event;
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      fillMemberHostForm();
+      renderMemberHostBoard();
+    }
+  } catch {
+    // Keep the local board usable while the phone is temporarily offline.
+  } finally {
+    memberHostRefreshBusy = false;
+  }
 }
 
 function renderSocietyFriendCard(card) {
@@ -2479,7 +2645,8 @@ function renderGolfCourses() {
   if (!els.golfCourseList) return;
   const courses = [
     { name: "Lane Creek Golf Club", city: "Bishop", miles: 8, access: "Public", note: "A close-to-home option for Oconee and Watkinsville players." },
-    { name: "Jennings Mill Country Club", city: "Watkinsville", miles: 10, access: "Private", note: "A local club option for member-hosted invites and groups." },
+    { name: "
+Jennings Mill Country Club", city: "Watkinsville", miles: 10, access: "Private", note: "A local club option for member-hosted invites and groups." },
     { name: "University of Georgia Golf Course", city: "Athens", miles: 12, access: "Public access", note: "A strong Athens-area anchor for Club Society rounds." },
     { name: "Athens Country Club", city: "Athens", miles: 15, access: "Private", note: "A member course suited to invitations and organized outings." },
     { name: "The Georgia Club", city: "Statham", miles: 19, access: "Private", note: "A nearby destination for member-hosted golf events." },
@@ -2655,8 +2822,7 @@ function savePublicRsvp(event) {
     return;
   }
 
-  const reserved = eventPlayers(selectedEvent.id)
-.filter((player) => player.status !== "Waitlist").length;
+  const reserved = eventPlayers(selectedEvent.id).filter((player) => player.status !== "Waitlist").length;
   const capacity = Number(selectedEvent.capacity) || 0;
   const status = capacity > 0 && reserved >= capacity ? "Waitlist" : "RSVP";
   const existing = state.players.find((player) => player.email.toLowerCase() === data.email.toLowerCase());
@@ -3402,7 +3568,8 @@ function clearPublicForm(keepMessage) {
   els.publicCheckinForm.dataset.playerId = "";
   els.publicCheckinForm.dataset.profileId = "";
   els.publicCheckinForm.dataset.waiverSignedAt = "";
-  els.publicCheckinForm.dataset.waiverSource = "";
+  
+els.publicCheckinForm.dataset.waiverSource = "";
   els.publicCheckinForm.dataset.pendingSubmit = "";
   setPublicWaiverStatus("Needs Signature");
   if (!keepMessage) {
@@ -3585,7 +3752,6 @@ function saveRoundTeams() {
   if (els.roundPlayerSource.value === "partners") {
     const linked = (state.roundSettings.partnerTeams || []).filter((team) => team.locked);
     const manualMap = new Map((state.roundSettings.partnerTeams || []).filter((team) => !team.locked).map((team, index) => [String(index), { ...team }]));
-
     els.roundPlayerPicker.querySelectorAll("[data-partner-team-index]").forEach((field) => {
       const team = manualMap.get(field.dataset.partnerTeamIndex) || { id: newId(), name: `Singles Team ${Number(field.dataset.partnerTeamIndex) + 1}`, playerA: "", playerB: "", locked: false };
       team[field.dataset.teamField] = field.value;
@@ -4296,7 +4462,8 @@ function deleteProfile(id) {
   state.profiles = state.profiles.filter((item) => item.id !== id);
   saveState();
   render();
-  showAdminMessage("#profileList", "success", "Player profile deleted.");
+  showAdminMessage("#profileList", "success", "Player profi
+le deleted.");
 }
 
 function resetProfileForm() {
@@ -4489,8 +4656,7 @@ function renderArchive() {
           <button type="button" data-export-event-csv="${escapeHtml(event.id)}">Export CSV</button>
           <button type="button" data-export-event-report="${escapeHtml(event.id)}">Printable Report</button>
         </div>
-      </a
-rticle>
+      </article>
     `).join("")
     : `<div class="empty">Archive ended events from the Events tab.</div>`;
   document.querySelector("#archiveExportPanel").innerHTML = `
@@ -5253,7 +5419,8 @@ function exportProfilesCsv() {
   downloadText(`club-society-player-profiles-${todaySlug()}.csv`, [headers, ...rows].map(csvLine).join("\n"), "text/csv");
 }
 
-function importProfilesCsv() {
+function importP
+rofilesCsv() {
   const file = els.profilesImport.files[0];
   if (!file) return;
 
@@ -5488,8 +5655,7 @@ function names(ids) {
   const list = ids
     .map((id) => state.players.find((player) => player.id === id))
     .filter(Boolean)
-    .map((player) => 
-`${player.firstName} ${player.lastName}`)
+    .map((player) => `${player.firstName} ${player.lastName}`)
     .join(" / ");
   return list || "Open slot";
 }
