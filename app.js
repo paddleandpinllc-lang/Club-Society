@@ -2728,6 +2728,7 @@ async function renderGolfCourses() {
         <span>${course.miles} miles away | ${escapeHtml(course.access)}</span>
         <p>${escapeHtml(course.address || "Course details available from the course.")}</p>
         <div class="course-card-actions">
+          <a class="course-map-link" href="${escapeHtml(golfCourseMapUrl(course))}" target="_blank" rel="noopener">Open in Maps</a>
           ${course.website ? `<a href="${escapeHtml(course.website)}" target="_blank" rel="noopener">Course Website</a>` : ""}
           ${course.bookingUrl && course.access !== "Private" ? `<a class="primary" href="${escapeHtml(course.bookingUrl)}" target="_blank" rel="noopener">View Tee Times</a>` : `<span>${course.access === "Private" ? "Member access only" : "Call course for tee times"}</span>`}
         </div>
@@ -2736,6 +2737,13 @@ async function renderGolfCourses() {
   } catch (error) {
     els.golfCourseList.innerHTML = `<div class="empty">${escapeHtml(error.message)} Check your profile city/ZIP or try Use My Current Location.</div>`;
   }
+}
+
+function golfCourseMapUrl(course) {
+  const query = course.lat && course.lon
+    ? `${course.lat},${course.lon}`
+    : [course.name, course.address].filter(Boolean).join(" ");
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
 }
 
 function searchGolfCoursesByZip(event) {
