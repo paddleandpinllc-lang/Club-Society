@@ -1,4 +1,4 @@
-const APP_VERSION = "2026-08-13-pickle-date-2";
+const APP_VERSION = "2026-08-13-member-host-1";
 const CACHE_NAME = `club-society-${APP_VERSION}`;
 const versioned = (path) => `${path}?v=${encodeURIComponent(APP_VERSION)}`;
 const ASSETS = [
