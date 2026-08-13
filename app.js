@@ -1,5 +1,5 @@
-Warning: truncated output (original token count: 57887)
-Total output lines: 5452
+Warning: truncated output (original token count: 58299)
+Total output lines: 5493
 
 const STORAGE_KEY = "paddlePinClub.v1";
 const CLOUD_CONFIG_KEY = "clubSociety.cloudConfig.v1";
@@ -309,6 +309,7 @@ if ("serviceWorker" in navigator) {
 }
 
 autoArchiveEndedEvents();
+initializeAuthPanels();
 applyLaunchMode();
 render();
 initProfileCompletionLink();
@@ -1115,6 +1116,12 @@ async function saveSocietyAccount(event) {
     showSocietyAccountMessage("Open https://clubsociety.app to join. This local preview cannot save users to the Cloudflare database or send verification email.", "error");
     return;
   }
+  const signupButton = els.societyAccountForm.querySelector("[data-signup-submit]");
+  const signupLabel = signupButton?.textContent || "Create My Society Pass";
+  if (signupButton) {
+    signupButton.disabled = true;
+    signupButton.textContent = "Creating your Society Pass…";
+  }
   const existing = state.profiles.find((profile) => profile.email?.toLowerCase() === data.email.toLowerCase());
   const previousExisting = existing ? { ...existing } : null;
   const previousSessionEmail = state.societySessionEmail;
@@ -1164,6 +1171,10 @@ async function saveSocietyAccount(event) {
     renderProfiles();
     updateSocietyHome();
     showSocietyAccountMessage(emailResult.message, "error");
+    if (signupButton) {
+      signupButton.disabled = false;
+      signupButton.textContent = signupLabel;
+    }
     return;
   }
   showSocietyAccountMessage(emailResult.message || (existing
@@ -1173,6 +1184,11 @@ async function saveSocietyAccount(event) {
   els.societyAccountForm.elements.city.value = "Watkinsville";
   els.societyAccountForm.elements.state.value = "GA";
   els.societyAccountForm.elements.zip.value = "30677";
+  if (signupButton) {
+    signupButton.disabled = false;
+    signupButton.textContent = signupLabel;
+  }
+  setSocietyTab("home");
 }
 
 async function saveResetPassword() {
@@ -1231,7 +1247,13 @@ function handleSocietyAppClick(event) {
       showSocietyAccountMessage("Enter your password to sign in.", "error");
       return;
     }
-    signInSocietyMember(email, password);
+    const originalLabel = signinButton.textContent;
+    signinButton.disabled = true;
+    signinButton.textContent = "Opening your Society…";
+    signInSocietyMember(email, password).finally(() => {
+      signinButton.disabled = false;
+      signinButton.textContent = originalLabel;
+    });
     return;
   }
 
@@ -1412,52 +1434,29 @@ function handleSocietyAppClick(event) {
 function setAuthPanel(panel) {
   els.societyAccountForm.classList.remove("auth-form-collapsed");
   document.querySelectorAll("[data-auth-content]").forEach((item) => {
-    item.classList.toggle("active", item.dataset.authContent === panel);
+    const active = item.dataset.authContent === panel;
+    item.classList.toggle("active", active);
+    item.querySelectorAll("input, select, textarea, button").forEach((control) => {
+      control.disabled = !active;
+    });
   });
   document.querySelectorAll("[data-auth-panel]").forEach((button) => {
     button.classList.toggle("active", button.dataset.authPanel === panel);
   });
   els.societyAccountMessage.textContent = "";
+  window.setTimeout(() => {
+    els.societyAccountForm.scrollIntoView({ behavior: "smooth", block: "start" });
+    const firstField = els.societyAccountForm.querySelector(`[data-auth-content="${panel}"] input:not([type="hidden"]):not([readonly])`);
+    firstField?.focus({ preventScroll: true });
+  }, 60);
 }
 
-function setSocietyTab(tab) {
-  const protectedTabs = new Set(["pickleballHome", "games", "courts", "events", "partners", "connectPlayers", "clubGroups", "myGroups", "host", "learn", "settings", "golfMessages"]);
-  if (protectedTabs.has(tab) && !hasSocietyAccess()) {
-    setSocietyTab("home");
-    els.societyAccountMessage.textContent = "Sign in or Join to access";
-    return;
-  }
-  if (["host", "golfMessages"].includes(tab) && !profileHasPhoto()) {
-    promptForSocietyPhoto();
-    return;
-  }
-  document.querySelectorAll("[data-society-panel]").forEach((panel) => {
-    panel.classList.toggle("active", panel.dataset.societyPanel === tab);
-  });
-  document.querySelectorAll("#societyApp [data-society-tab]").forEach((button) => {
-    button.classList.toggle("active", button.dataset.societyTab === tab);
-  });
-  if (tab === "home") updateSocietyHome();
-  if (tab === "partners") renderCasualMatches();
-  if (tab === "connectPlayers") renderSocietyFriends();
-  if (tab === "clubGroups") renderClubGroups();
-  if (tab === "myGroups") renderMyGroups();
-  if (tab === "games") renderQuickGames();
-  if (tab === "courts") renderCourtDirectory();
-}
-
-function hasSocietyAccess() {
-  return Boolean(state.societySessionEmail || state.profiles.some((profile) => profile.stayLoggedIn));
-}
-
-function currentSocietyProfile() {
-  const email = state.societySessionEmail?.toLowerCase();
-  return state.profiles.find((profile) => profile.email?.toLowerCase() === email)
-    || state.profiles.find((profile) => profile.stayLoggedIn)
-    || null;
-}
-
-functi…27887 tokens truncated…data.waiver || "Needs Signature",
+function initializeAuthPanels() {
+  document.querySelectorAll("[data-auth-content]").forEach((item) => {
+    const active = item.classList.contains("active");
+    item.querySelectorAll("input, select, textarea, button").forEach((control) => {
+      control.disabled = !active;
+   …28299 tokens truncated…data.waiver || "Needs Signature",
       ...waiverAudit,
       status: "Profile",
       paid: "Not tracked",
