@@ -120,6 +120,8 @@ const els = {
   pickleDateAgeMin: document.querySelector("#pickleDateAgeMin"),
   pickleDateAgeMax: document.querySelector("#pickleDateAgeMax"),
   pickleDateMiles: document.querySelector("#pickleDateMiles"),
+  memberHostForm: document.querySelector("#memberHostForm"),
+  memberHostBoard: document.querySelector("#memberHostBoard"),
   societyAvatar: document.querySelector(".society-avatar"),
   societyProfileDrawer: document.querySelector("#societyProfileDrawer"),
   societyPhotoPreview: document.querySelector("#societyPhotoPreview"),
@@ -238,6 +240,7 @@ els.pickleDateProfileForm?.addEventListener("submit", savePickleDateProfile);
 els.pickleDateAgeMin?.addEventListener("input", renderPickleDateProfiles);
 els.pickleDateAgeMax?.addEventListener("input", renderPickleDateProfiles);
 els.pickleDateMiles?.addEventListener("change", renderPickleDateProfiles);
+els.memberHostForm?.addEventListener("submit", buildMemberHostedEvent);
 els.golfTeeTimeForm.addEventListener("submit", saveGolfTeeTime);
 els.golfGroupForm.addEventListener("submit", saveGolfGroup);
 els.golfMessageForm.addEventListener("submit", saveGolfMessage);
@@ -353,6 +356,7 @@ function loadState() {
     quickGameFilter: "all",
     courtFilter: "all",
     courtDistance: "25",
+    memberHostDraft: { format: "round-robin", matches: [] },
     paddlePintImportedIds: [],
     roundSettings: { selectedPlayerIds: [], teams: [], partnerTeams: [], teamMatchQueue: [], sequentialTeams: [], sequentialMatchesRemaining: 0 },
     selectedEventRosterId: "",
@@ -423,6 +427,7 @@ function normalizeState(data) {
   data.quickGameFilter = data.quickGameFilter || "all";
   data.courtFilter = data.courtFilter || "all";
   data.courtDistance = data.courtDistance || "25";
+  data.memberHostDraft = { format: "round-robin", matches: [], ...(data.memberHostDraft || {}) };
   data.paddlePintImportedIds = data.paddlePintImportedIds || [];
   data.roundSettings = { selectedPlayerIds: [], teams: [], partnerTeams: [], teamMatchQueue: [], sequentialTeams: [], sequentialMatchesRemaining: 0, ...(data.roundSettings || {}) };
   data.selectedEventRosterId = data.selectedEventRosterId || "";
@@ -998,7 +1003,8 @@ async function initProfileCompletionLink() {
   }
 
   toggleSocietyProfileDrawer(true);
-  els.societyAccountMessage.textContent = "Complete your profile by adding your photo and details.";
+  els.societyAccountMessage.textContent = "Email verified. Next, add a clear photo of your face to unlock posting and messaging.";
+  els.societyProfileDrawer?.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
 function upsertSocietyProfileFromCompletion(member) {
@@ -1433,6 +1439,35 @@ function handleSocietyAppClick(event) {
     return;
   }
 
+  const hostFormatButton = event.target.closest("[data-member-host-format]");
+  if (hostFormatButton) {
+    state.memberHostDraft.format = hostFormatButton.dataset.memberHostFormat;
+    document.querySelectorAll("[data-member-host-format]").forEach((button) => button.classList.toggle("active", button === hostFormatButton));
+    const submit = els.memberHostForm?.querySelector('[type="submit"]');
+    if (submit) submit.textContent = state.memberHostDraft.format === "tournament" ? "Create Tournament" : "Create Round Robin";
+    return;
+  }
+
+  const hostDashboardInterest = event.target.closest("[data-host-dashboard-interest]");
+  if (hostDashboardInterest) {
+    openPrefilledMessage("Club Society Hosting", "I am interested in using the hosting dashboard for a charity event or tournament.");
+    return;
+  }
+
+  const hostWinnerButton = event.target.closest("[data-member-host-winner]");
+  if (hostWinnerButton) {
+    const match = state.memberHostDraft.matches.find((item) => item.id === hostWinnerButton.dataset.memberHostWinner);
+    if (match) match.winner = hostWinnerButton.dataset.side === "a" ? match.playerA : match.playerB;
+    saveState();
+    renderMemberHostBoard();
+    return;
+  }
+
+  if (event.target.closest("[data-member-host-advance]")) {
+    advanceMemberTournament();
+    return;
+  }
+
   const courtFilterButton = event.target.closest("[data-court-filter]");
   if (courtFilterButton) {
     state.courtFilter = courtFilterButton.dataset.courtFilter;
@@ -1481,7 +1516,7 @@ function initializeAuthPanels() {
 }
 
 function setSocietyTab(tab) {
-  const protectedTabs = new Set(["pickleballHome", "games", "courts", "pickleDate", "events", "partners", "connectPlayers", "clubGroups", "myGroups", "host", "learn", "settings", "golfMessages"]);
+  const protectedTabs = new Set(["pickleballHome", "games", "courts", "pickleDate", "memberHost", "events", "partners", "connectPlayers", "clubGroups", "myGroups", "host", "learn", "settings", "golfMessages"]);
   if (protectedTabs.has(tab) && !hasSocietyAccess()) {
     setSocietyTab("home");
     els.societyAccountMessage.textContent = "Sign in or Join to access";
@@ -1508,6 +1543,7 @@ function setSocietyTab(tab) {
     renderCourtDirectory();
   }
   if (tab === "pickleDate") renderPickleDateProfiles();
+  if (tab === "memberHost") renderMemberHostBoard();
 }
 
 function hasSocietyAccess() {
@@ -1662,6 +1698,7 @@ function readFileAsDataUrl(file) {
   });
 }
 
+
 function societyDirectoryCards() {
   const currentEmail = state.societySessionEmail?.toLowerCase();
   const savedProfiles = state.profiles
@@ -1698,7 +1735,6 @@ function defaultCasualMatches() {
 }
 
 function defaultQuickGames() {
-
   return [
     { id: "quick-today-singles", title: "Singles hit around", day: "Today", time: "16:30", location: "Satterfield Park", note: "One player, 45 minutes, any level.", ownerName: "Maya T.", ownerEmail: "demo-maya@example.com", rsvps: [] },
     { id: "quick-tomorrow-open", title: "Need 1 for doubles", day: "Tomorrow", time: "07:45", location: "Southeast Clarke Park", note: "Casual doubles before work.", ownerName: "Jordan R.", ownerEmail: "demo-jordan@example.com", rsvps: [] },
@@ -2034,6 +2070,60 @@ function renderPickleDateProfiles() {
   `).join("") : `<article class="society-list-card"><strong>No matches in this range yet</strong><p>Try widening the age or distance filters.</p></article>`;
 }
 
+function buildMemberHostedEvent(event) {
+  event.preventDefault();
+  const data = Object.fromEntries(new FormData(els.memberHostForm).entries());
+  const participants = String(data.participants || "").split(/\r?\n/).map((name) => name.trim()).filter(Boolean);
+  if (participants.length < 2) {
+    showSocietyAccountMessage("Add at least two players or teams.", "error");
+    return;
+  }
+  const matches = [];
+  if (state.memberHostDraft.format === "tournament") {
+    for (let index = 0; index < participants.length; index += 2) matches.push({ id: newId(), round: 1, playerA: participants[index], playerB: participants[index + 1] || "Bye", scoreA: "", scoreB: "", winner: participants[index + 1] ? "" : participants[index] });
+  } else {
+    for (let left = 0; left < participants.length; left += 1) for (let right = left + 1; right < participants.length; right += 1) matches.push({ id: newId(), round: matches.length + 1, playerA: participants[left], playerB: participants[right], scoreA: "", scoreB: "", winner: "" });
+  }
+  state.memberHostDraft = { ...state.memberHostDraft, ...data, participants, matches };
+  saveState();
+  renderMemberHostBoard();
+}
+
+function renderMemberHostBoard() {
+  if (!els.memberHostBoard) return;
+  const draft = state.memberHostDraft || { matches: [] };
+  els.memberHostBoard.innerHTML = draft.matches?.length ? `<div class="member-host-board-head"><span>${escapeHtml(draft.playType || "singles")}</span><strong>${escapeHtml(draft.eventName || "Hosted Event")}</strong></div>${draft.matches.map((match) => `
+    <article class="member-host-match">
+      <span>${draft.format === "tournament" ? `Round ${match.round}` : `Match ${match.round}`}</span>
+      <div><button data-member-host-winner="${match.id}" data-side="a" type="button" class="${match.winner === match.playerA ? "winner" : ""}">${escapeHtml(match.playerA)}</button><input data-member-score="${match.id}" data-side="a" type="number" min="0" value="${escapeHtml(match.scoreA)}" placeholder="0"></div>
+      <div><button data-member-host-winner="${match.id}" data-side="b" type="button" class="${match.winner === match.playerB ? "winner" : ""}">${escapeHtml(match.playerB)}</button><input data-member-score="${match.id}" data-side="b" type="number" min="0" value="${escapeHtml(match.scoreB)}" placeholder="0"></div>
+      <em>${match.winner ? `${escapeHtml(match.winner)} advances / wins` : "Enter scores, then tap the winner"}</em>
+    </article>`).join("")}${draft.format === "tournament" ? '<button class="primary member-advance-button" data-member-host-advance type="button">Advance Winners</button>' : ""}` : `<article class="society-list-card"><strong>Your event board will appear here</strong><p>Choose a format, add players or teams, and create the event.</p></article>`;
+  els.memberHostBoard.querySelectorAll("[data-member-score]").forEach((input) => input.addEventListener("change", () => {
+    const match = state.memberHostDraft.matches.find((item) => item.id === input.dataset.memberScore);
+    if (match) match[input.dataset.side === "a" ? "scoreA" : "scoreB"] = input.value;
+    saveState();
+  }));
+}
+
+function advanceMemberTournament() {
+  const draft = state.memberHostDraft;
+  const currentRound = Math.max(0, ...draft.matches.map((match) => Number(match.round) || 0));
+  const currentMatches = draft.matches.filter((match) => Number(match.round) === currentRound);
+  if (!currentMatches.length || currentMatches.some((match) => !match.winner)) {
+    showSocietyAccountMessage("Select a winner for every match before advancing.", "error");
+    return;
+  }
+  if (currentMatches.length === 1) {
+    showSocietyAccountMessage(`${currentMatches[0].winner} is the tournament champion.`, "success");
+    return;
+  }
+  const winners = currentMatches.map((match) => match.winner);
+  for (let index = 0; index < winners.length; index += 2) draft.matches.push({ id: newId(), round: currentRound + 1, playerA: winners[index], playerB: winners[index + 1] || "Bye", scoreA: "", scoreB: "", winner: winners[index + 1] ? "" : winners[index] });
+  saveState();
+  renderMemberHostBoard();
+}
+
 function renderSocietyFriendCard(card) {
   const isFriend = state.societyFriends.includes(card.id);
   const photo = card.photoDataUrl
@@ -2065,6 +2155,10 @@ function addSocietyFriend(id) {
 }
 
 function messageSocietyFriend(id) {
+  if (!profileHasPhoto()) {
+    promptForSocietyPhoto();
+    return;
+  }
   const card = societyDirectoryCards().find((item) => item.id === id);
   if (!card) return;
   if (card.allowMessages === false) {
@@ -2493,6 +2587,10 @@ function resolveMessageRecipient(value) {
 }
 
 function openPrefilledMessage(to, body) {
+  if (!profileHasPhoto()) {
+    promptForSocietyPhoto();
+    return;
+  }
   setSocietyTab("golfMessages");
   els.golfMessageForm.elements.to.value = to || "Club Society Host";
   els.golfMessageForm.elements.body.value = body || "Wanted to connect about this post.";
@@ -3301,6 +3399,7 @@ function roundEligiblePlayers() {
 
 function renderRoundPlayerPicker() {
   const players = checkedPlayers().sort(checkinPrioritySort);
+
   const mode = els.roundPlayerSource.value;
   const manual = mode === "manual";
   const teamsMode = mode === "teams";
@@ -3399,7 +3498,6 @@ function renderPartnerAwareTeamBuilder(players) {
 
 function partnerSingleSelect(players, selectedId, teamIndex, field) {
   return `
-
     <select data-partner-team-index="${teamIndex}" data-team-field="${field}">
       <option value="">Assign single player</option>
       ${players.map((player) => `<option value="${player.id}" ${player.id === selectedId ? "selected" : ""}>${escapeHtml(player.firstName)} ${escapeHtml(player.lastName)}</option>`).join("")}
@@ -5002,6 +5100,7 @@ function normalizeImportedPlayer(row) {
       waiverSource: row.waiverSource || row.source || "CSV import",
       waiverAgreementText: row.waiverAgreement || row.waiverAgreementText || "",
     }, "CSV import"),
+
     status: row.status || "RSVP",
     paid: row.paid || row.payment || row.paymentStatus || "Not tracked",
     eventId,
@@ -5100,7 +5199,6 @@ function exportProfilesCsv() {
       profile.waiverSource || "",
       profile.waiverAgreementText || "",
       profile.smsSubscriber ? "Yes" : "No",
-
       profile.discoverable ? "Yes" : "No",
       profile.allowMessages === false ? "No" : "Yes",
       profile.verificationStatus || "",
