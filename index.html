@@ -4,12 +4,12 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="theme-color" content="#0b2231">
-    <meta name="app-version" content="2026-08-13-lesson-listings-1">
+    <meta name="app-version" content="2026-08-31-instructor-signup-1">
     <title>Club Society</title>
-    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png?v=2026-08-13-lesson-listings-1">
-    <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=2026-08-13-lesson-listings-1">
-    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png?v=2026-08-13-lesson-listings-1">
-    <link rel="manifest" href="/manifest.webmanifest?v=2026-08-13-lesson-listings-1">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png?v=2026-08-31-instructor-signup-1">
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=2026-08-31-instructor-signup-1">
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png?v=2026-08-31-instructor-signup-1">
+    <link rel="manifest" href="/manifest.webmanifest?v=2026-08-31-instructor-signup-1">
     <script>
       if (["clubsociety.app", "www.clubsociety.app", "club-society.pages.dev"].includes(window.location.hostname.toLowerCase())) {
         document.documentElement.classList.add("member-host");
@@ -23,7 +23,7 @@
       .member-host main > .view { display: none !important; }
       .member-host main > #societyApp { display: block !important; }
     </style>
-    <link rel="stylesheet" href="styles.css?v=2026-08-13-lesson-listings-1">
+    <link rel="stylesheet" href="styles.css?v=2026-08-31-instructor-signup-1">
   </head>
   <body>
     <aside class="sidebar">
@@ -582,9 +582,19 @@
               <section class="society-section">
                 <button class="society-back-button" data-society-tab="pickleballHome" type="button">Back</button>
                 <p class="eyebrow">Local instruction</p>
-                <h3>Find instructors</h3>
-                <article class="lesson-offer-card"><span>Are you an instructor?</span><strong>Offer pickleball lessons</strong><p>Create a local instructor listing for a one-time $25 fee. Updates to the same listing are included.</p><button class="primary" data-offer-lessons="pickleball" type="button">Offer Lessons Â· $25</button></article>
+                <h3>Pickleball instructors</h3>
+                <p class="section-copy">Browse local pros and coaches offering private lessons, group instruction, and clinics.</p>
+                <div id="pickleballLessonList" class="society-stack">
+                  <article class="society-list-card"><strong>Beginner fundamentals</strong><span>Athens | Private or small group</span><p>Dinking, serving, positioning, and first match confidence.</p></article>
+                  <article class="society-list-card"><strong>3.0 to 3.5 clinic</strong><span>Watkinsville | Weekly clinic</span><p>Shot selection, resets, and smarter doubles patterns.</p></article>
+                </div>
+                <article class="lesson-offer-card"><span>For teaching pros and coaches</span><strong>Want to give pickleball lessons?</strong><p>Create an instructor profile so local players can find you.</p><button class="primary" data-offer-lessons="pickleball" type="button" aria-expanded="false">Sign Up to Give Lessons</button></article>
                 <form class="society-form lesson-listing-form" data-lesson-form="pickleball">
+                  <div class="lesson-signup-intro">
+                    <span>Instructor registration</span>
+                    <strong>Offer pickleball lessons</strong>
+                    <p>Complete your instructor profile below. A one-time $25 listing fee applies. Updates to the same listing are included.</p>
+                  </div>
                   <input name="name" placeholder="Instructor or business name" required>
                   <div class="form-pair"><input name="location" placeholder="City or teaching location" required><input name="radius" inputmode="numeric" placeholder="Travel radius (miles)"></div>
                   <input name="experience" placeholder="Experience, credentials, or certifications" required>
@@ -593,11 +603,6 @@
                   <textarea name="bio" rows="3" placeholder="Tell players about your instruction and availability" required></textarea>
                   <button class="primary" type="submit">Continue to $25 Listing Fee</button>
                 </form>
-                <div id="pickleballLessonList" class="society-stack">
-                  <article class="society-list-card"><strong>Beginner fundamentals</strong><span>Athens | Private or small group</span><p>Dinking, serving, positioning, and first match confidence.</p></article>
-                  <article class="society-list-card"><strong>3.0 to 3.5 clinic</strong><span>Watkinsville | Weekly clinic</span><p>Shot selection, resets, and smarter doubles patterns.</p></article>
-                  <article class="society-list-card"><strong>Host your clinic</strong><span>Instructor onboarding</span><p>List your lessons inside Club Society for local players.</p></article>
-                </div>
               </section>
             </div>
 
@@ -771,9 +776,20 @@
               <section class="society-section">
                 <button class="society-back-button" data-society-tab="golfHome" type="button">Back</button>
                 <p class="eyebrow">Lessons</p>
-                <h3>Find local help</h3>
-                <article class="lesson-offer-card"><span>Are you a golf instructor?</span><strong>Offer golf lessons</strong><p>Create a local instructor listing for a one-time $25 fee. Updates to the same listing are included.</p><button class="primary" data-offer-lessons="golf" type="button">Offer Lessons Â· $25</button></article>
+                <h3>Golf instructors</h3>
+                <p class="section-copy">Browse local pros and coaches offering swing instruction, short-game help, clinics, and playing lessons.</p>
+                <div id="golfLessonList" class="society-stack">
+                  <article class="society-list-card"><strong>Driver tune-up</strong><span>Watkinsville | 14 miles</span><p>Fix the big miss before the weekend group.</p></article>
+                  <article class="society-list-card"><strong>Short game scoring clinic</strong><span>Athens | 8 miles</span><p>Wedges, putting, and getting up-and-down more often.</p></article>
+                  <article class="society-list-card"><strong>Beginner playing lesson</strong><span>Oconee area</span><p>Course etiquette, pace, club choice, and confidence.</p></article>
+                </div>
+                <article class="lesson-offer-card"><span>For golf pros and coaches</span><strong>Want to give golf lessons?</strong><p>Create an instructor profile so local golfers can find you.</p><button class="primary" data-offer-lessons="golf" type="button" aria-expanded="false">Sign Up to Give Lessons</button></article>
                 <form class="society-form lesson-listing-form" data-lesson-form="golf">
+                  <div class="lesson-signup-intro">
+                    <span>Instructor registration</span>
+                    <strong>Offer golf lessons</strong>
+                    <p>Complete your instructor profile below. A one-time $25 listing fee applies. Updates to the same listing are included.</p>
+                  </div>
                   <input name="name" placeholder="Instructor or academy name" required>
                   <div class="form-pair"><input name="location" placeholder="Course, range, or city" required><input name="radius" inputmode="numeric" placeholder="Travel radius (miles)"></div>
                   <input name="experience" placeholder="Experience, credentials, or certifications" required>
@@ -782,11 +798,6 @@
                   <textarea name="bio" rows="3" placeholder="Tell players about your instruction and availability" required></textarea>
                   <button class="primary" type="submit">Continue to $25 Listing Fee</button>
                 </form>
-                <div id="golfLessonList" class="society-stack">
-                  <article class="society-list-card"><strong>Driver tune-up</strong><span>Watkinsville | 14 miles</span><p>Fix the big miss before the weekend group.</p></article>
-                  <article class="society-list-card"><strong>Short game scoring clinic</strong><span>Athens | 8 miles</span><p>Wedges, putting, and getting up-and-down more often.</p></article>
-                  <article class="society-list-card"><strong>Beginner playing lesson</strong><span>Oconee area</span><p>Course etiquette, pace, club choice, and confidence.</p></article>
-                </div>
               </section>
             </div>
 
@@ -1677,7 +1688,7 @@
       </section>
     </div>
 
-    <script src="app.js?v=2026-08-13-lesson-listings-1"></script>
+    <script src="app.js?v=2026-08-31-instructor-signup-1"></script>
   </body>
 </html>
 

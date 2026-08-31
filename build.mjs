@@ -10,6 +10,7 @@ const staticFiles = [
   "sw.js",
   "_routes.json",
   "_redirects",
+  "_headers",
   "club-society-mark.svg",
   "favicon-32.png",
   "apple-touch-icon.png",

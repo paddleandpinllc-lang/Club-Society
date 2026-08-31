@@ -334,9 +334,15 @@ if ("serviceWorker" in navigator) {
     refreshingForUpdate = true;
     window.location.reload();
   });
-  navigator.serviceWorker.register(`sw.js?v=${encodeURIComponent(APP_VERSION)}`).then((registration) => {
-    registration.update().catch(() => {});
-    setInterval(() => registration.update().catch(() => {}), 15 * 60 * 1000);
+  navigator.serviceWorker.register(`sw.js?v=${encodeURIComponent(APP_VERSION)}`, { updateViaCache: "none" }).then((registration) => {
+    const checkForAppUpdate = () => registration.update().catch(() => {});
+    checkForAppUpdate();
+    setInterval(checkForAppUpdate, 15 * 60 * 1000);
+    window.addEventListener("pageshow", checkForAppUpdate);
+    window.addEventListener("online", checkForAppUpdate);
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "visible") checkForAppUpdate();
+    });
   }).catch(() => {});
 }
 
@@ -1372,8 +1378,10 @@ function handleSocietyAppClick(event) {
   const offerLessonsButton = event.target.closest("[data-offer-lessons]");
   if (offerLessonsButton) {
     const form = document.querySelector(`[data-lesson-form="${offerLessonsButton.dataset.offerLessons}"]`);
-    form?.classList.toggle("active");
-    form?.scrollIntoView({ behavior: "smooth", block: "center" });
+    const isOpen = form?.classList.toggle("active") || false;
+    offerLessonsButton.setAttribute("aria-expanded", String(isOpen));
+    offerLessonsButton.textContent = isOpen ? "Close Instructor Sign-Up" : "Sign Up to Give Lessons";
+    if (isOpen) form?.scrollIntoView({ behavior: "smooth", block: "start" });
     return;
   }
 
