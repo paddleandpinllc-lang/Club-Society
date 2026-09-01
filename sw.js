@@ -1,4 +1,4 @@
-const APP_VERSION = "2026-09-01-golf-lessons-fix-1";
+const APP_VERSION = "2026-09-01-lesson-form-hide-1";
 const CACHE_NAME = `club-society-${APP_VERSION}`;
 const versioned = (path) => `${path}?v=${encodeURIComponent(APP_VERSION)}`;
 const ASSETS = [

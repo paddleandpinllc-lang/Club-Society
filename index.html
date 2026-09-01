@@ -4,12 +4,12 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="theme-color" content="#0b2231">
-    <meta name="app-version" content="2026-09-01-golf-lessons-fix-1">
+    <meta name="app-version" content="2026-09-01-lesson-form-hide-1">
     <title>Club Society</title>
-    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png?v=2026-09-01-golf-lessons-fix-1">
-    <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=2026-09-01-golf-lessons-fix-1">
-    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png?v=2026-09-01-golf-lessons-fix-1">
-    <link rel="manifest" href="/manifest.webmanifest?v=2026-09-01-golf-lessons-fix-1">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png?v=2026-09-01-lesson-form-hide-1">
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=2026-09-01-lesson-form-hide-1">
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png?v=2026-09-01-lesson-form-hide-1">
+    <link rel="manifest" href="/manifest.webmanifest?v=2026-09-01-lesson-form-hide-1">
     <script>
       if (["clubsociety.app", "www.clubsociety.app", "club-society.pages.dev"].includes(window.location.hostname.toLowerCase())) {
         document.documentElement.classList.add("member-host");
@@ -23,7 +23,7 @@
       .member-host main > .view { display: none !important; }
       .member-host main > #societyApp { display: block !important; }
     </style>
-    <link rel="stylesheet" href="styles.css?v=2026-09-01-golf-lessons-fix-1">
+    <link rel="stylesheet" href="styles.css?v=2026-09-01-lesson-form-hide-1">
   </head>
   <body>
     <aside class="sidebar">
@@ -589,7 +589,7 @@
                   <article class="society-list-card"><strong>3.0 to 3.5 clinic</strong><span>Watkinsville | Weekly clinic</span><p>Shot selection, resets, and smarter doubles patterns.</p></article>
                 </div>
                 <article class="lesson-offer-card"><span>For teaching pros and coaches</span><strong>Want to give pickleball lessons?</strong><p>Create an instructor profile so local players can find you.</p><button class="primary" data-offer-lessons="pickleball" type="button" aria-expanded="false">Sign Up to Give Lessons</button></article>
-                <form class="society-form lesson-listing-form" data-lesson-form="pickleball">
+                <form class="society-form lesson-listing-form" data-lesson-form="pickleball" hidden aria-hidden="true">
                   <div class="lesson-signup-intro">
                     <span>Instructor registration</span>
                     <strong>Offer pickleball lessons</strong>
@@ -784,7 +784,7 @@
                   <article class="society-list-card"><strong>Beginner playing lesson</strong><span>Oconee area</span><p>Course etiquette, pace, club choice, and confidence.</p></article>
                 </div>
                 <article class="lesson-offer-card"><span>For golf pros and coaches</span><strong>Want to give golf lessons?</strong><p>Create an instructor profile so local golfers can find you.</p><button class="primary" data-offer-lessons="golf" type="button" aria-expanded="false">Sign Up to Give Lessons</button></article>
-                <form class="society-form lesson-listing-form" data-lesson-form="golf">
+                <form class="society-form lesson-listing-form" data-lesson-form="golf" hidden aria-hidden="true">
                   <div class="lesson-signup-intro">
                     <span>Instructor registration</span>
                     <strong>Offer golf lessons</strong>
@@ -1688,7 +1688,7 @@
       </section>
     </div>
 
-    <script src="app.js?v=2026-09-01-golf-lessons-fix-1"></script>
+    <script src="app.js?v=2026-09-01-lesson-form-hide-1"></script>
   </body>
 </html>
 

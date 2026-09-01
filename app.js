@@ -1381,7 +1381,12 @@ function handleSocietyAppClick(event) {
   const offerLessonsButton = event.target.closest("[data-offer-lessons]");
   if (offerLessonsButton) {
     const form = document.querySelector(`[data-lesson-form="${offerLessonsButton.dataset.offerLessons}"]`);
-    const isOpen = form?.classList.toggle("active") || false;
+    const isOpen = Boolean(form?.hidden);
+    if (form) {
+      form.hidden = !isOpen;
+      form.setAttribute("aria-hidden", String(!isOpen));
+      form.classList.toggle("active", isOpen);
+    }
     offerLessonsButton.setAttribute("aria-expanded", String(isOpen));
     offerLessonsButton.textContent = isOpen ? "Close Instructor Sign-Up" : "Sign Up to Give Lessons";
     if (isOpen) form?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -1629,6 +1634,7 @@ function setSocietyTab(tab) {
     promptForSocietyPhoto();
     return;
   }
+  if (!["pickleballLessons", "golfLessons"].includes(tab)) closeLessonApplications();
   if (GOLF_SOCIETY_TABS.has(tab)) societySportContext = "golf";
   if (PICKLEBALL_SOCIETY_TABS.has(tab)) societySportContext = "pickleball";
   document.querySelectorAll("[data-society-panel]").forEach((panel) => {
@@ -1661,6 +1667,18 @@ function setSocietyTab(tab) {
   }
   if (tab === "pickleballLessons") renderLessonListings("pickleball");
   if (tab === "golfLessons") renderLessonListings("golf");
+}
+
+function closeLessonApplications() {
+  document.querySelectorAll("[data-lesson-form]").forEach((form) => {
+    form.hidden = true;
+    form.setAttribute("aria-hidden", "true");
+    form.classList.remove("active");
+  });
+  document.querySelectorAll("[data-offer-lessons]").forEach((button) => {
+    button.setAttribute("aria-expanded", "false");
+    button.textContent = "Sign Up to Give Lessons";
+  });
 }
 
 function saveLessonListing(event) {
