@@ -89,6 +89,9 @@ const state = loadState();
 let memberCloudSyncTimer = 0;
 let suppressMemberCloudSync = false;
 let memberHostRefreshBusy = false;
+let societySportContext = "pickleball";
+const GOLF_SOCIETY_TABS = new Set(["golfHome", "golfFindGame", "golfPostTee", "golfCreateGroup", "golfLessons", "golfCourses", "golfTournament", "golfMessages"]);
+const PICKLEBALL_SOCIETY_TABS = new Set(["pickleballHome", "games", "courts", "pickleDate", "memberHost", "partners", "host", "pickleballLessons"]);
 const els = {
   navItems: document.querySelectorAll(".nav-item"),
   views: document.querySelectorAll(".view"),
@@ -1570,6 +1573,12 @@ function handleSocietyAppClick(event) {
     return;
   }
 
+  const lessonsTabButton = event.target.closest("[data-society-lessons]");
+  if (lessonsTabButton) {
+    setSocietyTab(societySportContext === "golf" ? "golfLessons" : "pickleballLessons");
+    return;
+  }
+
   const tabButton = event.target.closest("[data-society-tab]");
   if (tabButton) {
     setSocietyTab(tabButton.dataset.societyTab);
@@ -1610,7 +1619,7 @@ function initializeAuthPanels() {
 }
 
 function setSocietyTab(tab) {
-  const protectedTabs = new Set(["pickleballHome", "games", "courts", "pickleDate", "memberHost", "events", "partners", "connectPlayers", "clubGroups", "myGroups", "host", "learn", "settings", "golfHome", "golfFindGame", "golfPostTee", "golfCreateGroup", "golfLessons", "golfCourses", "golfTournament", "golfMessages"]);
+  const protectedTabs = new Set(["pickleballHome", "games", "courts", "pickleDate", "memberHost", "events", "partners", "connectPlayers", "clubGroups", "myGroups", "host", "pickleballLessons", "settings", "golfHome", "golfFindGame", "golfPostTee", "golfCreateGroup", "golfLessons", "golfCourses", "golfTournament", "golfMessages"]);
   if (protectedTabs.has(tab) && !hasSocietyAccess()) {
     setSocietyTab("home");
     els.societyAccountMessage.textContent = "Sign in or Join to access";
@@ -1620,11 +1629,16 @@ function setSocietyTab(tab) {
     promptForSocietyPhoto();
     return;
   }
+  if (GOLF_SOCIETY_TABS.has(tab)) societySportContext = "golf";
+  if (PICKLEBALL_SOCIETY_TABS.has(tab)) societySportContext = "pickleball";
   document.querySelectorAll("[data-society-panel]").forEach((panel) => {
     panel.classList.toggle("active", panel.dataset.societyPanel === tab);
   });
   document.querySelectorAll("#societyApp [data-society-tab]").forEach((button) => {
     button.classList.toggle("active", button.dataset.societyTab === tab);
+  });
+  document.querySelectorAll("#societyApp [data-society-lessons]").forEach((button) => {
+    button.classList.toggle("active", ["pickleballLessons", "golfLessons"].includes(tab));
   });
   if (tab === "home") updateSocietyHome();
   if (tab === "partners") renderCasualMatches();
@@ -1645,7 +1659,8 @@ function setSocietyTab(tab) {
     if (els.golfCourseDistance) els.golfCourseDistance.value = state.golfCourseDistance || "25";
     renderGolfCourses();
   }
-  if (["learn", "golfLessons"].includes(tab)) renderLessonListings();
+  if (tab === "pickleballLessons") renderLessonListings("pickleball");
+  if (tab === "golfLessons") renderLessonListings("golf");
 }
 
 function saveLessonListing(event) {
@@ -1658,19 +1673,16 @@ function saveLessonListing(event) {
   const listing = { ...(existing || {}), ...data, id: existing?.id || newId(), sport, ownerEmail: profile?.email || "", paymentStatus: existing?.paymentStatus || "pending", status: existing?.status || "Pending payment", updatedAt: new Date().toISOString() };
   if (existing) Object.assign(existing, listing); else state.lessonListings.unshift(listing);
   saveState();
-  renderLessonListings();
+  renderLessonListings(sport);
   showSocietyAccountMessage("Your lesson listing is saved as Pending Payment. Secure $25 checkout will open here when the Club Society Stripe account is connected.", "notice");
 }
 
-function renderLessonListings() {
-  const render = (sport, id) => {
-    const target = document.querySelector(id); if (!target) return;
-    const listings = state.lessonListings.filter((item) => item.sport === sport && item.paymentStatus === "paid");
-    const existingDemo = target.querySelectorAll("article:not([data-paid-lesson])");
-    target.querySelectorAll("[data-paid-lesson]").forEach((item) => item.remove());
-    listings.forEach((item) => { const card = document.createElement("article"); card.className = "society-list-card"; card.dataset.paidLesson = item.id; card.innerHTML = `<strong>${escapeHtml(item.name)}</strong><span>${escapeHtml(item.location)} | ${escapeHtml(item.format)}</span><p>${escapeHtml(item.bio)}</p>`; target.prepend(card); });
-  };
-  render("pickleball", "#pickleballLessonList"); render("golf", "#golfLessonList");
+function renderLessonListings(sport) {
+  const target = document.querySelector(sport === "golf" ? "#golfLessonList" : "#pickleballLessonList");
+  if (!target) return;
+  const listings = state.lessonListings.filter((item) => item.sport === sport && item.paymentStatus === "paid");
+  target.querySelectorAll("[data-paid-lesson]").forEach((item) => item.remove());
+  listings.forEach((item) => { const card = document.createElement("article"); card.className = "society-list-card"; card.dataset.paidLesson = item.id; card.innerHTML = `<strong>${escapeHtml(item.name)}</strong><span>${escapeHtml(item.location)} | ${escapeHtml(item.format)}</span><p>${escapeHtml(item.bio)}</p>`; target.prepend(card); });
 }
 
 function hasSocietyAccess() {
