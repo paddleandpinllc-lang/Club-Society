@@ -40,6 +40,12 @@ export async function onRequest(context) {
     return json({ ok: false, error: "Invalid JSON body" }, 400, corsHeaders);
   }
 
+  if (payload.action === "directory") {
+    const directoryError = validateDirectoryRequest(payload);
+    if (directoryError) return json({ ok: false, error: directoryError }, 400, corsHeaders);
+    return getMemberDirectory(payload, env, corsHeaders);
+  }
+
   const validationError = validateSignup(payload);
   if (payload.action === "signin") {
     const signinError = validateSignin(payload);
@@ -109,7 +115,7 @@ async function getMemberByToken(request, env, corsHeaders) {
   try {
     await ensureMemberTable(env.DB);
     const result = await env.DB.prepare(`
-      SELECT first_name, last_name, email, phone, gender, sport, city, state, zip
+      SELECT first_name, last_name, email, phone, gender, age, sport, city, state, zip
       FROM club_members
       WHERE completion_token = ?
       LIMIT 1
@@ -132,6 +138,7 @@ async function getMemberByToken(request, env, corsHeaders) {
         email: result.email || "",
         phone: result.phone || "",
         gender: result.gender || "",
+        age: result.age || "",
         sport: result.sport || "both",
         city: result.city || "Watkinsville",
         state: result.state || "GA",
@@ -151,7 +158,7 @@ async function signInMember(payload, env, corsHeaders) {
   try {
     await ensureMemberTable(env.DB);
     const result = await env.DB.prepare(`
-      SELECT first_name, last_name, email, phone, gender, sport, city, state, zip, password_hash, email_verified_at, app_state_json
+      SELECT first_name, last_name, email, phone, gender, age, sport, city, state, zip, password_hash, email_verified_at, app_state_json
       FROM club_members
       WHERE email = ?
       LIMIT 1
@@ -193,6 +200,7 @@ async function signInMember(payload, env, corsHeaders) {
         email: result.email || "",
         phone: result.phone || "",
         gender: result.gender || "",
+        age: result.age || "",
         sport: result.sport || "both",
         city: result.city || "Watkinsville",
         state: result.state || "GA",
@@ -301,6 +309,71 @@ async function saveMemberAppState(payload, env, corsHeaders) {
   }
 }
 
+async function getMemberDirectory(payload, env, corsHeaders) {
+  if (!env.DB) return json({ ok: false, error: "Database binding DB is not configured" }, 500, corsHeaders);
+  const email = cleanEmail(payload.email);
+  const syncToken = cleanText(payload.syncToken);
+  try {
+    await ensureMemberTable(env.DB);
+    const member = await env.DB.prepare(`
+      SELECT id FROM club_members WHERE email = ? AND sync_token = ? LIMIT 1
+    `).bind(email, syncToken).first();
+    if (!member) return json({ ok: false, error: "Sign in again to refresh members" }, 401, corsHeaders);
+    const rows = await env.DB.prepare(`
+      SELECT id, first_name, last_name, email, gender, age, sport, city, state, zip, app_state_json, updated_at
+      FROM club_members
+      WHERE email <> ?
+      ORDER BY updated_at DESC
+      LIMIT 100
+    `).bind(email).all();
+    const profiles = (rows.results || []).map(publicMemberProfile).filter(Boolean);
+    return json({ ok: true, profiles }, 200, corsHeaders);
+  } catch (error) {
+    console.error("Club Society member directory failed", error);
+    return json({ ok: false, error: "Server error while loading members" }, 500, corsHeaders);
+  }
+}
+
+function publicMemberProfile(row) {
+  const appState = safeJsonParse(row.app_state_json, {});
+  const savedProfiles = Array.isArray(appState.profiles) ? appState.profiles : [];
+  const saved = savedProfiles.find((profile) => cleanEmail(profile?.email) === cleanEmail(row.email)) || savedProfiles[0] || {};
+  const discoverable = saved.discoverable === true;
+  const dateProfileActive = saved.dateProfileActive === true;
+  if (!discoverable && !dateProfileActive) return null;
+  const photo = String(saved.photoDataUrl || "");
+  return {
+    id: String(saved.id || `member-${row.id}`),
+    firstName: cleanText(saved.firstName || row.first_name),
+    lastName: cleanText(saved.lastName || row.last_name),
+    email: cleanEmail(row.email),
+    gender: cleanText(saved.gender || row.gender),
+    age: cleanText(saved.age || row.age),
+    city: cleanText(saved.city || row.city),
+    state: cleanText(saved.state || row.state),
+    zip: cleanText(saved.zip || row.zip),
+    preferredSport: cleanText(saved.preferredSport || row.sport || "both"),
+    pickleballLevel: cleanText(saved.pickleballLevel),
+    handicap: cleanText(saved.handicap),
+    bio: cleanText(saved.bio),
+    photoDataUrl: photo.startsWith("data:image/") && photo.length <= 250000 ? photo : "",
+    socialPlay: saved.socialPlay === true,
+    allowMessages: saved.allowMessages !== false,
+    discoverable,
+    dateProfileActive,
+    dateGender: cleanText(saved.dateGender || saved.gender || row.gender),
+    dateLookingFor: cleanText(saved.dateLookingFor || "everyone"),
+    dateSports: cleanText(saved.dateSports || saved.preferredSport || row.sport || "both"),
+    dateAge: cleanText(saved.dateAge || saved.age || row.age),
+    dateAgeMin: cleanText(saved.dateAgeMin || "18"),
+    dateAgeMax: cleanText(saved.dateAgeMax || "99"),
+    dateMiles: cleanText(saved.dateMiles || "25"),
+    dateBio: cleanText(saved.dateBio),
+    dateIdea: cleanText(saved.dateIdea),
+    updatedAt: cleanText(saved.updatedAt || row.updated_at),
+  };
+}
+
 async function ensureMemberTable(db) {
   await db.prepare(`
     CREATE TABLE IF NOT EXISTS club_members (
@@ -310,6 +383,7 @@ async function ensureMemberTable(db) {
       email TEXT NOT NULL UNIQUE,
       phone TEXT,
       gender TEXT,
+      age TEXT,
       sport TEXT,
       city TEXT,
       state TEXT,
@@ -331,6 +405,7 @@ async function ensureMemberTable(db) {
   await ensureColumn(db, "club_members", "password_reset_token", "TEXT");
   await ensureColumn(db, "club_members", "password_reset_expires_at", "TEXT");
   await ensureColumn(db, "club_members", "gender", "TEXT");
+  await ensureColumn(db, "club_members", "age", "TEXT");
   await ensureColumn(db, "club_members", "email_verified_at", "TEXT");
   await ensureColumn(db, "club_members", "sync_token", "TEXT");
   await ensureColumn(db, "club_members", "app_state_json", "TEXT");
@@ -358,13 +433,14 @@ async function upsertMember(db, member, token, password, syncToken, appState = {
   const appStateJson = safeAppStateJson(appState);
   await db.prepare(`
     INSERT INTO club_members (
-      first_name, last_name, email, phone, gender, sport, city, state, zip, password_hash, completion_token, sync_token, app_state_json, app_state_updated_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+      first_name, last_name, email, phone, gender, age, sport, city, state, zip, password_hash, completion_token, sync_token, app_state_json, app_state_updated_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
     ON CONFLICT(email) DO UPDATE SET
       first_name = excluded.first_name,
       last_name = excluded.last_name,
       phone = excluded.phone,
       gender = excluded.gender,
+      age = excluded.age,
       sport = excluded.sport,
       city = excluded.city,
       state = excluded.state,
@@ -381,6 +457,7 @@ async function upsertMember(db, member, token, password, syncToken, appState = {
     member.email,
     member.phone,
     member.gender,
+    member.age,
     member.sport,
     member.city,
     member.state,
@@ -530,6 +607,13 @@ function validateAppStateSave(payload) {
   return "";
 }
 
+function validateDirectoryRequest(payload) {
+  if (!payload || typeof payload !== "object") return "Invalid JSON body";
+  if (!payload.email || !isValidEmail(payload.email)) return "Invalid email";
+  if (!payload.syncToken) return "Missing cloud sync token";
+  return "";
+}
+
 function validateSignin(payload) {
   if (!payload || typeof payload !== "object") return "Invalid JSON body";
   if (!payload.email) return "Missing required field: email";
@@ -545,6 +629,7 @@ function normalizeMember(payload) {
     email: cleanEmail(payload.email),
     phone: cleanText(payload.phone),
     gender: cleanText(payload.gender),
+    age: cleanText(payload.age),
     sport: cleanText(payload.sport || "both"),
     city: cleanText(payload.city || "Watkinsville"),
     state: cleanText(payload.state || "GA"),
@@ -557,6 +642,9 @@ function sanitizeAppState(value) {
     "profiles",
     "societyFavorites",
     "societyFriends",
+    "societyFriendRequests",
+    "societyBlockedMembers",
+    "lessonListings",
     "clubGroups",
     "casualMatches",
     "quickGames",

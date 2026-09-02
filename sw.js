@@ -1,4 +1,4 @@
-const APP_VERSION = "2026-09-01-lesson-form-hide-1";
+const APP_VERSION = "2026-09-02-shared-members-dating-1";
 const CACHE_NAME = `club-society-${APP_VERSION}`;
 const versioned = (path) => `${path}?v=${encodeURIComponent(APP_VERSION)}`;
 const ASSETS = [
@@ -61,5 +61,31 @@ self.addEventListener("fetch", (event) => {
       })
     )
   );
+});
+
+self.addEventListener("push", (event) => {
+  let message = {};
+  try {
+    message = event.data?.json() || {};
+  } catch {
+    message = { body: event.data?.text() || "You have a new Club Society update." };
+  }
+  event.waitUntil(self.registration.showNotification(message.title || "Club Society", {
+    body: message.body || "You have a new reply or connection.",
+    icon: "/club-society-icon-192.png",
+    badge: "/favicon-32.png",
+    tag: message.tag || "club-society-update",
+    data: { url: message.url || "/?app=1" },
+  }));
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const destination = event.notification.data?.url || "/?app=1";
+  event.waitUntil(clients.matchAll({ type: "window", includeUncontrolled: true }).then((openClients) => {
+    const existing = openClients.find((client) => new URL(client.url).origin === self.location.origin);
+    if (existing) return existing.navigate(destination).then(() => existing.focus());
+    return clients.openWindow(destination);
+  }));
 });
 

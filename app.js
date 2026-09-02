@@ -91,7 +91,7 @@ let suppressMemberCloudSync = false;
 let memberHostRefreshBusy = false;
 let societySportContext = "pickleball";
 const GOLF_SOCIETY_TABS = new Set(["golfHome", "golfFindGame", "golfPostTee", "golfCreateGroup", "golfLessons", "golfCourses", "golfTournament", "golfMessages"]);
-const PICKLEBALL_SOCIETY_TABS = new Set(["pickleballHome", "games", "courts", "pickleDate", "memberHost", "partners", "host", "pickleballLessons"]);
+const PICKLEBALL_SOCIETY_TABS = new Set(["pickleballHome", "games", "courts", "memberHost", "partners", "host", "pickleballLessons"]);
 const els = {
   navItems: document.querySelectorAll(".nav-item"),
   views: document.querySelectorAll(".view"),
@@ -127,9 +127,8 @@ const els = {
   courtDirectoryList: document.querySelector("#courtDirectoryList"),
   pickleDateProfileForm: document.querySelector("#pickleDateProfileForm"),
   pickleDateResults: document.querySelector("#pickleDateResults"),
-  pickleDateAgeMin: document.querySelector("#pickleDateAgeMin"),
-  pickleDateAgeMax: document.querySelector("#pickleDateAgeMax"),
-  pickleDateMiles: document.querySelector("#pickleDateMiles"),
+  pickleDateSearch: document.querySelector("#pickleDateSearch"),
+  pickleDateMatchNote: document.querySelector("#pickleDateMatchNote"),
   memberHostForm: document.querySelector("#memberHostForm"),
   memberHostBoard: document.querySelector("#memberHostBoard"),
   memberHostJoinForm: document.querySelector("#memberHostJoinForm"),
@@ -256,9 +255,7 @@ els.quickGameForm.addEventListener("submit", saveQuickGame);
 els.courtSearch.addEventListener("input", renderCourtDirectory);
 els.courtDistance?.addEventListener("change", renderCourtDirectory);
 els.pickleDateProfileForm?.addEventListener("submit", savePickleDateProfile);
-els.pickleDateAgeMin?.addEventListener("input", renderPickleDateProfiles);
-els.pickleDateAgeMax?.addEventListener("input", renderPickleDateProfiles);
-els.pickleDateMiles?.addEventListener("change", renderPickleDateProfiles);
+els.pickleDateSearch?.addEventListener("input", renderPickleDateProfiles);
 els.memberHostForm?.addEventListener("submit", buildMemberHostedEvent);
 els.memberHostJoinForm?.addEventListener("submit", joinMemberHostedEvent);
 els.golfTeeTimeForm.addEventListener("submit", saveGolfTeeTime);
@@ -370,6 +367,8 @@ function loadState() {
     verificationCodes: {},
     admins: [{ id: "owner", name: "Event Owner", email: LOCAL_ADMIN_EMAIL, role: "Host Admin" }],
     profiles: [],
+    memberDirectory: [],
+    memberDirectoryUpdatedAt: "",
     golfProfile: {},
     golfTeeTimes: [],
     golfGroups: [],
@@ -440,6 +439,8 @@ function normalizeState(data) {
     gender: profile.gender || "",
     ...profile,
   }));
+  data.memberDirectory = (data.memberDirectory || []).filter((profile) => profile && typeof profile === "object");
+  data.memberDirectoryUpdatedAt = data.memberDirectoryUpdatedAt || "";
   data.players = (data.players || []).map((player) => ({
     waiverSignedAt: "",
     waiverSource: "",
@@ -537,7 +538,18 @@ function memberSignupSnapshot(profile) {
       email: profile.email,
       phone: profile.phone,
       gender: profile.gender || "",
+      age: profile.age || "",
       dateInterested: profile.dateInterested === true,
+      dateProfileActive: profile.dateProfileActive === true,
+      dateGender: profile.dateGender || profile.gender || "",
+      dateLookingFor: profile.dateLookingFor || "everyone",
+      dateSports: profile.dateSports || profile.preferredSport || "both",
+      dateAge: profile.dateAge || profile.age || "",
+      dateAgeMin: profile.dateAgeMin || "25",
+      dateAgeMax: profile.dateAgeMax || "55",
+      dateMiles: profile.dateMiles || "25",
+      dateBio: profile.dateBio || "",
+      dateIdea: profile.dateIdea || "",
       city: profile.city,
       state: profile.state,
       zip: profile.zip,
@@ -546,6 +558,8 @@ function memberSignupSnapshot(profile) {
       handicap: profile.handicap,
       discoverable: profile.discoverable,
       allowMessages: profile.allowMessages !== false,
+      bio: profile.bio || "",
+      photoDataUrl: profile.photoDataUrl || "",
       verificationStatus: profile.verificationStatus,
       source: profile.source,
       updatedAt: profile.updatedAt,
@@ -591,6 +605,31 @@ async function pushMemberCloudState(immediate = false) {
   } catch {
     state.cloudMemberSync.status = "Cloud sync pending";
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  }
+}
+
+async function refreshMemberDirectory(force = false) {
+  if (!canUseMemberCloudSync()) return false;
+  const refreshedAt = Date.parse(state.memberDirectoryUpdatedAt || "") || 0;
+  if (!force && Date.now() - refreshedAt < 60000) return true;
+  try {
+    const response = await fetch("/api/member-signup", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        action: "directory",
+        email: state.cloudMemberSync.email,
+        syncToken: state.cloudMemberSync.token,
+      }),
+    });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok || !result.ok) throw new Error(result.error || "Member directory unavailable");
+    state.memberDirectory = Array.isArray(result.profiles) ? result.profiles : [];
+    state.memberDirectoryUpdatedAt = new Date().toISOString();
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    return true;
+  } catch {
+    return false;
   }
 }
 
@@ -962,6 +1001,8 @@ async function sendSocietySignupConfirmation(profile) {
         email: profile.email,
         password: profile.password,
         phone: profile.phone,
+        gender: profile.gender,
+        age: profile.age,
         sport: profile.preferredSport,
         city: profile.city,
         state: profile.state,
@@ -975,11 +1016,13 @@ async function sendSocietySignupConfirmation(profile) {
     }
     if (result.emailSent) {
       saveCloudMemberCredentials(profile.email, result.syncToken);
-      pushMemberCloudState(true);
+      await pushMemberCloudState(true);
+      await refreshMemberDirectory(true);
       return { ok: true, message: "Welcome to Club Society. Check your email to verify your account and finish your profile." };
     }
     saveCloudMemberCredentials(profile.email, result.syncToken);
-    pushMemberCloudState(true);
+    await pushMemberCloudState(true);
+    await refreshMemberDirectory(true);
     return { ok: true, message: result.emailWarning || "Profile saved, but the verification email did not send. Check the Brevo settings in Cloudflare." };
   } catch {
     return { ok: false, message: "Cloud signup is not reachable from this device yet. Open https://clubsociety.app and try again." };
@@ -1068,6 +1111,8 @@ function upsertSocietyProfileFromCompletion(member) {
     lastName: titleCase(member.lastName || existing?.lastName || ""),
     email: member.email.toLowerCase(),
     phone: member.phone || existing?.phone || "",
+    gender: member.gender || existing?.gender || "",
+    age: member.age || existing?.age || "",
     city: member.city || existing?.city || "Watkinsville",
     state: member.state || existing?.state || "GA",
     zip: member.zip || existing?.zip || "30677",
@@ -1135,6 +1180,8 @@ async function signInSocietyMember(email, password) {
       saveCloudMemberCredentials(normalizedEmail, result.syncToken);
       if (result.appState) mergeMemberCloudState(result.appState);
       state.societySessionEmail = normalizedEmail;
+      await refreshMemberDirectory(true);
+      closeLessonApplications();
       saveState();
       updateSocietyHome();
       render();
@@ -1370,6 +1417,11 @@ function handleSocietyAppClick(event) {
     return;
   }
 
+  if (event.target.closest("[data-dating-back]")) {
+    setSocietyTab(societySportContext === "golf" ? "golfHome" : "pickleballHome");
+    return;
+  }
+
   const friendFilterButton = event.target.closest("[data-society-friend-filter]");
   if (friendFilterButton) {
     state.societyFriendFilter = friendFilterButton.dataset.societyFriendFilter;
@@ -1508,11 +1560,11 @@ function handleSocietyAppClick(event) {
     return;
   }
 
-  const pickleDateMessageButton = event.target.closest("[data-pickle-date-message]");
-  if (pickleDateMessageButton) {
-    const names = { "date-maya": "Maya", "date-jordan": "Jordan", "date-taylor": "Taylor" };
-    const name = names[pickleDateMessageButton.dataset.pickleDateMessage] || "Club Society member";
-    openPrefilledMessage(name, `Hi ${name}, I found your profile in It's Just Pickleball and would like to connect.`);
+  const dateMessageButton = event.target.closest("[data-date-message]");
+  if (dateMessageButton) {
+    const match = datingDirectoryProfiles().find((profile) => profile.id === dateMessageButton.dataset.dateMessage);
+    const name = match ? `${match.firstName || ""} ${match.lastName || ""}`.trim() : "Club Society member";
+    openPrefilledMessage(name, `Hi ${name}, I found your profile in It's Just… and would like to connect.`);
     return;
   }
 
@@ -1634,7 +1686,7 @@ function setSocietyTab(tab) {
     promptForSocietyPhoto();
     return;
   }
-  if (!["pickleballLessons", "golfLessons"].includes(tab)) closeLessonApplications();
+  closeLessonApplications();
   if (GOLF_SOCIETY_TABS.has(tab)) societySportContext = "golf";
   if (PICKLEBALL_SOCIETY_TABS.has(tab)) societySportContext = "pickleball";
   document.querySelectorAll("[data-society-panel]").forEach((panel) => {
@@ -1648,7 +1700,10 @@ function setSocietyTab(tab) {
   });
   if (tab === "home") updateSocietyHome();
   if (tab === "partners") renderCasualMatches();
-  if (tab === "connectPlayers") renderSocietyFriends();
+  if (tab === "connectPlayers") {
+    renderSocietyFriends();
+    refreshMemberDirectory().then((updated) => { if (updated) renderSocietyFriends(); });
+  }
   if (tab === "clubGroups") renderClubGroups();
   if (tab === "myGroups") renderMyGroups();
   if (tab === "games") renderQuickGames();
@@ -1656,7 +1711,10 @@ function setSocietyTab(tab) {
     if (els.courtDistance) els.courtDistance.value = state.courtDistance || "25";
     renderCourtDirectory();
   }
-  if (tab === "pickleDate") renderPickleDateProfiles();
+  if (tab === "pickleDate") {
+    renderPickleDateProfiles();
+    refreshMemberDirectory().then((updated) => { if (updated) renderPickleDateProfiles(); });
+  }
   if (tab === "memberHost") {
     fillMemberHostForm();
     renderMemberHostBoard();
@@ -1855,8 +1913,11 @@ function promptForSocietyPhoto() {
 
 function logoutSociety() {
   pushMemberCloudState(true);
+  closeLessonApplications();
   state.societySessionEmail = "";
   state.cloudMemberSync = { email: "", token: "", lastPulledAt: "", lastPushedAt: "", status: "Local only" };
+  state.memberDirectory = [];
+  state.memberDirectoryUpdatedAt = "";
   state.profiles.forEach((profile) => {
     profile.stayLoggedIn = false;
   });
@@ -1901,8 +1962,9 @@ async function resizeProfilePhoto(file) {
 
 function societyDirectoryCards() {
   const currentEmail = state.societySessionEmail?.toLowerCase();
-  const savedProfiles = state.profiles
+  const savedProfiles = mergeRecords(state.profiles, state.memberDirectory, (profile) => profile.email || profile.id)
     .filter((profile) => profile.email?.toLowerCase() !== currentEmail && profile.discoverable === true)
+    .filter((profile) => !isSampleMember(profile))
     .map((profile) => ({
       id: profile.id,
       name: `${profile.firstName || ""} ${profile.lastName || ""}`.trim() || "Club member",
@@ -1918,12 +1980,12 @@ function societyDirectoryCards() {
       phone: profile.phone || "",
       discoverable: true,
     }));
-  const demoProfiles = [
-    { id: "demo-maya", email: "demo-maya@example.com", name: "Maya Thompson", city: "Watkinsville", sport: "pickleball", skill: "3.5 doubles", vibe: "Weeknight games, mixed doubles, and post-match hangouts.", socialPlay: true, allowMessages: true, discoverable: true },
-    { id: "demo-eli", email: "demo-eli@example.com", name: "Eli Parker", city: "Athens", sport: "golf", skill: "12 handicap", vibe: "Last-minute tee times, relaxed pace, good playlists.", socialPlay: true, allowMessages: true, discoverable: true },
-    { id: "demo-jordan", email: "demo-jordan@example.com", name: "Jordan Reese", city: "Oconee", sport: "both", skill: "Pickleball 3.0 | Golf 18", vibe: "Down for social play, beginner-friendly groups, and club events.", socialPlay: true, allowMessages: true, discoverable: true },
-  ];
-  return [...savedProfiles, ...demoProfiles];
+  return savedProfiles;
+}
+
+function isSampleMember(profile) {
+  const email = String(profile?.email || "").toLowerCase();
+  return email.endsWith("@example.com") || String(profile?.id || "").startsWith("demo-");
 }
 
 function defaultCasualMatches() {
@@ -2244,43 +2306,132 @@ function courtMilesFromProfile(court) {
   return estimates[city] || 35;
 }
 
-function savePickleDateProfile(event) {
+async function savePickleDateProfile(event) {
   event.preventDefault();
   const profile = currentSocietyProfile();
   if (!profile) return;
   const data = Object.fromEntries(new FormData(els.pickleDateProfileForm).entries());
+  const age = Number(data.dateAge || 0);
+  const ageMin = Number(data.dateAgeMin || 18);
+  const ageMax = Number(data.dateAgeMax || 99);
+  if (age < 18 || age > 99 || ageMin < 18 || ageMax > 99 || ageMin > ageMax) {
+    showSocietyAccountMessage("Check your age and preferred age range.", "error");
+    return;
+  }
+  profile.dateGender = String(data.dateGender || "");
+  profile.gender = profile.dateGender === "Woman" ? "Female" : profile.dateGender === "Man" ? "Male" : profile.dateGender;
+  profile.dateLookingFor = String(data.dateLookingFor || "everyone");
+  profile.dateSports = String(data.dateSports || "both");
+  profile.dateAge = String(age);
+  profile.age = String(age);
+  profile.dateAgeMin = String(ageMin);
+  profile.dateAgeMax = String(ageMax);
+  profile.dateMiles = String(data.dateMiles || "25");
   profile.dateBio = String(data.dateBio || "").trim();
   profile.dateIdea = String(data.dateIdea || "").trim();
   profile.dateProfileActive = data.dateProfileActive === "on";
-  profile.dateInterested = profile.dateInterested || profile.dateProfileActive;
+  profile.dateInterested = profile.dateProfileActive;
   profile.updatedAt = new Date().toISOString();
   saveState();
+  await pushMemberCloudState(true);
+  await refreshMemberDirectory(true);
   renderPickleDateProfiles();
-  showSocietyAccountMessage(profile.dateProfileActive ? "Your private pickleball date profile is live." : "Your date profile is saved but hidden.", "success");
+  showSocietyAccountMessage(profile.dateProfileActive ? "Your one dating profile is live for mutual golf and pickleball matches." : "Your dating profile is saved but hidden.", "success");
 }
 
 function renderPickleDateProfiles() {
   if (!els.pickleDateResults || !els.pickleDateProfileForm) return;
   const current = currentSocietyProfile();
-  els.pickleDateProfileForm.elements.dateBio.value = current?.dateBio || "";
-  els.pickleDateProfileForm.elements.dateIdea.value = current?.dateIdea || "";
-  els.pickleDateProfileForm.elements.dateProfileActive.checked = current?.dateProfileActive === true;
-  const minAge = Math.max(18, Number(els.pickleDateAgeMin?.value || 18));
-  const maxAge = Math.max(minAge, Number(els.pickleDateAgeMax?.value || 99));
-  const maxMiles = Number(els.pickleDateMiles?.value || 25);
-  const demoDates = [
-    { id: "date-maya", name: "Maya", age: 34, miles: 6, level: "3.5 doubles", bio: "Competitive rallies, easy laughs, and coffee after the match.", idea: "Saturday morning open play and brunch." },
-    { id: "date-jordan", name: "Jordan", age: 41, miles: 14, level: "3.0 social", bio: "Here for good games, good conversation, and no pressure.", idea: "A relaxed mixed-doubles social." },
-    { id: "date-taylor", name: "Taylor", age: 29, miles: 22, level: "4.0", bio: "Serious about improving, equally serious about having fun.", idea: "Best-of-three then tacos." },
-  ];
-  const profiles = demoDates.filter((profile) => profile.age >= minAge && profile.age <= maxAge && profile.miles <= maxMiles);
+  const fields = els.pickleDateProfileForm.elements;
+  fields.dateGender.value = datingGenderFormValue(current?.dateGender || current?.gender);
+  fields.dateLookingFor.value = current?.dateLookingFor || "everyone";
+  fields.dateSports.value = current?.dateSports || current?.preferredSport || "both";
+  fields.dateAge.value = current?.dateAge || current?.age || "";
+  fields.dateAgeMin.value = current?.dateAgeMin || "25";
+  fields.dateAgeMax.value = current?.dateAgeMax || "55";
+  fields.dateMiles.value = current?.dateMiles || "25";
+  fields.dateBio.value = current?.dateBio || "";
+  fields.dateIdea.value = current?.dateIdea || "";
+  fields.dateProfileActive.checked = current?.dateProfileActive === true;
+  if (!current?.dateProfileActive) {
+    if (els.pickleDateMatchNote) els.pickleDateMatchNote.textContent = "Create or update your profile and turn on matching to see compatible members.";
+    els.pickleDateResults.innerHTML = `<article class="society-list-card"><strong>Your preferences protect your privacy</strong><p>Matches appear only after you opt in, and only when both profiles fit each other&rsquo;s age, gender, sport, and distance choices.</p></article>`;
+    return;
+  }
+  const query = String(els.pickleDateSearch?.value || "").trim().toLowerCase();
+  const profiles = datingDirectoryProfiles().filter((profile) => isMutualDatingMatch(current, profile)).filter((profile) => {
+    const haystack = `${profile.firstName || ""} ${profile.lastName || ""} ${profile.city || ""} ${profile.dateSports || profile.preferredSport || ""} ${profile.dateBio || ""} ${profile.dateIdea || ""}`.toLowerCase();
+    return !query || haystack.includes(query);
+  });
+  if (els.pickleDateMatchNote) els.pickleDateMatchNote.textContent = `${profiles.length} mutual match${profiles.length === 1 ? "" : "es"} fit your saved preferences. Edit the form anytime to change who appears.`;
   els.pickleDateResults.innerHTML = profiles.length ? profiles.map((profile) => `
     <article class="pickle-date-profile">
-      <div class="pickle-date-avatar">${escapeHtml(initials(profile.name))}</div>
-      <div><span>${profile.age} | ${profile.miles} miles away | ${escapeHtml(profile.level)}</span><strong>${escapeHtml(profile.name)}</strong><p>${escapeHtml(profile.bio)}</p><em>${escapeHtml(profile.idea)}</em></div>
-      <button data-pickle-date-message="${escapeHtml(profile.id)}" type="button">Message</button>
+      <div class="pickle-date-avatar">${escapeHtml(initials(`${profile.firstName || ""} ${profile.lastName || ""}`))}</div>
+      <div><span>${escapeHtml(profile.dateAge || profile.age)} | about ${datingDistanceMiles(current, profile)} miles away | ${escapeHtml(datingSportLabel(profile.dateSports || profile.preferredSport))}</span><strong>${escapeHtml(`${profile.firstName || ""} ${profile.lastName || ""}`.trim() || "Club Society member")}</strong><p>${escapeHtml(profile.dateBio || "Open to a low-pressure sporting connection.")}</p><em>${escapeHtml(profile.dateIdea || "A casual first game or round.")}</em></div>
+      <button data-date-message="${escapeHtml(profile.id)}" type="button">Message</button>
     </article>
-  `).join("") : `<article class="society-list-card"><strong>No matches in this range yet</strong><p>Try widening the age or distance filters.</p></article>`;
+  `).join("") : `<article class="society-list-card"><strong>No mutual matches yet</strong><p>Adjust your saved preferences or check again as more members opt in.</p></article>`;
+}
+
+function datingDirectoryProfiles() {
+  const currentEmail = String(state.societySessionEmail || "").toLowerCase();
+  return mergeRecords(state.profiles, state.memberDirectory, (profile) => profile.email || profile.id)
+    .filter((profile) => String(profile.email || "").toLowerCase() !== currentEmail)
+    .filter((profile) => profile.dateProfileActive === true)
+    .filter((profile) => !isSampleMember(profile));
+}
+
+function isMutualDatingMatch(current, candidate) {
+  const currentAge = Number(current.dateAge || current.age || 0);
+  const candidateAge = Number(candidate.dateAge || candidate.age || 0);
+  if (!currentAge || !candidateAge) return false;
+  if (candidateAge < Number(current.dateAgeMin || 18) || candidateAge > Number(current.dateAgeMax || 99)) return false;
+  if (currentAge < Number(candidate.dateAgeMin || 18) || currentAge > Number(candidate.dateAgeMax || 99)) return false;
+  if (!datingGenderMatches(current.dateLookingFor, candidate.dateGender || candidate.gender)) return false;
+  if (!datingGenderMatches(candidate.dateLookingFor, current.dateGender || current.gender)) return false;
+  if (!datingSportsOverlap(current.dateSports || "both", candidate.dateSports || candidate.preferredSport || "both")) return false;
+  const distance = datingDistanceMiles(current, candidate);
+  return distance <= Number(current.dateMiles || 25) && distance <= Number(candidate.dateMiles || 25);
+}
+
+function datingGenderMatches(preference = "everyone", gender = "") {
+  if (preference === "everyone") return true;
+  return preference === normalizedDatingGender(gender);
+}
+
+function normalizedDatingGender(value) {
+  const gender = String(value || "").trim().toLowerCase();
+  if (["woman", "women", "female"].includes(gender)) return "women";
+  if (["man", "men", "male"].includes(gender)) return "men";
+  if (["nonbinary", "non-binary"].includes(gender)) return "nonbinary";
+  return "";
+}
+
+function datingGenderFormValue(value) {
+  const gender = normalizedDatingGender(value);
+  if (gender === "women") return "Woman";
+  if (gender === "men") return "Man";
+  if (gender === "nonbinary") return "Nonbinary";
+  return value === "Prefer not to say" ? value : "";
+}
+
+function datingSportsOverlap(left = "both", right = "both") {
+  return left === "both" || right === "both" || left === right;
+}
+
+function datingSportLabel(value = "both") {
+  if (value === "golf") return "Golf";
+  if (value === "pickleball") return "Pickleball";
+  return "Golf + Pickleball";
+}
+
+function datingDistanceMiles(left, right) {
+  if (left.zip && right.zip && left.zip === right.zip) return 3;
+  const cityMiles = { watkinsville: 0, oconee: 5, bishop: 8, bogart: 10, athens: 12, statham: 18, winder: 27, bethlehem: 29, jefferson: 31 };
+  const leftMiles = cityMiles[String(left.city || "").toLowerCase()];
+  const rightMiles = cityMiles[String(right.city || "").toLowerCase()];
+  if (Number.isFinite(leftMiles) && Number.isFinite(rightMiles)) return Math.max(3, Math.abs(leftMiles - rightMiles));
+  return String(left.city || "").toLowerCase() === String(right.city || "").toLowerCase() ? 3 : 25;
 }
 
 function activeMemberHostDraft() {
@@ -2957,21 +3108,14 @@ function renderGolfMessages() {
 function messageSuggestionCards() {
   const profile = currentSocietyProfile();
   const currentEmail = (profile?.email || state.societySessionEmail || "").toLowerCase();
-  const profileCards = state.profiles
+  const profileCards = societyDirectoryCards()
     .filter((item) => item.email?.toLowerCase() !== currentEmail)
-    .filter((item) => item.discoverable === true || item.allowMessages === true)
     .map((item) => ({
       id: item.id,
-      name: `${item.firstName || ""} ${item.lastName || ""}`.trim() || item.email,
-      email: item.email || "",
+      name: item.name,
+      email: item.email,
       type: "Member",
     }));
-  const demoCards = societyDirectoryCards().map((item) => ({
-    id: item.id,
-    name: item.name,
-    email: item.email || "",
-    type: "Member",
-  }));
   const groupCards = state.clubGroups.map((item) => ({
     id: item.id,
     name: item.name,
@@ -2993,7 +3137,7 @@ function messageSuggestionCards() {
     type: "Event host",
   }));
   const byName = new Map();
-  [...profileCards, ...demoCards, ...groupCards, ...postOwnerCards, ...hostCards, { id: "club-society-host", name: "Club Society Host", email: "", type: "Event host" }]
+  [...profileCards, ...groupCards, ...postOwnerCards, ...hostCards, { id: "club-society-host", name: "Club Society Host", email: "", type: "Event host" }]
     .filter((item) => item.name)
     .forEach((item) => {
       const key = item.name.toLowerCase();
