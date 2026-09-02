@@ -345,7 +345,7 @@ function publicMemberProfile(row) {
   return {
     id: String(saved.id || `member-${row.id}`),
     firstName: cleanText(saved.firstName || row.first_name),
-    lastName: cleanText(saved.lastName || row.last_name),
+    lastName: lastInitial(saved.lastName || row.last_name),
     email: cleanEmail(row.email),
     gender: cleanText(saved.gender || row.gender),
     age: cleanText(saved.age || row.age),
@@ -362,7 +362,7 @@ function publicMemberProfile(row) {
     discoverable,
     dateProfileActive,
     dateGender: cleanText(saved.dateGender || saved.gender || row.gender),
-    dateLookingFor: cleanText(saved.dateLookingFor || "everyone"),
+    dateLookingFor: datingPreference(saved.dateLookingFor, saved.dateGender || saved.gender || row.gender),
     dateSports: cleanText(saved.dateSports || saved.preferredSport || row.sport || "both"),
     dateAge: cleanText(saved.dateAge || saved.age || row.age),
     dateAgeMin: cleanText(saved.dateAgeMin || "18"),
@@ -780,6 +780,17 @@ function fullName(member) {
 
 function cleanText(value) {
   return String(value || "").trim().slice(0, 1000);
+}
+
+function lastInitial(value) {
+  const lastName = cleanText(value);
+  return lastName ? `${lastName[0].toUpperCase()}.` : "";
+}
+
+function datingPreference(value, gender = "") {
+  const preference = cleanText(value).toLowerCase();
+  if (preference === "women" || preference === "men") return preference;
+  return ["woman", "women", "female"].includes(cleanText(gender).toLowerCase()) ? "men" : "women";
 }
 
 function cleanEmail(value) {

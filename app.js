@@ -542,7 +542,7 @@ function memberSignupSnapshot(profile) {
       dateInterested: profile.dateInterested === true,
       dateProfileActive: profile.dateProfileActive === true,
       dateGender: profile.dateGender || profile.gender || "",
-      dateLookingFor: profile.dateLookingFor || "everyone",
+      dateLookingFor: datingPreferenceValue(profile.dateLookingFor, profile.dateGender || profile.gender),
       dateSports: profile.dateSports || profile.preferredSport || "both",
       dateAge: profile.dateAge || profile.age || "",
       dateAgeMin: profile.dateAgeMin || "25",
@@ -1563,7 +1563,7 @@ function handleSocietyAppClick(event) {
   const dateMessageButton = event.target.closest("[data-date-message]");
   if (dateMessageButton) {
     const match = datingDirectoryProfiles().find((profile) => profile.id === dateMessageButton.dataset.dateMessage);
-    const name = match ? `${match.firstName || ""} ${match.lastName || ""}`.trim() : "Club Society member";
+    const name = publicMemberName(match, "Club Society member");
     openPrefilledMessage(name, `Hi ${name}, I found your profile in It's Just… and would like to connect.`);
     return;
   }
@@ -1967,7 +1967,7 @@ function societyDirectoryCards() {
     .filter((profile) => !isSampleMember(profile))
     .map((profile) => ({
       id: profile.id,
-      name: `${profile.firstName || ""} ${profile.lastName || ""}`.trim() || "Club member",
+      name: publicMemberName(profile, "Club member"),
       city: profile.city || "Watkinsville",
       sport: profile.preferredSport || profile.sport || "pickleball",
       skill: profile.skill || profile.pickleballLevel || (profile.handicap ? `Golf handicap ${profile.handicap}` : "Open play"),
@@ -2159,7 +2159,7 @@ function renderPostCard(post, type) {
       <div>
         <span>${escapeHtml(post.day)} | ${escapeHtml(formatDisplayTime(post.time) || "Time TBD")}</span>
         <strong>${escapeHtml(post.title)}</strong>
-        ${post.ownerName ? `<em class="post-owner">Posted by ${escapeHtml(post.ownerName)}</em>` : ""}
+        ${post.ownerName ? `<em class="post-owner">Posted by ${escapeHtml(publicNameFromString(post.ownerName))}</em>` : ""}
         <p>${needed}${escapeHtml(post.location || "Location TBD")} ${post.skill ? `| ${escapeHtml(post.skill)}` : ""}</p>
         <p>${escapeHtml(post.note || "RSVP if you can play.")}</p>
       </div>
@@ -2176,7 +2176,7 @@ function currentPostOwner() {
   const profile = currentSocietyProfile();
   return {
     ownerEmail: profile?.email || state.societySessionEmail || "",
-    ownerName: profile ? `${profile.firstName || ""} ${profile.lastName || ""}`.trim() : "Society Member",
+    ownerName: publicMemberName(profile, "Society Member"),
   };
 }
 
@@ -2195,7 +2195,7 @@ function renderProfileActivity() {
     : `<p class="empty-mini">No RSVPs yet.</p>`;
   els.myPostList.innerHTML = myPosts.length
     ? myPosts.map((post) => {
-      const responders = (post.rsvps || []).map((rsvp) => rsvp.name || rsvp).filter(Boolean);
+      const responders = (post.rsvps || []).map((rsvp) => publicNameFromString(rsvp.name || rsvp)).filter(Boolean);
       return renderActivityItem(post, `${responders.length} response${responders.length === 1 ? "" : "s"}`, responders.join(", ") || "No responses yet");
     }).join("")
     : `<p class="empty-mini">No posts yet.</p>`;
@@ -2232,7 +2232,7 @@ function rsvpToPost(collection, id) {
     collection.unshift(post);
   }
   const profile = currentSocietyProfile();
-  const name = profile ? `${profile.firstName || ""} ${profile.lastName || ""}`.trim() : "Society Member";
+  const name = publicMemberName(profile, "Society Member");
   post.rsvps = post.rsvps || [];
   const email = profile?.email || state.societySessionEmail || "";
   if (!post.rsvps.some((rsvp) => String(rsvp.email || rsvp).toLowerCase() === email.toLowerCase())) {
@@ -2260,8 +2260,8 @@ function messagePostCreator(id) {
   const post = findPlayablePost(id);
   if (!post) return;
   openPrefilledMessage(
-    post.ownerName || "Society Member",
-    `Hey ${post.ownerName || "there"}, I saw your post for ${post.title || "a game"} and wanted to connect.`
+    publicNameFromString(post.ownerName || "Society Member"),
+    `Hey ${publicNameFromString(post.ownerName || "there")}, I saw your post for ${post.title || "a game"} and wanted to connect.`
   );
 }
 
@@ -2320,7 +2320,7 @@ async function savePickleDateProfile(event) {
   }
   profile.dateGender = String(data.dateGender || "");
   profile.gender = profile.dateGender === "Woman" ? "Female" : profile.dateGender === "Man" ? "Male" : profile.dateGender;
-  profile.dateLookingFor = String(data.dateLookingFor || "everyone");
+  profile.dateLookingFor = datingPreferenceValue(data.dateLookingFor, profile.dateGender);
   profile.dateSports = String(data.dateSports || "both");
   profile.dateAge = String(age);
   profile.age = String(age);
@@ -2344,7 +2344,7 @@ function renderPickleDateProfiles() {
   const current = currentSocietyProfile();
   const fields = els.pickleDateProfileForm.elements;
   fields.dateGender.value = datingGenderFormValue(current?.dateGender || current?.gender);
-  fields.dateLookingFor.value = current?.dateLookingFor || "everyone";
+  fields.dateLookingFor.value = datingPreferenceValue(current?.dateLookingFor, current?.dateGender || current?.gender);
   fields.dateSports.value = current?.dateSports || current?.preferredSport || "both";
   fields.dateAge.value = current?.dateAge || current?.age || "";
   fields.dateAgeMin.value = current?.dateAgeMin || "25";
@@ -2366,8 +2366,8 @@ function renderPickleDateProfiles() {
   if (els.pickleDateMatchNote) els.pickleDateMatchNote.textContent = `${profiles.length} mutual match${profiles.length === 1 ? "" : "es"} fit your saved preferences. Edit the form anytime to change who appears.`;
   els.pickleDateResults.innerHTML = profiles.length ? profiles.map((profile) => `
     <article class="pickle-date-profile">
-      <div class="pickle-date-avatar">${escapeHtml(initials(`${profile.firstName || ""} ${profile.lastName || ""}`))}</div>
-      <div><span>${escapeHtml(profile.dateAge || profile.age)} | about ${datingDistanceMiles(current, profile)} miles away | ${escapeHtml(datingSportLabel(profile.dateSports || profile.preferredSport))}</span><strong>${escapeHtml(`${profile.firstName || ""} ${profile.lastName || ""}`.trim() || "Club Society member")}</strong><p>${escapeHtml(profile.dateBio || "Open to a low-pressure sporting connection.")}</p><em>${escapeHtml(profile.dateIdea || "A casual first game or round.")}</em></div>
+      <div class="pickle-date-avatar">${escapeHtml(initials(publicMemberName(profile)))}</div>
+      <div><span>${escapeHtml(profile.dateAge || profile.age)} | about ${datingDistanceMiles(current, profile)} miles away | ${escapeHtml(datingSportLabel(profile.dateSports || profile.preferredSport))}</span><strong>${escapeHtml(publicMemberName(profile, "Club Society member"))}</strong><p>${escapeHtml(profile.dateBio || "Open to a low-pressure sporting connection.")}</p><em>${escapeHtml(profile.dateIdea || "A casual first game or round.")}</em></div>
       <button data-date-message="${escapeHtml(profile.id)}" type="button">Message</button>
     </article>
   `).join("") : `<article class="society-list-card"><strong>No mutual matches yet</strong><p>Adjust your saved preferences or check again as more members opt in.</p></article>`;
@@ -2387,23 +2387,27 @@ function isMutualDatingMatch(current, candidate) {
   if (!currentAge || !candidateAge) return false;
   if (candidateAge < Number(current.dateAgeMin || 18) || candidateAge > Number(current.dateAgeMax || 99)) return false;
   if (currentAge < Number(candidate.dateAgeMin || 18) || currentAge > Number(candidate.dateAgeMax || 99)) return false;
-  if (!datingGenderMatches(current.dateLookingFor, candidate.dateGender || candidate.gender)) return false;
-  if (!datingGenderMatches(candidate.dateLookingFor, current.dateGender || current.gender)) return false;
+  if (!datingGenderMatches(datingPreferenceValue(current.dateLookingFor, current.dateGender || current.gender), candidate.dateGender || candidate.gender)) return false;
+  if (!datingGenderMatches(datingPreferenceValue(candidate.dateLookingFor, candidate.dateGender || candidate.gender), current.dateGender || current.gender)) return false;
   if (!datingSportsOverlap(current.dateSports || "both", candidate.dateSports || candidate.preferredSport || "both")) return false;
   const distance = datingDistanceMiles(current, candidate);
   return distance <= Number(current.dateMiles || 25) && distance <= Number(candidate.dateMiles || 25);
 }
 
-function datingGenderMatches(preference = "everyone", gender = "") {
-  if (preference === "everyone") return true;
+function datingGenderMatches(preference = "", gender = "") {
   return preference === normalizedDatingGender(gender);
+}
+
+function datingPreferenceValue(value, gender = "") {
+  const preference = String(value || "").trim().toLowerCase();
+  if (preference === "women" || preference === "men") return preference;
+  return normalizedDatingGender(gender) === "women" ? "men" : "women";
 }
 
 function normalizedDatingGender(value) {
   const gender = String(value || "").trim().toLowerCase();
   if (["woman", "women", "female"].includes(gender)) return "women";
   if (["man", "men", "male"].includes(gender)) return "men";
-  if (["nonbinary", "non-binary"].includes(gender)) return "nonbinary";
   return "";
 }
 
@@ -2411,7 +2415,6 @@ function datingGenderFormValue(value) {
   const gender = normalizedDatingGender(value);
   if (gender === "women") return "Woman";
   if (gender === "men") return "Man";
-  if (gender === "nonbinary") return "Nonbinary";
   return value === "Prefer not to say" ? value : "";
 }
 
@@ -2776,7 +2779,7 @@ function renderClubGroupCard(group, currentEmail, context = "mine") {
     <li><strong>${escapeHtml(item.title)}</strong> ${escapeHtml(item.date || "Date TBD")} ${escapeHtml(formatDisplayTime(item.time) || "")} | ${escapeHtml(item.repeats || "One-time")}</li>
   `).join("") || "<li>No scheduled events yet.</li>";
   const messages = (group.messages || []).slice(0, 3).map((item) => `
-    <p><strong>${escapeHtml(item.from || "Member")}:</strong> ${escapeHtml(item.body)}</p>
+    <p><strong>${escapeHtml(publicNameFromString(item.from || "Member"))}:</strong> ${escapeHtml(item.body)}</p>
   `).join("") || "<p>No group messages yet.</p>";
   return `
     <article class="club-group-card">
@@ -2786,7 +2789,7 @@ function renderClubGroupCard(group, currentEmail, context = "mine") {
           <strong>${escapeHtml(group.name)}</strong>
           <p>${escapeHtml(group.description || "A Club Society group.")}</p>
         </div>
-        <span class="status-pill">${escapeHtml(group.ownerName || "Organizer")}</span>
+        <span class="status-pill">${escapeHtml(publicNameFromString(group.ownerName || "Organizer"))}</span>
       </div>
       <p class="meta">Invited: ${escapeHtml(invitees)}</p>
       <div class="club-group-events"><span>Schedule</span><ul>${events}</ul></div>
@@ -2873,6 +2876,23 @@ function initials(name) {
     .map((part) => part[0])
     .join("")
     .toUpperCase() || "CS";
+}
+
+function publicMemberName(profile, fallback = "Club Society member") {
+  if (!profile) return fallback;
+  const firstName = String(profile.firstName || "").trim().split(/\s+/)[0] || "";
+  const lastName = String(profile.lastName || "").trim();
+  const lastInitial = lastName ? `${lastName[0].toUpperCase()}.` : "";
+  return [firstName, lastInitial].filter(Boolean).join(" ") || fallback;
+}
+
+function publicNameFromString(value, fallback = "Club Society member") {
+  const name = String(value || "").trim();
+  if (!name) return fallback;
+  if (["You", "Member", "Organizer", "Society Member", "Club Society Host", "Club Society member", "there"].includes(name)) return name;
+  const parts = name.split(/\s+/).filter(Boolean);
+  if (parts.length < 2) return name;
+  return `${parts[0]} ${parts[parts.length - 1][0].toUpperCase()}.`;
 }
 
 function setSocietyEventTab(tab) {
@@ -3098,7 +3118,7 @@ function renderGolfMessages() {
     ? state.golfMessages.map((message) => `
       <article class="society-list-card">
         <strong>${escapeHtml(message.to)}</strong>
-        <span>${escapeHtml(message.from)} | ${formatDateTime(message.createdAt)}</span>
+        <span>${escapeHtml(publicNameFromString(message.from))} | ${formatDateTime(message.createdAt)}</span>
         <p>${escapeHtml(message.body)}</p>
       </article>
     `).join("")
