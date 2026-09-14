@@ -53,6 +53,10 @@ export async function onRequest(context) {
     return json({ ok: false, error: "Invalid JSON body" }, 400, corsHeaders);
   }
 
+  if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
+    return json({ ok: false, error: 'Invalid JSON body' }, 400, corsHeaders);
+  }
+
   const spamError = validateAntiSpam(payload);
   if (spamError) return json({ ok: false, error: spamError }, 400, corsHeaders);
 
@@ -60,6 +64,27 @@ export async function onRequest(context) {
   if (validationError) return json({ ok: false, error: validationError }, 400, corsHeaders);
 
   try {
+    if (payload.type === 'round_robin_event' && payload.returning_player === true) {
+      // Resolve only on the server. Never return a player profile to the browser.
+      const previous = await env.DB.prepare(`
+        SELECT first_name, last_name FROM paddle_pint_submissions
+        WHERE type = 'round_robin_event' AND lower(trim(email)) = ?
+          AND trim(coalesce(first_name, '')) <> '' AND trim(coalesce(last_name, '')) <> ''
+        ORDER BY id DESC LIMIT 1
+      `).bind(cleanEmail(payload.email)).first();
+      if (!previous) {
+        return json({ ok: false, error: 'Quick signup could not be completed. Please use First time / full signup below.' }, 422, corsHeaders);
+      }
+      payload.first_name = previous.first_name;
+      payload.last_name = previous.last_name;
+      payload.name = null;
+      payload.phone = null;
+      payload.shirt_gender = null;
+      payload.shirt_size = null;
+      payload.optional_shirt_choice = null;
+      payload.selected_shirt = null;
+      payload.notes = 'Returning player RSVP. No shirt requested. ' + (payload.notes || '');
+    }
     await env.DB.prepare(`
       INSERT INTO paddle_pint_submissions (
         type,
@@ -162,9 +187,19 @@ function validatePayload(payload) {
   if (!isValidEmail(payload.email)) return "Invalid email";
 
   if (payload.type === "round_robin_event") {
-    if (!payload.first_name) return "Missing required field: first_name";
-    if (!payload.last_name) return "Missing required field: last_name";
+    if (payload.returning_player !== true) {
+      if (!cleanText(payload.first_name)) return "Missing required field: first_name";
+      if (!cleanText(payload.last_name)) return "Missing required field: last_name";
+    }
     if (!payload.event_date) return "Missing required field: event_date";
+    if (payload.returning_player === true) {
+      const date = new Date(payload.event_date);
+      if (Number.isNaN(date.getTime()) || date.getUTCDay() !== 1 || date.getUTCDate() > 14) return "Choose a first or second Monday.";
+      const today = new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
+      if (date.toISOString().slice(0, 10) < today) return "Choose an upcoming event date.";
+      if (!Array.isArray(payload.additional_players) || payload.additional_players.length > 6) return "Add up to six guests.";
+      if (payload.additional_players.some(player => !player || !cleanText(player.first_name) || !cleanText(player.last_name))) return "Enter each guest\u0027s first and last name.";
+    }
   }
 
   if (payload.type === "free_shirt_claim") {
