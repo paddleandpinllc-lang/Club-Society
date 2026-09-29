@@ -8,8 +8,9 @@ const STORAGE_SCHEMA_VERSION = 2;
 const currentHost = window.location.hostname.toLowerCase();
 const MEMBER_APP_HOSTS = new Set(["clubsociety.app", "www.clubsociety.app", "club-society.pages.dev"]);
 const LOCAL_DASHBOARD_HOSTS = new Set(["", "localhost", "127.0.0.1", "0.0.0.0", "::1"]);
-const isStandaloneLaunch = MEMBER_APP_HOSTS.has(currentHost);
-const isDashboardLaunch = LOCAL_DASHBOARD_HOSTS.has(currentHost) || window.location.protocol === "file:";
+const isLocalMemberPreview = LOCAL_DASHBOARD_HOSTS.has(currentHost) && new URLSearchParams(window.location.search).has("member-preview");
+const isStandaloneLaunch = MEMBER_APP_HOSTS.has(currentHost) || isLocalMemberPreview;
+const isDashboardLaunch = (!isLocalMemberPreview && LOCAL_DASHBOARD_HOSTS.has(currentHost)) || window.location.protocol === "file:";
 const isUnsupportedHostedLaunch = !isStandaloneLaunch && !isDashboardLaunch;
 const DEFAULT_LOCATION = { street: "", city: "Watkinsville", state: "GA", zip: "30677" };
 const DEFAULT_PUBLIC_VIEW = {
@@ -1774,6 +1775,7 @@ function currentSocietyProfile() {
 
 function updateSocietyHome() {
   const hasAccess = hasSocietyAccess();
+  document.querySelector(".society-phone-shell")?.classList.toggle("society-guest-mode", !hasAccess);
   document.querySelector(".society-guest-panel")?.classList.toggle("hidden", hasAccess);
   document.querySelector(".society-public-hero")?.classList.toggle("hidden", hasAccess);
   els.societyMemberDashboard?.classList.toggle("active", hasAccess);

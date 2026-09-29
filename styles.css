@@ -7,7 +7,7 @@
   --card: #ffffff;
   --line: #e4d6bd;
   --green: #1f8a62;
-  --gold: #f4b52b;
+  --gold: #f5cf64;
   --coral: #f56b3b;
   --sky: #4fa8c8;
   --shadow: 0 18px 44px rgba(11, 34, 49, 0.14);
@@ -3217,6 +3217,455 @@ textarea {
   .round-team-card,
   .golf-swipe-actions {
     grid-template-columns: 1fr;
+  }
+}
+
+/* Club Society guest welcome screen */
+.standalone-member-app .society-phone-shell.society-guest-mode {
+  background:
+    radial-gradient(circle at 12% 7%, rgba(245, 207, 100, 0.13), transparent 24%),
+    #f5f0e7;
+}
+
+.society-menu-button {
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: 5px;
+}
+
+.society-menu-button i {
+  display: block;
+  width: 24px;
+  height: 2px;
+  border-radius: 99px;
+  background: currentColor;
+}
+
+.society-wordmark > div {
+  display: grid;
+  justify-items: center;
+}
+
+.society-guest-mode .society-app-top {
+  position: relative;
+  grid-template-columns: 1fr auto;
+  width: min(1120px, calc(100% - 72px));
+  margin: 0 auto;
+  padding: 26px 0 22px;
+  border: 0;
+  background: transparent;
+  backdrop-filter: none;
+}
+
+.society-guest-mode .society-app-top > [aria-label="Account"] {
+  display: none;
+}
+
+.society-guest-mode .society-wordmark {
+  display: flex;
+  justify-items: start;
+  justify-self: start;
+  gap: 20px;
+  text-align: left;
+}
+
+.society-guest-mode .society-wordmark img {
+  width: 64px;
+  height: 64px;
+  padding-right: 18px;
+  border-right: 1px solid rgba(13, 71, 57, 0.18);
+}
+
+.society-guest-mode .society-wordmark > div {
+  display: grid;
+  align-content: center;
+  gap: 2px;
+}
+
+.society-guest-mode .society-wordmark strong {
+  color: #0d4739;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(1.8rem, 4vw, 2.65rem);
+  line-height: 1;
+}
+
+.society-guest-mode .society-wordmark span {
+  display: none;
+}
+
+.society-guest-mode .society-menu-button {
+  width: 54px;
+  height: 54px;
+  min-height: 54px;
+  border: 0;
+  color: #0d4739;
+  background: transparent;
+  box-shadow: none;
+}
+
+.society-guest-mode .society-public-hero,
+.society-guest-mode .society-guest-panel {
+  width: min(1120px, calc(100% - 72px));
+  margin-right: auto;
+  margin-left: auto;
+}
+
+.society-guest-mode .society-public-hero {
+  min-height: 720px;
+  padding: 72px 50px 42px;
+  border: 1px solid rgba(245, 207, 100, 0.14);
+  border-radius: 30px;
+  background:
+    radial-gradient(circle at 88% 18%, rgba(245, 207, 100, 0.09), transparent 29%),
+    linear-gradient(145deg, #073d31 0%, #0b4c3c 56%, #0b3f34 100%) !important;
+  box-shadow: 0 30px 70px rgba(7, 55, 44, 0.17);
+}
+
+.society-guest-mode .society-hero-glow {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(110deg, rgba(255, 255, 255, 0.035), transparent 48%);
+  pointer-events: none;
+}
+
+.society-sport-line-art {
+  position: absolute;
+  top: 34px;
+  right: -8px;
+  width: min(48%, 520px);
+  height: auto;
+  color: #f5cf64;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.25;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: 0.78;
+  pointer-events: none;
+}
+
+.society-guest-mode .society-hero-kicker {
+  position: relative;
+  z-index: 1;
+  color: #f5cf64 !important;
+  font-size: 0.9rem !important;
+  letter-spacing: 0.23em;
+}
+
+.society-guest-mode .society-hero-card h2 {
+  margin: 28px 0 30px;
+  max-width: 780px;
+  color: #fffdf5;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(4.25rem, 8.2vw, 7.15rem);
+  font-weight: 500;
+  letter-spacing: -0.065em;
+  line-height: 0.84;
+}
+
+.society-guest-mode .society-hero-card h2 span,
+.society-guest-mode .society-hero-card h2 em {
+  position: relative;
+  z-index: 2;
+}
+
+.society-guest-mode .society-hero-card h2 em {
+  color: #f5cf64;
+}
+
+.society-guest-mode .society-hero-card > p:not(.society-hero-kicker):not(.society-invite-note) {
+  position: relative;
+  z-index: 2;
+  max-width: 625px;
+  margin-bottom: 38px;
+  color: rgba(255, 255, 255, 0.92);
+  font-size: clamp(1.12rem, 2.2vw, 1.45rem);
+  line-height: 1.45;
+}
+
+.society-guest-mode .society-live-strip {
+  position: relative;
+  z-index: 2;
+  max-width: 770px;
+  gap: 14px;
+  margin-bottom: 34px;
+}
+
+.society-guest-mode .society-live-strip span {
+  min-height: 68px;
+  gap: 12px;
+  border-color: rgba(255, 255, 255, 0.28);
+  border-radius: 999px;
+  background: rgba(2, 39, 31, 0.18);
+  color: #fff;
+  font-size: 0.9rem;
+  padding: 10px 16px;
+}
+
+.society-guest-mode .society-live-strip svg,
+.society-guest-mode .society-feature-grid svg {
+  width: 27px;
+  height: 27px;
+  fill: none;
+  stroke: #f5cf64;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  flex: 0 0 auto;
+}
+
+.society-guest-mode .society-hero-actions {
+  max-width: 770px;
+  gap: 16px;
+}
+
+.society-guest-mode .society-hero-actions button {
+  min-height: 72px;
+  border-radius: 20px;
+  font-size: 1.13rem;
+}
+
+.society-guest-mode .society-join-cta {
+  background: linear-gradient(135deg, #f5cf64, #ffe69a);
+  color: #093d32;
+  box-shadow: 0 18px 34px rgba(245, 207, 100, 0.19);
+}
+
+.society-guest-mode .society-signin-cta {
+  border: 2px solid rgba(255, 255, 255, 0.88);
+  background: rgba(2, 39, 31, 0.15);
+  color: #fff;
+}
+
+.society-guest-mode .society-hero-card .society-invite-note {
+  max-width: 770px;
+  margin-top: 26px;
+  color: rgba(255, 255, 255, 0.64);
+  font-size: 0.82rem;
+  letter-spacing: 0.02em;
+}
+
+.society-guest-mode .society-guest-panel {
+  gap: 34px;
+  padding: 78px 50px 110px;
+}
+
+.society-guest-mode .society-pass-intro {
+  gap: 18px;
+}
+
+.society-guest-mode .society-pass-intro .society-kicker {
+  color: #8b9d5f;
+  font-size: 0.87rem;
+  letter-spacing: 0.22em;
+}
+
+.society-guest-mode .society-pass-intro h3 {
+  max-width: 930px;
+  margin: 0;
+  color: #0d4739;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(3.2rem, 6.3vw, 5.2rem);
+  font-weight: 500;
+  letter-spacing: -0.055em;
+  line-height: 0.95;
+}
+
+.society-guest-mode .society-pass-intro > p {
+  max-width: 850px;
+  color: #244f48;
+  font-size: clamp(1.05rem, 2vw, 1.35rem);
+  line-height: 1.5;
+}
+
+.society-guest-mode .society-feature-grid {
+  gap: 0;
+  margin-top: 20px;
+}
+
+.society-guest-mode .society-feature-grid article {
+  grid-template-columns: 52px 72px 1fr;
+  column-gap: 20px;
+  min-height: 126px;
+  border: 0;
+  border-bottom: 1px solid rgba(13, 71, 57, 0.17);
+  border-radius: 0;
+  background: transparent;
+  padding: 22px 0;
+}
+
+.society-guest-mode .society-feature-grid article:last-child {
+  border-bottom: 0;
+}
+
+.society-guest-mode .society-feature-grid article > span {
+  grid-row: 1 / span 2;
+  align-self: center;
+  color: #8b9d5f;
+  font-family: inherit;
+  font-size: 1rem;
+  font-weight: 850;
+}
+
+.society-guest-mode .society-feature-grid article > i {
+  display: grid;
+  grid-row: 1 / span 2;
+  place-items: center;
+  align-self: center;
+  width: 54px;
+  height: 54px;
+  border-left: 1px solid rgba(13, 71, 57, 0.17);
+  padding-left: 18px;
+}
+
+.society-guest-mode .society-feature-grid strong {
+  align-self: end;
+  color: #0d4739;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.7rem;
+  font-weight: 600;
+}
+
+.society-guest-mode .society-feature-grid article p {
+  align-self: start;
+  color: #3d5e58;
+  font-size: 1rem;
+}
+
+.society-guest-mode #societyAccountForm {
+  width: min(100%, 760px);
+  margin-top: 10px;
+  border-color: rgba(13, 71, 57, 0.12);
+  border-radius: 28px;
+  box-shadow: 0 24px 60px rgba(13, 71, 57, 0.13);
+}
+
+.society-guest-mode .society-auth-submit {
+  background: #0d4739;
+}
+
+@media (max-width: 720px) {
+  .society-guest-mode .society-app-top,
+  .society-guest-mode .society-public-hero,
+  .society-guest-mode .society-guest-panel {
+    width: calc(100% - 24px);
+  }
+
+  .society-guest-mode .society-app-top {
+    padding: 17px 2px 15px;
+  }
+
+  .society-guest-mode .society-wordmark {
+    gap: 12px;
+  }
+
+  .society-guest-mode .society-wordmark img {
+    width: 51px;
+    height: 51px;
+    padding-right: 12px;
+  }
+
+  .society-guest-mode .society-wordmark strong {
+    font-size: 1.65rem;
+  }
+
+  .society-guest-mode .society-menu-button {
+    width: 44px;
+    height: 44px;
+    min-height: 44px;
+  }
+
+  .society-guest-mode .society-public-hero {
+    min-height: 0;
+    padding: 43px 22px 28px;
+    border-radius: 24px;
+  }
+
+  .society-sport-line-art {
+    top: 46px;
+    right: -62px;
+    width: 78%;
+    opacity: 0.29;
+  }
+
+  .society-guest-mode .society-hero-kicker {
+    font-size: 0.7rem !important;
+    letter-spacing: 0.18em;
+  }
+
+  .society-guest-mode .society-hero-card h2 {
+    margin: 22px 0 24px;
+    font-size: clamp(3.15rem, 15.8vw, 4.65rem);
+    line-height: 0.88;
+  }
+
+  .society-guest-mode .society-hero-card > p:not(.society-hero-kicker):not(.society-invite-note) {
+    max-width: 92%;
+    margin-bottom: 28px;
+    font-size: 1rem;
+  }
+
+  .society-guest-mode .society-live-strip {
+    gap: 6px;
+    margin-bottom: 25px;
+  }
+
+  .society-guest-mode .society-live-strip span {
+    min-height: 61px;
+    flex-direction: column;
+    gap: 5px;
+    font-size: 0.61rem;
+    padding: 8px 4px;
+    text-align: center;
+  }
+
+  .society-guest-mode .society-live-strip svg {
+    width: 22px;
+    height: 22px;
+  }
+
+  .society-guest-mode .society-hero-actions button {
+    min-height: 61px;
+    font-size: 0.93rem;
+  }
+
+  .society-guest-mode .society-hero-card .society-invite-note {
+    margin-top: 21px;
+    font-size: 0.68rem;
+  }
+
+  .society-guest-mode .society-guest-panel {
+    padding: 58px 14px 88px;
+  }
+
+  .society-guest-mode .society-pass-intro h3 {
+    font-size: clamp(2.65rem, 11.5vw, 3.5rem);
+  }
+
+  .society-guest-mode .society-pass-intro > p {
+    font-size: 1rem;
+  }
+
+  .society-guest-mode .society-feature-grid article {
+    grid-template-columns: 34px 54px 1fr;
+    column-gap: 12px;
+    min-height: 112px;
+    padding: 18px 0;
+  }
+
+  .society-guest-mode .society-feature-grid article > i {
+    width: 46px;
+    height: 48px;
+    padding-left: 12px;
+  }
+
+  .society-guest-mode .society-feature-grid strong {
+    font-size: 1.3rem;
+  }
+
+  .society-guest-mode .society-feature-grid article p {
+    font-size: 0.82rem;
   }
 }
 

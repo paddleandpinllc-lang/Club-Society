@@ -4,14 +4,15 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="theme-color" content="#0b2231">
-    <meta name="app-version" content="2026-09-02-date-name-privacy-1">
+    <meta name="app-version" content="2026-09-29-welcome-redesign-1">
     <title>Club Society</title>
-    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png?v=2026-09-02-date-name-privacy-1">
-    <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=2026-09-02-date-name-privacy-1">
-    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png?v=2026-09-02-date-name-privacy-1">
-    <link rel="manifest" href="/manifest.webmanifest?v=2026-09-02-date-name-privacy-1">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png?v=2026-09-29-welcome-redesign-1">
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=2026-09-29-welcome-redesign-1">
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png?v=2026-09-29-welcome-redesign-1">
+    <link rel="manifest" href="/manifest.webmanifest?v=2026-09-29-welcome-redesign-1">
     <script>
-      if (["clubsociety.app", "www.clubsociety.app", "club-society.pages.dev"].includes(window.location.hostname.toLowerCase())) {
+      const localMemberPreviewHost = ["localhost", "127.0.0.1"].includes(window.location.hostname.toLowerCase()) && new URLSearchParams(window.location.search).has("member-preview");
+      if (["clubsociety.app", "www.clubsociety.app", "club-society.pages.dev"].includes(window.location.hostname.toLowerCase()) || localMemberPreviewHost) {
         document.documentElement.classList.add("member-host");
       }
     </script>
@@ -23,7 +24,7 @@
       .member-host main > .view { display: none !important; }
       .member-host main > #societyApp { display: block !important; }
     </style>
-    <link rel="stylesheet" href="styles.css?v=2026-09-02-date-name-privacy-1">
+    <link rel="stylesheet" href="styles.css?v=2026-09-29-welcome-redesign-1">
   </head>
   <body>
     <aside class="sidebar">
@@ -121,21 +122,31 @@
               <button class="society-icon-button" data-society-tab="account" type="button" aria-label="Account">CS</button>
               <div class="society-wordmark">
                 <img src="club-society-mark.svg" alt="">
-                <strong>Club Society</strong>
-                <span>Connect. Play. Socialize.</span>
+                <div>
+                  <strong>Club Society</strong>
+                  <span>Connect. Play. Socialize.</span>
+                </div>
               </div>
-              <button class="society-icon-button" data-society-tab="settings" type="button" aria-label="Settings">...</button>
+              <button class="society-icon-button society-menu-button" data-society-tab="settings" type="button" aria-label="Settings"><i></i><i></i><i></i></button>
             </header>
 
             <section class="society-hero-card society-public-hero">
               <div class="society-hero-glow" aria-hidden="true"></div>
-              <p class="society-hero-kicker"><span></span> The social side of sport</p>
-              <h2>Connect.<br>Play.&nbsp; <em>Socialize.</em></h2>
+              <svg class="society-sport-line-art" viewBox="0 0 520 520" aria-hidden="true">
+                <path d="M347 52v214M347 55c39 0 46 35 87 22-22-33-52-39-87-22ZM330 266h34M347 266c-15 0-15 10 0 10s15-10 0-10Z"/>
+                <path d="M120 218c78 42 139 28 226-4 67-25 119-29 174-25M173 267c83 29 149 23 218-4 54-21 96-24 129-22" opacity=".42"/>
+                <path d="M286 374h118v78H286zM286 402h118M305 374v78M324 374v78M343 374v78M362 374v78M381 374v78"/>
+                <path d="M145 484 286 402l118 50-106 68M167 472l90 31M245 430l95 34" opacity=".7"/>
+                <circle cx="249" cy="458" r="17"/>
+                <circle cx="243" cy="451" r="2.5" fill="currentColor"/><circle cx="254" cy="448" r="2.5" fill="currentColor"/><circle cx="257" cy="459" r="2.5" fill="currentColor"/><circle cx="246" cy="465" r="2.5" fill="currentColor"/>
+              </svg>
+              <p class="society-hero-kicker">The social side of sport</p>
+              <h2><span>Connect. Play.</span><br><em>Socialize.</em></h2>
               <p>Find the people, games, and gatherings that make golf and pickleball better&mdash;on and off the court.</p>
               <div class="society-live-strip" aria-label="Club Society activity">
-                <span><i aria-hidden="true"></i> Local games</span>
-                <span>Player matches</span>
-                <span>Social events</span>
+                <span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22s7-6.1 7-13A7 7 0 1 0 5 9c0 6.9 7 13 7 13Z"/><circle cx="12" cy="9" r="2.2"/></svg>Local games</span>
+                <span><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="7" r="3"/><path d="M3 20v-2c0-3 2.7-5 6-5s6 2 6 5v2M17 6a3 3 0 0 1 0 6M17 14c2.5 0 4 1.5 4 4v2"/></svg>Player matches</span>
+                <span><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M7 2v6M17 2v6M3 10h18"/></svg>Social events</span>
               </div>
               <div class="society-hero-actions">
                 <button class="society-join-cta" data-auth-panel="signup" type="button">Claim Your Society Pass <span>&rarr;</span></button>
@@ -148,12 +159,12 @@
               <section class="society-join-card society-guest-panel">
                 <div class="society-pass-intro">
                   <span class="society-kicker">Your club, in your pocket</span>
-                  <h3>More playing. More people. More fun.</h3>
+                  <h3>More playing.<br>More people. More fun.</h3>
                   <p>One private place to discover plans, meet your next partner, and stay connected after the final point.</p>
                   <div class="society-feature-grid" aria-label="Society Pass benefits">
-                    <article><span>01</span><strong>Find your game</strong><p>Local play that fits your level and schedule.</p></article>
-                    <article><span>02</span><strong>Meet your people</strong><p>Partners, groups, and familiar faces nearby.</p></article>
-                    <article><span>03</span><strong>Stay social</strong><p>Events and plans that go beyond the score.</p></article>
+                    <article><span>01</span><i aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 22s7-6.1 7-13A7 7 0 1 0 5 9c0 6.9 7 13 7 13Z"/><circle cx="12" cy="9" r="2.2"/></svg></i><strong>Find your game</strong><p>Local play that fits your level and schedule.</p></article>
+                    <article><span>02</span><i aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="9" cy="7" r="3"/><path d="M3 20v-2c0-3 2.7-5 6-5s6 2 6 5v2M17 6a3 3 0 0 1 0 6M17 14c2.5 0 4 1.5 4 4v2"/></svg></i><strong>Meet your people</strong><p>Partners, groups, and familiar faces nearby.</p></article>
+                    <article><span>03</span><i aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M7 2v6M17 2v6M3 10h18"/></svg></i><strong>Stay social</strong><p>Events and plans that go beyond the score.</p></article>
                   </div>
                 </div>
                 <form id="societyAccountForm" class="society-form auth-form-collapsed">
@@ -1698,7 +1709,7 @@
       </section>
     </div>
 
-    <script src="app.js?v=2026-09-02-date-name-privacy-1"></script>
+    <script src="app.js?v=2026-09-29-welcome-redesign-1"></script>
   </body>
 </html>
 
