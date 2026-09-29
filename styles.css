@@ -3329,8 +3329,8 @@ textarea {
   border: 1px solid rgba(245, 207, 100, 0.14);
   border-radius: 30px;
   background:
-    radial-gradient(circle at 88% 18%, rgba(245, 207, 100, 0.09), transparent 29%),
-    linear-gradient(145deg, #073d31 0%, #0b4c3c 56%, #0b3f34 100%) !important;
+    linear-gradient(90deg, rgba(4, 38, 31, 0.88) 0%, rgba(4, 38, 31, 0.75) 40%, rgba(4, 38, 31, 0.3) 72%, rgba(4, 38, 31, 0.14) 100%),
+    url("club-society-sports-background-v1.png?v=2026-09-29-welcome-background-1") center / cover no-repeat !important;
   box-shadow: 0 30px 70px rgba(7, 55, 44, 0.17);
 }
 
@@ -3338,22 +3338,6 @@ textarea {
   position: absolute;
   inset: 0;
   background: linear-gradient(110deg, rgba(255, 255, 255, 0.035), transparent 48%);
-  pointer-events: none;
-}
-
-.society-sport-line-art {
-  position: absolute;
-  top: 34px;
-  right: -8px;
-  width: min(48%, 520px);
-  height: auto;
-  color: #f5cf64;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 2.25;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  opacity: 0.78;
   pointer-events: none;
 }
 
@@ -3592,13 +3576,7 @@ textarea {
     min-height: 0;
     padding: 43px 22px 28px;
     border-radius: 24px;
-  }
-
-  .society-sport-line-art {
-    top: 46px;
-    right: -62px;
-    width: 78%;
-    opacity: 0.29;
+    background-position: 56% center !important;
   }
 
   .society-guest-mode .society-hero-kicker {

@@ -1,4 +1,4 @@
-const APP_VERSION = "2026-09-29-welcome-redesign-2";
+const APP_VERSION = "2026-09-29-welcome-background-1";
 const CACHE_NAME = `club-society-${APP_VERSION}`;
 const versioned = (path) => `${path}?v=${encodeURIComponent(APP_VERSION)}`;
 const ASSETS = [
@@ -8,6 +8,7 @@ const ASSETS = [
   versioned("./app.js"),
   versioned("./manifest.webmanifest"),
   versioned("./club-society-mark.svg"),
+  versioned("./club-society-sports-background-v1.png"),
   versioned("./favicon-32.png"),
   versioned("./apple-touch-icon.png"),
   versioned("./club-society-icon-192.png"),
