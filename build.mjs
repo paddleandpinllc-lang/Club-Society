@@ -12,6 +12,7 @@ const staticFiles = [
   "_redirects",
   "_headers",
   "club-society-mark.svg",
+  "club-society-sports-background-v1.png",
   "favicon-32.png",
   "apple-touch-icon.png",
   "club-society-icon-192.png",
