@@ -3271,10 +3271,22 @@ textarea {
 }
 
 .society-guest-mode .society-wordmark img {
+  display: none;
+}
+
+.society-guest-mode .society-wordmark::before {
+  content: "CS";
+  display: grid;
+  place-items: center;
   width: 64px;
   height: 64px;
   padding-right: 18px;
   border-right: 1px solid rgba(13, 71, 57, 0.18);
+  color: #0d4739;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 2.2rem;
+  font-weight: 700;
+  letter-spacing: -0.18em;
 }
 
 .society-guest-mode .society-wordmark > div {
