@@ -3271,22 +3271,12 @@ textarea {
 }
 
 .society-guest-mode .society-wordmark img {
-  display: none;
-}
-
-.society-guest-mode .society-wordmark::before {
-  content: "CS";
-  display: grid;
-  place-items: center;
-  width: 64px;
+  width: 82px;
   height: 64px;
   padding-right: 18px;
   border-right: 1px solid rgba(13, 71, 57, 0.18);
-  color: #0d4739;
-  font-family: Georgia, "Times New Roman", serif;
-  font-size: 2.2rem;
-  font-weight: 700;
-  letter-spacing: -0.18em;
+  object-fit: contain;
+  object-position: left center;
 }
 
 .society-guest-mode .society-wordmark > div {
@@ -3330,7 +3320,7 @@ textarea {
   border-radius: 30px;
   background:
     linear-gradient(90deg, rgba(4, 38, 31, 0.98) 0%, rgba(4, 38, 31, 0.92) 42%, rgba(4, 38, 31, 0.62) 72%, rgba(4, 38, 31, 0.54) 100%),
-    url("club-society-sports-background-v1.png?v=2026-09-29-welcome-background-4") right -24px top -14px / 72% auto no-repeat,
+    url("club-society-sports-background-v1.png?v=2026-10-05-logo-1") right -24px top -14px / 72% auto no-repeat,
     #073d31 !important;
   box-shadow: 0 30px 70px rgba(7, 55, 44, 0.17);
 }
@@ -3558,7 +3548,7 @@ textarea {
   }
 
   .society-guest-mode .society-wordmark img {
-    width: 51px;
+    width: 63px;
     height: 51px;
     padding-right: 12px;
   }
@@ -3579,7 +3569,7 @@ textarea {
     border-radius: 24px;
     background:
       linear-gradient(90deg, rgba(4, 38, 31, 0.96) 0%, rgba(4, 38, 31, 0.88) 54%, rgba(4, 38, 31, 0.6) 100%),
-      url("club-society-sports-background-v1.png?v=2026-09-29-welcome-background-4") right 2px top 58px / 92% auto no-repeat,
+      url("club-society-sports-background-v1.png?v=2026-10-05-logo-1") right 2px top 58px / 92% auto no-repeat,
       #073d31 !important;
   }
 
