@@ -4,12 +4,12 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="theme-color" content="#0b2231">
-    <meta name="app-version" content="2026-10-05-radius-navigation-2">
+    <meta name="app-version" content="2026-10-05-back-home-1">
     <title>Club Society</title>
-    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png?v=2026-10-05-radius-navigation-2">
-    <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=2026-10-05-radius-navigation-2">
-    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png?v=2026-10-05-radius-navigation-2">
-    <link rel="manifest" href="/manifest.webmanifest?v=2026-10-05-radius-navigation-2">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png?v=2026-10-05-back-home-1">
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=2026-10-05-back-home-1">
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png?v=2026-10-05-back-home-1">
+    <link rel="manifest" href="/manifest.webmanifest?v=2026-10-05-back-home-1">
     <script>
       const localMemberPreviewHost = ["localhost", "127.0.0.1"].includes(window.location.hostname.toLowerCase()) && new URLSearchParams(window.location.search).has("member-preview");
       if (["clubsociety.app", "www.clubsociety.app", "club-society.pages.dev"].includes(window.location.hostname.toLowerCase()) || localMemberPreviewHost) {
@@ -24,7 +24,7 @@
       .member-host main > .view { display: none !important; }
       .member-host main > #societyApp { display: block !important; }
     </style>
-    <link rel="stylesheet" href="styles.css?v=2026-10-05-radius-navigation-2">
+    <link rel="stylesheet" href="styles.css?v=2026-10-05-back-home-1">
   </head>
   <body>
     <aside class="sidebar">
@@ -422,7 +422,7 @@
 
             <div class="society-tab" data-society-panel="memberEventCreate">
               <section class="society-section">
-                <button class="society-back-button" data-society-tab="postMenu" type="button">Post</button>
+                <button class="society-back-button" data-society-tab="home" type="button">Home</button>
                 <p class="eyebrow">New event</p>
                 <h3>Post an event or social</h3>
                 <form id="memberEventForm" class="society-form society-post-form">
@@ -439,7 +439,7 @@
 
             <div class="society-tab" data-society-panel="games">
               <section class="society-section">
-                <button class="society-back-button" data-society-tab="postMenu" type="button">Post</button>
+                <button class="society-back-button" data-society-tab="home" type="button">Home</button>
                 <p class="eyebrow">Play</p>
                 <h3>Post a last-minute game</h3>
                 <p class="section-copy">Create a quick game for today, tomorrow, or this weekend so other members can RSVP.</p>
@@ -476,7 +476,7 @@
 
             <div class="society-tab" data-society-panel="partners">
               <section class="society-section">
-                <button class="society-back-button" data-society-tab="findMenu" type="button">Find</button>
+                <button class="society-back-button" data-society-tab="home" type="button">Home</button>
                 <div class="society-social-hero">
                   <p class="eyebrow">Casual matches</p>
                   <h3>Find a Match</h3>
@@ -505,7 +505,7 @@
 
             <div class="society-tab" data-society-panel="connectPlayers">
               <section class="society-section">
-                <button class="society-back-button" data-society-tab="findMenu" type="button">Find</button>
+                <button class="society-back-button" data-society-tab="home" type="button">Home</button>
                 <div class="society-social-hero">
                   <p class="eyebrow">Connect Players</p>
                   <h3>Find members who want to be found.</h3>
@@ -529,7 +529,7 @@
 
             <div class="society-tab" data-society-panel="clubGroups">
               <section class="society-section">
-                <button class="society-back-button" data-society-tab="findMenu" type="button">Find</button>
+                <button class="society-back-button" data-society-tab="home" type="button">Home</button>
                 <p class="eyebrow">Club Groups</p>
                 <h3>Public groups posted by members.</h3>
                 <p class="section-copy">Browse open groups and join the ones that fit how you like to play.</p>
@@ -627,7 +627,7 @@
 
             <div class="society-tab" data-society-panel="pickleballLessons">
               <section class="society-section">
-                <button class="society-back-button" data-society-tab="findMenu" type="button">Find</button>
+                <button class="society-back-button" data-society-tab="home" type="button">Home</button>
                 <p class="eyebrow">Local instruction</p>
                 <h3>Pickleball instructors</h3>
                 <p class="section-copy">Browse local pros and coaches offering private lessons, group instruction, and clinics.</p>
@@ -654,7 +654,7 @@
 
             <div class="society-tab" data-society-panel="courts">
               <section class="society-section">
-                <button class="society-back-button" data-society-tab="findMenu" type="button">Find</button>
+                <button class="society-back-button" data-society-tab="home" type="button">Home</button>
                 <p class="eyebrow">Nearby courts</p>
                 <h3>Find a Court</h3>
                 <p class="section-copy">Search any U.S. ZIP. The default area is 25 miles from the ZIP in your profile.</p>
@@ -683,7 +683,7 @@
 
             <div class="society-tab" data-society-panel="pickleDate">
               <section class="society-section pickle-date-section">
-                <button class="society-back-button" data-society-tab="findMenu" type="button">Find</button>
+                <button class="society-back-button" data-society-tab="home" type="button">Home</button>
                 <div class="pickle-date-hero">
                   <span>Date on the Court or Course</span>
                   <h3>One profile. The right connections.</h3>
@@ -732,7 +732,7 @@
 
             <div class="society-tab" data-society-panel="golfFindGame">
               <section class="society-section">
-                <button class="society-back-button" data-society-tab="findMenu" type="button">Find</button>
+                <button class="society-back-button" data-society-tab="home" type="button">Home</button>
                 <p class="eyebrow">Find Game</p>
                 <h3>Last-minute partner deck</h3>
                 <div class="member-scope-slot"></div>
@@ -746,7 +746,7 @@
 
             <div class="society-tab" data-society-panel="golfPostTee">
               <section class="society-section">
-                <button class="society-back-button" data-society-tab="postMenu" type="button">Post</button>
+                <button class="society-back-button" data-society-tab="home" type="button">Home</button>
                 <p class="eyebrow">Post tee time</p>
                 <h3>Fill an open slot</h3>
                 <form id="golfTeeTimeForm" class="society-form">
@@ -772,7 +772,7 @@
 
             <div class="society-tab" data-society-panel="golfCreateGroup">
               <section class="society-section">
-                <button class="society-back-button" data-society-tab="postMenu" type="button">Post</button>
+                <button class="society-back-button" data-society-tab="home" type="button">Home</button>
                 <p class="eyebrow">Create Group</p>
                 <h3>Build your golf circle</h3>
                 <form id="golfGroupForm" class="society-form">
@@ -792,7 +792,7 @@
 
             <div class="society-tab" data-society-panel="golfLessons">
               <section class="society-section">
-                <button class="society-back-button" data-society-tab="findMenu" type="button">Find</button>
+                <button class="society-back-button" data-society-tab="home" type="button">Home</button>
                 <p class="eyebrow">Lessons</p>
                 <h3>Golf instructors</h3>
                 <p class="section-copy">Browse local pros and coaches offering swing instruction, short-game help, clinics, and playing lessons.</p>
@@ -819,7 +819,7 @@
 
             <div class="society-tab" data-society-panel="golfCourses">
               <section class="society-section">
-                <button class="society-back-button" data-society-tab="findMenu" type="button">Find</button>
+                <button class="society-back-button" data-society-tab="home" type="button">Home</button>
                 <p class="eyebrow">Nearby courses</p>
                 <h3>Find a Course</h3>
                 <p class="society-section-intro">Choose how far you want to travel and see courses inside that range.</p>
@@ -869,6 +869,7 @@
 
             <div class="society-tab" data-society-panel="account">
               <section class="society-section">
+                <button class="society-back-button" data-society-tab="home" type="button">Home</button>
                 <p class="eyebrow">Account</p>
                 <h3>Profile, login, and membership</h3>
                 <div class="society-action-card">
@@ -881,6 +882,7 @@
 
             <div class="society-tab" data-society-panel="settings">
               <section class="society-section">
+                <button class="society-back-button" data-society-tab="home" type="button">Home</button>
                 <p class="eyebrow">Settings + legal</p>
                 <h3>App settings</h3>
                 <div class="society-settings-list">
@@ -1723,7 +1725,7 @@
       </section>
     </div>
 
-    <script src="app.js?v=2026-10-05-radius-navigation-2"></script>
+    <script src="app.js?v=2026-10-05-back-home-1"></script>
   </body>
 </html>
 
