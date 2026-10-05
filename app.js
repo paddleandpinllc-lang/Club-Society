@@ -106,6 +106,13 @@ const els = {
   societyMemberDashboard: document.querySelector("#societyMemberDashboard"),
   societyMemberName: document.querySelector("#societyMemberName"),
   societyMemberMeta: document.querySelector("#societyMemberMeta"),
+  societyMemberFirstName: document.querySelector("#societyMemberFirstName"),
+  societyMemberLocation: document.querySelector("#societyMemberLocation"),
+  memberDiscoveryForm: document.querySelector("#memberDiscoveryForm"),
+  memberDiscoveryZip: document.querySelector("#memberDiscoveryZip"),
+  memberDiscoveryNote: document.querySelector("#memberDiscoveryNote"),
+  memberDiscoveryList: document.querySelector("#memberDiscoveryList"),
+  memberEventList: document.querySelector("#memberEventList"),
   societyFavoriteCount: document.querySelector("#societyFavoriteCount"),
   societyFriendCount: document.querySelector("#societyFriendCount"),
   societyGroupCount: document.querySelector("#societyGroupCount"),
@@ -253,6 +260,7 @@ els.societyFriendSearch.addEventListener("input", renderSocietyFriends);
 els.casualMatchForm?.addEventListener("submit", saveCasualMatch);
 els.clubGroupForm.addEventListener("submit", saveClubGroup);
 els.quickGameForm.addEventListener("submit", saveQuickGame);
+els.memberDiscoveryForm?.addEventListener("submit", searchMemberDiscovery);
 els.courtSearch.addEventListener("input", renderCourtDirectory);
 els.courtDistance?.addEventListener("change", renderCourtDirectory);
 els.pickleDateProfileForm?.addEventListener("submit", savePickleDateProfile);
@@ -370,6 +378,11 @@ function loadState() {
     profiles: [],
     memberDirectory: [],
     memberDirectoryUpdatedAt: "",
+    memberActivity: [],
+    memberActivityZip: "",
+    memberHomeSport: "pickleball",
+    memberHomeZip: "",
+    memberHomeNationwide: false,
     golfProfile: {},
     golfTeeTimes: [],
     golfGroups: [],
@@ -442,6 +455,11 @@ function normalizeState(data) {
   }));
   data.memberDirectory = (data.memberDirectory || []).filter((profile) => profile && typeof profile === "object");
   data.memberDirectoryUpdatedAt = data.memberDirectoryUpdatedAt || "";
+  data.memberActivity = (data.memberActivity || []).filter((item) => item && typeof item === "object");
+  data.memberActivityZip = data.memberActivityZip || "";
+  data.memberHomeSport = data.memberHomeSport === "golf" ? "golf" : "pickleball";
+  data.memberHomeZip = /^\d{5}$/.test(String(data.memberHomeZip || "")) ? String(data.memberHomeZip) : "";
+  data.memberHomeNationwide = data.memberHomeNationwide === true;
   data.players = (data.players || []).map((player) => ({
     waiverSignedAt: "",
     waiverSource: "",
@@ -609,10 +627,11 @@ async function pushMemberCloudState(immediate = false) {
   }
 }
 
-async function refreshMemberDirectory(force = false) {
+async function refreshMemberDirectory(force = false, activityZip = "") {
   if (!canUseMemberCloudSync()) return false;
   const refreshedAt = Date.parse(state.memberDirectoryUpdatedAt || "") || 0;
-  if (!force && Date.now() - refreshedAt < 60000) return true;
+  const requestedZip = /^\d{5}$/.test(String(activityZip || "")) ? String(activityZip) : "";
+  if (!force && state.memberActivityZip === requestedZip && Date.now() - refreshedAt < 60000) return true;
   try {
     const response = await fetch("/api/member-signup", {
       method: "POST",
@@ -621,11 +640,14 @@ async function refreshMemberDirectory(force = false) {
         action: "directory",
         email: state.cloudMemberSync.email,
         syncToken: state.cloudMemberSync.token,
+        zip: requestedZip,
       }),
     });
     const result = await response.json().catch(() => ({}));
     if (!response.ok || !result.ok) throw new Error(result.error || "Member directory unavailable");
     state.memberDirectory = Array.isArray(result.profiles) ? result.profiles : [];
+    state.memberActivity = Array.isArray(result.activities) ? result.activities : [];
+    state.memberActivityZip = requestedZip;
     state.memberDirectoryUpdatedAt = new Date().toISOString();
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
     return true;
@@ -1394,6 +1416,40 @@ function handleSocietyAppClick(event) {
     return;
   }
 
+  const homeSportButton = event.target.closest("[data-home-sport]");
+  if (homeSportButton) {
+    state.memberHomeSport = homeSportButton.dataset.homeSport === "golf" ? "golf" : "pickleball";
+    saveState();
+    renderMemberDiscovery();
+    return;
+  }
+
+  if (event.target.closest("[data-home-post]")) {
+    setSocietyTab(state.memberHomeSport === "golf" ? "golfPostTee" : "games");
+    return;
+  }
+
+  if (event.target.closest("[data-home-find]")) {
+    setSocietyTab(state.memberHomeSport === "golf" ? "golfFindGame" : "partners");
+    return;
+  }
+
+  if (event.target.closest("[data-member-nationwide]")) {
+    state.memberHomeNationwide = true;
+    state.memberHomeZip = "";
+    if (els.memberDiscoveryZip) els.memberDiscoveryZip.value = "";
+    saveState();
+    refreshMemberDirectory(true, "").then(() => renderMemberDiscovery());
+    renderMemberDiscovery();
+    return;
+  }
+
+  const homeOpenButton = event.target.closest("[data-home-open]");
+  if (homeOpenButton) {
+    setSocietyTab(homeOpenButton.dataset.homeOpen);
+    return;
+  }
+
   const favoriteButton = event.target.closest("[data-society-favorite]");
   if (favoriteButton) {
     addSocietyFavorite(favoriteButton.dataset.societyFavorite);
@@ -1677,7 +1733,7 @@ function initializeAuthPanels() {
 }
 
 function setSocietyTab(tab) {
-  const protectedTabs = new Set(["pickleballHome", "games", "courts", "pickleDate", "memberHost", "events", "partners", "connectPlayers", "clubGroups", "myGroups", "host", "pickleballLessons", "settings", "golfHome", "golfFindGame", "golfPostTee", "golfCreateGroup", "golfLessons", "golfCourses", "golfTournament", "golfMessages"]);
+  const protectedTabs = new Set(["pickleballHome", "games", "courts", "pickleDate", "memberHost", "events", "partners", "connectPlayers", "clubGroups", "myGroups", "host", "pickleballLessons", "settings", "shop", "golfHome", "golfFindGame", "golfPostTee", "golfCreateGroup", "golfLessons", "golfCourses", "golfTournament", "golfMessages"]);
   if (protectedTabs.has(tab) && !hasSocietyAccess()) {
     setSocietyTab("home");
     els.societyAccountMessage.textContent = "Sign in or Join to access";
@@ -1700,6 +1756,7 @@ function setSocietyTab(tab) {
     button.classList.toggle("active", ["pickleballLessons", "golfLessons"].includes(tab));
   });
   if (tab === "home") updateSocietyHome();
+  if (tab === "events") renderMemberEvents();
   if (tab === "partners") renderCasualMatches();
   if (tab === "connectPlayers") {
     renderSocietyFriends();
@@ -1707,7 +1764,13 @@ function setSocietyTab(tab) {
   }
   if (tab === "clubGroups") renderClubGroups();
   if (tab === "myGroups") renderMyGroups();
-  if (tab === "games") renderQuickGames();
+  if (tab === "games") {
+    if (els.quickGameForm?.elements.zip && !els.quickGameForm.elements.zip.value) els.quickGameForm.elements.zip.value = currentSocietyProfile()?.zip || "";
+    renderQuickGames();
+  }
+  if (tab === "golfPostTee" && els.golfTeeTimeForm?.elements.zip && !els.golfTeeTimeForm.elements.zip.value) {
+    els.golfTeeTimeForm.elements.zip.value = currentSocietyProfile()?.zip || "";
+  }
   if (tab === "courts") {
     if (els.courtDistance) els.courtDistance.value = state.courtDistance || "25";
     renderCourtDirectory();
@@ -1758,8 +1821,7 @@ function renderLessonListings(sport) {
   const target = document.querySelector(sport === "golf" ? "#golfLessonList" : "#pickleballLessonList");
   if (!target) return;
   const listings = state.lessonListings.filter((item) => item.sport === sport && item.paymentStatus === "paid");
-  target.querySelectorAll("[data-paid-lesson]").forEach((item) => item.remove());
-  listings.forEach((item) => { const card = document.createElement("article"); card.className = "society-list-card"; card.dataset.paidLesson = item.id; card.innerHTML = `<strong>${escapeHtml(item.name)}</strong><span>${escapeHtml(item.location)} | ${escapeHtml(item.format)}</span><p>${escapeHtml(item.bio)}</p>`; target.prepend(card); });
+  target.innerHTML = listings.length ? listings.map((item) => `<article class="society-list-card" data-paid-lesson="${escapeHtml(item.id)}"><strong>${escapeHtml(item.name)}</strong><span>${escapeHtml(item.location)} | ${escapeHtml(item.format)}</span><p>${escapeHtml(item.bio)}</p></article>`).join("") : `<div class="empty">No verified ${sport} instructors are listed yet.</div>`;
 }
 
 function hasSocietyAccess() {
@@ -1784,9 +1846,15 @@ function updateSocietyHome() {
   const profile = currentSocietyProfile();
   const name = profile ? `${profile.firstName || ""} ${profile.lastName || ""}`.trim() : "Society Member";
   els.societyMemberName.textContent = name || "Society Member";
+  if (els.societyMemberFirstName) els.societyMemberFirstName.textContent = profile?.firstName || "member";
+  if (els.societyMemberLocation) {
+    els.societyMemberLocation.textContent = [profile?.city, profile?.state, profile?.zip].filter(Boolean).join(", ") || "Search any U.S. ZIP code";
+  }
   els.societyMemberMeta.textContent = profile
     ? `${profile.city || "Watkinsville"}, ${profile.state || "GA"} | ${profile.preferredSport || "Golf + Pickleball"}`
     : "Golf + Pickleball | 30677";
+  if (!state.memberHomeZip && !state.memberHomeNationwide && profile?.zip) state.memberHomeZip = profile.zip;
+  if (els.memberDiscoveryZip) els.memberDiscoveryZip.value = state.memberHomeZip || "";
   if (els.societyFavoriteCount) els.societyFavoriteCount.textContent = String(state.societyFavorites.length);
   if (els.societyFriendCount) els.societyFriendCount.textContent = String(state.societyFriends.length);
   if (els.societyGroupCount) els.societyGroupCount.textContent = String(myClubGroups().length);
@@ -1794,6 +1862,120 @@ function updateSocietyHome() {
   updateSocietyAvatar(profile);
   renderSocietyFriends();
   renderProfileActivity();
+  renderMemberDiscovery();
+  refreshMemberDirectory(false, state.memberHomeNationwide ? "" : state.memberHomeZip).then((updated) => {
+    if (updated) renderMemberDiscovery();
+  });
+}
+
+function searchMemberDiscovery(event) {
+  event.preventDefault();
+  const zip = String(els.memberDiscoveryZip?.value || "").trim();
+  if (!/^\d{5}$/.test(zip)) {
+    showSocietyAccountMessage("Enter a valid five-digit U.S. ZIP code.", "error");
+    els.memberDiscoveryZip?.focus();
+    return;
+  }
+  state.memberHomeZip = zip;
+  state.memberHomeNationwide = false;
+  saveState();
+  if (els.memberDiscoveryNote) els.memberDiscoveryNote.textContent = `Finding ${state.memberHomeSport} activity in ${zip}...`;
+  refreshMemberDirectory(true, zip).then(() => renderMemberDiscovery());
+  renderMemberDiscovery();
+}
+
+function memberDiscoveryItems() {
+  const profile = currentSocietyProfile();
+  const profileZip = profile?.zip || "";
+  const localItems = [
+    ...state.quickGames.map((item) => ({ ...item, sport: "pickleball", type: "game", zip: item.zip || profileZip })),
+    ...state.casualMatches.map((item) => ({ ...item, sport: "pickleball", type: "match", zip: item.zip || profileZip })),
+    ...state.golfTeeTimes.map((item) => ({
+      ...item,
+      sport: "golf",
+      type: "round",
+      title: item.course,
+      day: item.date,
+      location: item.course,
+      zip: item.zip || profileZip,
+    })),
+  ].filter((item) => !isSampleActivity(item));
+  const byId = new Map();
+  [...state.memberActivity, ...localItems].forEach((item) => {
+    if (!item?.id) return;
+    byId.set(item.id, { ...(byId.get(item.id) || {}), ...item });
+  });
+  const requestedZip = state.memberHomeNationwide ? "" : state.memberHomeZip;
+  return [...byId.values()]
+    .filter((item) => item.sport === state.memberHomeSport)
+    .filter((item) => !requestedZip || String(item.zip || "") === requestedZip)
+    .sort((a, b) => String(b.createdAt || b.day || "").localeCompare(String(a.createdAt || a.day || "")))
+    .slice(0, 12);
+}
+
+function isSampleActivity(item) {
+  const id = String(item?.id || "");
+  const email = String(item?.ownerEmail || "").toLowerCase();
+  return id.startsWith("quick-") || id.startsWith("match-") || email.endsWith("@example.com");
+}
+
+function renderMemberDiscovery() {
+  if (!els.memberDiscoveryList) return;
+  const sport = state.memberHomeSport === "golf" ? "golf" : "pickleball";
+  document.querySelectorAll("[data-home-sport]").forEach((button) => {
+    button.classList.toggle("active", button.dataset.homeSport === sport);
+  });
+  const postButton = document.querySelector("[data-home-post]");
+  if (postButton) postButton.innerHTML = sport === "golf" ? "<span>+</span> Post a tee time" : "<span>+</span> Post a game";
+  const place = state.memberHomeNationwide ? "nationwide" : `in ${state.memberHomeZip || "your ZIP"}`;
+  if (els.memberDiscoveryNote) els.memberDiscoveryNote.textContent = `Showing ${sport} activity ${place}. Search any five-digit U.S. ZIP.`;
+  const items = memberDiscoveryItems();
+  const placeholder = sport === "golf" ? "member-golf-placeholder.webp" : "member-pickleball-placeholder.webp";
+  const destination = sport === "golf" ? "golfFindGame" : "partners";
+  els.memberDiscoveryList.innerHTML = items.length ? items.map((item) => {
+    const image = String(item.imageDataUrl || "").startsWith("data:image/") ? item.imageDataUrl : placeholder;
+    const owner = item.ownerName ? `Posted by ${publicNameFromString(item.ownerName)}` : "Member post";
+    const timing = [item.day || item.date, formatDisplayTime(item.time)].filter(Boolean).join(" · ") || "Schedule with the host";
+    const location = [item.location || item.course, item.zip].filter(Boolean).join(" · ");
+    return `
+      <article class="member-discovery-card">
+        <div class="member-discovery-image" style="background-image:url('${escapeHtml(image)}')" role="img" aria-label="${escapeHtml(sport)} event image"></div>
+        <div class="member-discovery-content">
+          <span>${escapeHtml(sport)} · ${escapeHtml(owner)}</span>
+          <strong>${escapeHtml(item.title || item.course || "Open play")}</strong>
+          <p>${escapeHtml(timing)}</p>
+          <p>${escapeHtml(location || "Location shared by the host")}${item.spots ? ` · ${escapeHtml(item.spots)} open` : ""}</p>
+          <button data-home-open="${destination}" type="button">View details</button>
+        </div>
+      </article>`;
+  }).join("") : `
+    <article class="member-empty-state">
+      <div class="member-empty-state-image" style="background-image:url('${placeholder}')" role="img" aria-label="${sport} placeholder image"></div>
+      <div class="member-empty-state-copy">
+        <strong>No ${sport} posts here yet.</strong>
+        <p>Be the first member to post in ${escapeHtml(state.memberHomeNationwide ? "the nationwide feed" : state.memberHomeZip || "this ZIP code")}.</p>
+        <button data-home-post type="button">Create the first post</button>
+      </div>
+    </article>`;
+}
+
+function renderMemberEvents() {
+  if (!els.memberEventList) return;
+  const events = state.events
+    .filter((item) => item.published !== false)
+    .filter((item) => !String(item?.ownerEmail || "").toLowerCase().endsWith("@example.com"))
+    .sort((a, b) => String(a.date || "").localeCompare(String(b.date || "")));
+  els.memberEventList.innerHTML = events.length ? events.map((item) => `
+    <article class="society-list-card">
+      <strong>${escapeHtml(item.name)}</strong>
+      <span>${escapeHtml(item.sport || "Club Society")} · ${escapeHtml(item.date || "Date announced by host")}</span>
+      <p>${escapeHtml([item.venue, item.format].filter(Boolean).join(" · ") || item.note || "Member event")}</p>
+      <div class="society-post-actions">
+        <span>${escapeHtml(item.capacity ? `${item.capacity} spots` : "Member event")}</span>
+        <button data-society-event-rsvp="${escapeHtml(item.id)}" type="button">RSVP</button>
+        <button data-society-event-message="${escapeHtml(item.id)}" type="button">Message</button>
+      </div>
+    </article>`).join("") : `<div class="empty">No published member events yet. New events will appear here after a host publishes them.</div>`;
 }
 
 function fillSocietyProfileDrawer(profile) {
@@ -1962,6 +2144,29 @@ async function resizeProfilePhoto(file) {
   return canvas.toDataURL("image/jpeg", 0.78);
 }
 
+async function resizeEventPhoto(file) {
+  if (!file || !file.size) return "";
+  if (!file.type?.startsWith("image/")) throw new Error("Choose an image file.");
+  if (file.size > 15 * 1024 * 1024) throw new Error("Event images must be smaller than 15 MB.");
+  const source = await readFileAsDataUrl(file);
+  const image = await new Promise((resolve, reject) => {
+    const element = new Image();
+    element.onload = () => resolve(element);
+    element.onerror = reject;
+    element.src = source;
+  });
+  const maxWidth = 960;
+  const maxHeight = 640;
+  const scale = Math.min(1, maxWidth / image.naturalWidth, maxHeight / image.naturalHeight);
+  const width = Math.max(1, Math.round(image.naturalWidth * scale));
+  const height = Math.max(1, Math.round(image.naturalHeight * scale));
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  canvas.getContext("2d", { alpha: false }).drawImage(image, 0, 0, width, height);
+  return canvas.toDataURL("image/jpeg", 0.68);
+}
+
 function societyDirectoryCards() {
   const currentEmail = state.societySessionEmail?.toLowerCase();
   const savedProfiles = mergeRecords(state.profiles, state.memberDirectory, (profile) => profile.email || profile.id)
@@ -1988,22 +2193,6 @@ function societyDirectoryCards() {
 function isSampleMember(profile) {
   const email = String(profile?.email || "").toLowerCase();
   return email.endsWith("@example.com") || String(profile?.id || "").startsWith("demo-");
-}
-
-function defaultCasualMatches() {
-  return [
-    { id: "match-sat-doubles", title: "Need 2 for social doubles", day: "Today", time: "18:00", playersNeeded: "2", skill: "3.0-3.5", location: "Southeast Clarke Park", note: "Rotating partners, friendly but competitive.", ownerName: "Maya T.", ownerEmail: "demo-maya@example.com", rsvps: [] },
-    { id: "match-mixed-oconee", title: "Mixed doubles practice group", day: "Tomorrow", time: "09:00", playersNeeded: "1", skill: "Open", location: "Herman C. Michael Park", note: "Easy pace, drill a little then play.", ownerName: "Jordan R.", ownerEmail: "demo-jordan@example.com", rsvps: [] },
-    { id: "match-weekend-open", title: "Weekend open play group", day: "This weekend", time: "10:00", playersNeeded: "4", skill: "All levels", location: "Bishop Park", note: "Looking for a relaxed rotation Saturday morning.", ownerName: "Avery C.", ownerEmail: "demo-avery@example.com", rsvps: [] },
-  ];
-}
-
-function defaultQuickGames() {
-  return [
-    { id: "quick-today-singles", title: "Singles hit around", day: "Today", time: "16:30", location: "Satterfield Park", note: "One player, 45 minutes, any level.", ownerName: "Maya T.", ownerEmail: "demo-maya@example.com", rsvps: [] },
-    { id: "quick-tomorrow-open", title: "Need 1 for doubles", day: "Tomorrow", time: "07:45", location: "Southeast Clarke Park", note: "Casual doubles before work.", ownerName: "Jordan R.", ownerEmail: "demo-jordan@example.com", rsvps: [] },
-    { id: "quick-weekend-rotation", title: "Weekend rotation", day: "This weekend", time: "09:30", location: "Bishop Park", note: "Trying to get 6-8 players for rotating games.", ownerName: "Taylor R.", ownerEmail: "demo-taylor@example.com", rsvps: [] },
-  ];
 }
 
 function courtDirectory() {
@@ -2114,7 +2303,8 @@ function renderCasualMatches() {
     button.classList.toggle("active", button.dataset.matchFilter === filter);
   });
   const currentEmail = (currentSocietyProfile()?.email || state.societySessionEmail || "").toLowerCase();
-  const posts = [...state.quickGames, ...state.casualMatches, ...defaultQuickGames(), ...defaultCasualMatches()]
+  const posts = [...state.quickGames, ...state.casualMatches]
+    .filter((post) => !isSampleActivity(post))
     .filter((post) => String(post.ownerEmail || "").toLowerCase() !== currentEmail)
     .filter((post) => matchesDayFilter(post.day, filter));
   els.casualMatchList.innerHTML = posts.length
@@ -2122,15 +2312,25 @@ function renderCasualMatches() {
     : `<article class="society-list-card"><strong>No member matches yet</strong><p>Check another day or ask members to post from Play.</p></article>`;
 }
 
-function saveQuickGame(event) {
+async function saveQuickGame(event) {
   event.preventDefault();
   if (!profileHasPhoto()) {
     promptForSocietyPhoto();
     return;
   }
   const data = Object.fromEntries(new FormData(els.quickGameForm).entries());
-  state.quickGames.unshift({ ...data, ...currentPostOwner(), id: newId(), rsvps: [], createdAt: new Date().toISOString() });
+  const imageFile = data.eventImage;
+  delete data.eventImage;
+  let imageDataUrl = "";
+  try {
+    imageDataUrl = await resizeEventPhoto(imageFile);
+  } catch (error) {
+    showSocietyAccountMessage(error.message || "The event image could not be prepared.", "error");
+    return;
+  }
+  state.quickGames.unshift({ ...data, ...currentPostOwner(), imageDataUrl, sport: "pickleball", id: newId(), rsvps: [], createdAt: new Date().toISOString() });
   els.quickGameForm.reset();
+  els.quickGameForm.elements.zip.value = currentSocietyProfile()?.zip || "";
   saveState();
   renderQuickGames();
   renderProfileActivity();
@@ -2227,12 +2427,7 @@ function rsvpToQuickGame(id) {
 
 function rsvpToPost(collection, id) {
   let post = collection.find((item) => item.id === id);
-  if (!post) {
-    const seed = [...defaultCasualMatches(), ...defaultQuickGames()].find((item) => item.id === id);
-    if (!seed) return;
-    post = { ...seed, rsvps: [] };
-    collection.unshift(post);
-  }
+  if (!post) return;
   const profile = currentSocietyProfile();
   const name = publicMemberName(profile, "Society Member");
   post.rsvps = post.rsvps || [];
@@ -2249,9 +2444,7 @@ function allPlayablePosts() {
   return [
     ...state.casualMatches,
     ...state.quickGames,
-    ...defaultCasualMatches(),
-    ...defaultQuickGames(),
-  ];
+  ].filter((post) => !isSampleActivity(post));
 }
 
 function findPlayablePost(id) {
@@ -2914,21 +3107,33 @@ function addSocietyFavorite(label) {
   els.societyAccountMessage.textContent = `${label} added to favorites and reminders.`;
 }
 
-function saveGolfTeeTime(event) {
+async function saveGolfTeeTime(event) {
   event.preventDefault();
   if (!profileHasPhoto()) {
     promptForSocietyPhoto();
     return;
   }
   const data = Object.fromEntries(new FormData(els.golfTeeTimeForm).entries());
+  const imageFile = data.eventImage;
+  delete data.eventImage;
+  let imageDataUrl = "";
+  try {
+    imageDataUrl = await resizeEventPhoto(imageFile);
+  } catch (error) {
+    showSocietyAccountMessage(error.message || "The event image could not be prepared.", "error");
+    return;
+  }
   state.golfTeeTimes.unshift({
     ...data,
+    ...currentPostOwner(),
+    imageDataUrl,
+    sport: "golf",
     id: newId(),
-    zip: data.zip || "30677",
+    zip: data.zip || currentSocietyProfile()?.zip || "",
     createdAt: new Date().toISOString(),
   });
   els.golfTeeTimeForm.reset();
-  els.golfTeeTimeForm.elements.zip.value = "30677";
+  els.golfTeeTimeForm.elements.zip.value = currentSocietyProfile()?.zip || "";
   saveState();
   renderGolf();
 }
@@ -2967,6 +3172,7 @@ function saveGolfMessage(event) {
 
 function passGolfMatch() {
   const cards = golfMatchCards();
+  if (!cards.length) return;
   state.golfMatchIndex = (state.golfMatchIndex + 1) % cards.length;
   saveState();
   renderGolfMatchDeck();
@@ -2978,6 +3184,10 @@ function messageGolfMatch() {
     return;
   }
   const card = golfMatchCards()[state.golfMatchIndex % golfMatchCards().length];
+  if (!card) {
+    showSocietyAccountMessage("No member golf rounds are posted yet.", "notice");
+    return;
+  }
   setSocietyTab("golfMessages");
   els.golfMessageForm.elements.to.value = card.name;
   els.golfMessageForm.elements.body.value = `Interested in ${card.cta.toLowerCase()} at ${card.course}.`;
@@ -3071,10 +3281,18 @@ function useCurrentGolfLocation() {
 
 function renderGolfMatchDeck() {
   const cards = golfMatchCards();
+  if (!cards.length) {
+    els.golfMatchDeck.innerHTML = `<article class="society-list-card"><strong>No member rounds yet</strong><p>Post a tee time to start the golf feed. Only real member activity appears here.</p></article>`;
+    els.golfPassBtn.disabled = true;
+    els.golfMessageMatchBtn.disabled = true;
+    return;
+  }
+  els.golfPassBtn.disabled = false;
+  els.golfMessageMatchBtn.disabled = false;
   const card = cards[state.golfMatchIndex % cards.length];
   els.golfMatchDeck.innerHTML = `
     <article class="golf-match-card">
-      <span>${escapeHtml(card.distance)} from 30677</span>
+      <span>${escapeHtml(card.distance)}</span>
       <strong>${escapeHtml(card.name)}</strong>
       <p>${escapeHtml(card.course)} | ${escapeHtml(card.time)} | HCP ${escapeHtml(card.handicap)}</p>
       <div class="golf-card-tags">
@@ -3086,33 +3304,25 @@ function renderGolfMatchDeck() {
 }
 
 function renderGolfTeeTimes() {
-  const demo = [
-    { course: "Lane Creek Golf Club", date: "Today", time: "4:20 PM", spots: "1", note: "Single dropped. Need one more for a relaxed foursome." },
-    { course: "UGA Golf Course", date: "Tomorrow", time: "8:40 AM", spots: "2", note: "Cart booked. Casual pace, 12-20 handicap range." },
-  ];
-  const items = [...state.golfTeeTimes, ...demo];
-  els.golfTeeTimeList.innerHTML = items.map((item) => `
+  const items = state.golfTeeTimes.filter((item) => !isSampleActivity(item));
+  els.golfTeeTimeList.innerHTML = items.length ? items.map((item) => `
     <article class="society-list-card">
       <strong>${escapeHtml(item.course)}</strong>
       <span>${escapeHtml(item.date)} | ${escapeHtml(formatDisplayTime(item.time))} | ${escapeHtml(item.spots)} open</span>
       <p>${escapeHtml(item.note || "Open tee time inside the Club Society golf radius.")}</p>
     </article>
-  `).join("");
+  `).join("") : `<div class="empty">No member tee times yet. Post the first round above.</div>`;
 }
 
 function renderGolfGroups() {
-  const demo = [
-    { name: "Oconee After Work 9", vibe: "Casual foursome finder", note: "Weekday nine-hole rounds near Watkinsville." },
-    { name: "Athens Weekend Skins", vibe: "Competitive matches", note: "Friendly matches with a little pressure." },
-  ];
-  const items = [...state.golfGroups, ...demo];
-  els.golfGroupList.innerHTML = items.map((item) => `
+  const items = state.golfGroups;
+  els.golfGroupList.innerHTML = items.length ? items.map((item) => `
     <article class="society-list-card">
       <strong>${escapeHtml(item.name)}</strong>
       <span>${escapeHtml(item.vibe)}</span>
       <p>${escapeHtml(item.note || "Golf group inside the 30677 radius.")}</p>
     </article>
-  `).join("");
+  `).join("") : `<div class="empty">No golf groups yet. Create the first group above.</div>`;
 }
 
 function renderGolfMessages() {
@@ -3200,11 +3410,21 @@ function openPrefilledMessage(to, body) {
 }
 
 function golfMatchCards() {
-  return [
-    { name: "Blake M.", course: "Lane Creek Golf Club", time: "Today 4:10 PM", handicap: "11", distance: "9 miles", cta: "Needs one more", tags: ["Fast reply", "Cart booked", "Casual"] },
-    { name: "Jordan K.", course: "UGA Golf Course", time: "Tomorrow 8:40 AM", handicap: "18", distance: "12 miles", cta: "Open twosome", tags: ["Beginner friendly", "Morning", "Social"] },
-    { name: "Taylor R.", course: "Jennings Mill", time: "Friday 2:30 PM", handicap: "6", distance: "14 miles", cta: "Match play invite", tags: ["Competitive", "Member invite", "18 holes"] },
-  ];
+  const byId = new Map();
+  [...state.memberActivity.filter((item) => item.sport === "golf"), ...state.golfTeeTimes].forEach((item) => {
+    if (!item?.id || isSampleActivity(item)) return;
+    byId.set(item.id, {
+      id: item.id,
+      name: publicNameFromString(item.ownerName || "Club member"),
+      course: item.course || item.location || item.title || "Golf round",
+      time: [item.date || item.day, formatDisplayTime(item.time)].filter(Boolean).join(" "),
+      handicap: item.handicap || "Open",
+      distance: item.zip ? `ZIP ${item.zip}` : "Location shared by host",
+      cta: item.spots ? `${item.spots} spot${String(item.spots) === "1" ? "" : "s"} open` : "Open round",
+      tags: [item.note || "Member-hosted round"],
+    });
+  });
+  return [...byId.values()];
 }
 
 function savePublicRsvp(event) {

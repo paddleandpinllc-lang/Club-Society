@@ -4,12 +4,12 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="theme-color" content="#0b2231">
-    <meta name="app-version" content="2026-10-05-logo-1">
+    <meta name="app-version" content="2026-10-05-member-home-1">
     <title>Club Society</title>
-    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png?v=2026-10-05-logo-1">
-    <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=2026-10-05-logo-1">
-    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png?v=2026-10-05-logo-1">
-    <link rel="manifest" href="/manifest.webmanifest?v=2026-10-05-logo-1">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png?v=2026-10-05-member-home-1">
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=2026-10-05-member-home-1">
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png?v=2026-10-05-member-home-1">
+    <link rel="manifest" href="/manifest.webmanifest?v=2026-10-05-member-home-1">
     <script>
       const localMemberPreviewHost = ["localhost", "127.0.0.1"].includes(window.location.hostname.toLowerCase()) && new URLSearchParams(window.location.search).has("member-preview");
       if (["clubsociety.app", "www.clubsociety.app", "club-society.pages.dev"].includes(window.location.hostname.toLowerCase()) || localMemberPreviewHost) {
@@ -24,7 +24,7 @@
       .member-host main > .view { display: none !important; }
       .member-host main > #societyApp { display: block !important; }
     </style>
-    <link rel="stylesheet" href="styles.css?v=2026-10-05-logo-1">
+    <link rel="stylesheet" href="styles.css?v=2026-10-05-member-home-1">
   </head>
   <body>
     <aside class="sidebar">
@@ -254,26 +254,67 @@
               </section>
 
               <section class="society-member-dashboard" id="societyMemberDashboard">
-                <header class="society-member-welcome">
-                  <span class="society-kicker">Your Society</span>
-                  <h2>What are you playing today?</h2>
-                  <p>Choose a sport to find serious players, post a game, and see what is happening nearby.</p>
+                <header class="member-home-header">
+                  <div>
+                    <span class="society-kicker">Your Society</span>
+                    <h2>Hi, <span id="societyMemberFirstName">member</span>.</h2>
+                    <p id="societyMemberLocation">Set your ZIP to discover play anywhere in the U.S.</p>
+                  </div>
+                  <button class="member-notification-button" data-society-tab="golfMessages" type="button" aria-label="Open messages">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M9.7 21h4.6"/></svg>
+                  </button>
                 </header>
 
-                <div class="society-direction-grid" aria-label="Choose sport">
-                  <button class="pickleball-card" data-society-tab="pickleballHome" type="button">
-                    <span>Pickleball</span>
-                    <strong>Find play, post games, events &amp; lessons</strong>
-                    <i>Open Pickleball &rarr;</i>
-                  </button>
-                  <button class="golf-card" data-society-tab="golfHome" type="button">
-                    <span>Golf</span>
-                    <strong>Find tee times, groups, and matches</strong>
-                    <i>Open Golf &rarr;</i>
-                  </button>
+                <section class="member-play-hero">
+                  <div class="member-play-copy">
+                    <span>Connect. Play. Belong.</span>
+                    <h2>Ready to play?</h2>
+                    <p>Find a game, share an opening, or make a plan with members near any ZIP code nationwide.</p>
+                  </div>
+                  <div class="member-sport-switch" aria-label="Choose a sport">
+                    <button class="active" data-home-sport="pickleball" type="button"><span aria-hidden="true">●</span> Pickleball</button>
+                    <button data-home-sport="golf" type="button"><span aria-hidden="true">⚑</span> Golf</button>
+                  </div>
+                  <button class="member-primary-action" data-home-post type="button"><span>+</span> Post a game</button>
+                </section>
+
+                <form id="memberDiscoveryForm" class="member-discovery-bar">
+                  <label for="memberDiscoveryZip">Find play by ZIP</label>
+                  <div>
+                    <input id="memberDiscoveryZip" name="zip" inputmode="numeric" maxlength="5" pattern="[0-9]{5}" placeholder="Any U.S. ZIP code" required>
+                    <button type="submit">Search</button>
+                  </div>
+                  <button class="member-nationwide-button" data-member-nationwide type="button">Show all nationwide</button>
+                </form>
+
+                <div class="member-quick-actions" aria-label="Member shortcuts">
+                  <button data-home-find type="button"><span>⌖</span><strong>Find</strong><small>Players &amp; games</small></button>
+                  <button data-society-tab="events" type="button"><span>□</span><strong>Events</strong><small>See the calendar</small></button>
+                  <button data-society-tab="myGroups" type="button"><span>◎</span><strong>Groups</strong><small>Meet your people</small></button>
+                  <button data-society-lessons type="button"><span>↗</span><strong>Lessons</strong><small>Improve your game</small></button>
                 </div>
 
-                <article class="society-profile-card">
+                <section class="member-nearby-section">
+                  <div class="member-section-title">
+                    <div><span>Discover</span><h3>Near you</h3></div>
+                    <button data-home-find type="button">See all &rarr;</button>
+                  </div>
+                  <p id="memberDiscoveryNote" class="member-discovery-note">Showing member activity near your profile ZIP.</p>
+                  <div id="memberDiscoveryList" class="member-discovery-list"></div>
+                </section>
+
+                <section class="society-profile-activity-grid member-activity-summary">
+                  <article class="society-activity-card">
+                    <div class="society-section-head compact"><div><span class="society-kicker">My RSVPs</span><h3>Coming up</h3></div></div>
+                    <div id="myRsvpList" class="society-mini-list"></div>
+                  </article>
+                  <article class="society-activity-card">
+                    <div class="society-section-head compact"><div><span class="society-kicker">My Posts</span><h3>Responses</h3></div></div>
+                    <div id="myPostList" class="society-mini-list"></div>
+                  </article>
+                </section>
+
+                <article class="society-profile-card member-profile-card">
                   <div class="society-profile-strip">
                     <button class="society-avatar" data-profile-toggle type="button" aria-label="Open profile photo">CS</button>
                     <button class="society-profile-name-button" data-profile-toggle type="button">
@@ -321,65 +362,7 @@
                   </form>
                 </article>
 
-                <section class="society-profile-activity-grid">
-                  <article class="society-activity-card">
-                    <div class="society-section-head compact">
-                      <div>
-                        <span class="society-kicker">My RSVPs</span>
-                        <h3>Where I am in</h3>
-                      </div>
-                    </div>
-                    <div id="myRsvpList" class="society-mini-list"></div>
-                  </article>
-                  <article class="society-activity-card">
-                    <div class="society-section-head compact">
-                      <div>
-                        <span class="society-kicker">My Posts</span>
-                        <h3>Responses</h3>
-                      </div>
-                    </div>
-                    <div id="myPostList" class="society-mini-list"></div>
-                  </article>
-                </section>
-
-                <div class="society-mini-actions" aria-label="Member shortcuts">
-                  <button data-society-tab="connectPlayers" type="button"><span>Connect Players</span></button>
-                  <button data-society-tab="golfMessages" type="button"><span>Messages</span></button>
-                  <button data-society-tab="myGroups" type="button"><span>My Groups</span><strong id="societyGroupCount">0</strong></button>
-                </div>
-
-                <section class="society-events-dock">
-                  <div class="society-section-head">
-                    <div>
-                      <span class="society-kicker">Next 7 days</span>
-                      <h3>What is happening</h3>
-                    </div>
-                  </div>
-                  <div class="society-filter-row">
-                    <button class="active" data-society-event-tab="pickleball" type="button">Pickleball</button>
-                    <button data-society-event-tab="golf" type="button">Golf</button>
-                  </div>
-                  <div class="society-event-list active" data-society-event-list="pickleball">
-                    <article class="society-event-preview">
-                      <div><span>Tonight</span><strong>Watkinsville Social Mixer</strong><p>Rotating partner games inside the 30677 area.</p></div>
-                      <button class="mini-icon-button" data-society-favorite="Watkinsville Social Mixer" type="button" aria-label="Add Watkinsville Social Mixer">+</button>
-                    </article>
-                    <article class="society-event-preview">
-                      <div><span>Saturday</span><strong>Athens Open Play</strong><p>Drop-in courts, casual games, and partner matching.</p></div>
-                      <button class="mini-icon-button" data-society-favorite="Athens Open Play" type="button" aria-label="Add Athens Open Play">+</button>
-                    </article>
-                  </div>
-                  <div class="society-event-list" data-society-event-list="golf">
-                    <article class="society-event-preview">
-                      <div><span>Tomorrow</span><strong>Lane Creek Twosome Alert</strong><p>One open spot for a late afternoon round.</p></div>
-                      <button class="mini-icon-button" data-society-favorite="Lane Creek Twosome Alert" type="button" aria-label="Add Lane Creek Twosome Alert">+</button>
-                    </article>
-                    <article class="society-event-preview">
-                      <div><span>Sunday</span><strong>UGA Course Social Nine</strong><p>Low-pressure nine-hole group near Athens.</p></div>
-                      <button class="mini-icon-button" data-society-favorite="UGA Course Social Nine" type="button" aria-label="Add UGA Course Social Nine">+</button>
-                    </article>
-                  </div>
-                </section>
+                <p class="member-experience-note">Club Society is a Paddle + Pin experience.</p>
               </section>
             </div>
 
@@ -420,8 +403,15 @@
                     </select>
                     <input name="time" type="time" required>
                   </div>
-                  <input name="location" placeholder="Court or area" required>
+                  <div class="form-pair">
+                    <input name="location" placeholder="Court or area" required>
+                    <input name="zip" inputmode="numeric" maxlength="5" pattern="[0-9]{5}" placeholder="ZIP code" required>
+                  </div>
                   <textarea name="note" rows="2" placeholder="Skill level, singles/doubles, how many needed..."></textarea>
+                  <label class="event-photo-field">
+                    <span>Add an event image <small>Optional. We will use the pickleball placeholder if omitted.</small></span>
+                    <input name="eventImage" type="file" accept="image/*">
+                  </label>
                   <button class="primary" type="submit">Post Game</button>
                 </form>
                 <div class="society-filter-row">
@@ -587,10 +577,7 @@
                 <p class="eyebrow">Local instruction</p>
                 <h3>Pickleball instructors</h3>
                 <p class="section-copy">Browse local pros and coaches offering private lessons, group instruction, and clinics.</p>
-                <div id="pickleballLessonList" class="society-stack">
-                  <article class="society-list-card"><strong>Beginner fundamentals</strong><span>Athens | Private or small group</span><p>Dinking, serving, positioning, and first match confidence.</p></article>
-                  <article class="society-list-card"><strong>3.0 to 3.5 clinic</strong><span>Watkinsville | Weekly clinic</span><p>Shot selection, resets, and smarter doubles patterns.</p></article>
-                </div>
+                <div id="pickleballLessonList" class="society-stack"></div>
                 <article class="lesson-offer-card"><span>For teaching pros and coaches</span><strong>Want to give pickleball lessons?</strong><p>Create an instructor profile so local players can find you.</p><button class="primary" data-offer-lessons="pickleball" type="button" aria-expanded="false">Sign Up to Give Lessons</button></article>
                 <form class="society-form lesson-listing-form" data-lesson-form="pickleball" hidden aria-hidden="true">
                   <div class="lesson-signup-intro">
@@ -678,38 +665,7 @@
                 <button class="society-back-button" data-society-tab="pickleballHome" type="button">Back</button>
                 <p class="eyebrow">Events + tournaments</p>
                 <h3>Challenge board</h3>
-                <div class="society-stack">
-                  <article class="society-list-card">
-                    <strong>Club Society Skill Ladder</strong>
-                    <span>Coming soon | Athens</span>
-                    <p>Season-based standings and challenge matches.</p>
-                    <div class="society-post-actions">
-                      <span>Event post</span>
-                      <button data-jump="publicEvents" type="button">RSVP</button>
-                      <button data-static-event-message="Club Society Skill Ladder" type="button">Message</button>
-                    </div>
-                  </article>
-                  <article class="society-list-card">
-                    <strong>Paddle + Pint Night</strong>
-                    <span>South Main Brewing | Round robin</span>
-                    <p>Social competition with local commerce tie-ins.</p>
-                    <div class="society-post-actions">
-                      <span>Event post</span>
-                      <button data-jump="publicEvents" type="button">RSVP</button>
-                      <button data-static-event-message="Paddle + Pint Night" type="button">Message</button>
-                    </div>
-                  </article>
-                  <article class="society-list-card">
-                    <strong>Host submitted tournament</strong>
-                    <span>Local groups</span>
-                    <p>Future listing path for leagues, nonprofits, and clubs.</p>
-                    <div class="society-post-actions">
-                      <span>Event post</span>
-                      <button data-jump="publicEvents" type="button">RSVP</button>
-                      <button data-static-event-message="Host submitted tournament" type="button">Message</button>
-                    </div>
-                  </article>
-                </div>
+                <div id="memberEventList" class="society-stack"></div>
               </section>
             </div>
 
@@ -756,9 +712,13 @@
                   </div>
                   <div class="form-pair">
                     <input name="spots" inputmode="numeric" placeholder="Open spots" required>
-                    <input name="zip" inputmode="numeric" value="30677" placeholder="ZIP">
+                    <input name="zip" inputmode="numeric" maxlength="5" pattern="[0-9]{5}" placeholder="ZIP" required>
                   </div>
                   <textarea name="note" rows="2" placeholder="Cancellation, pace, handicap fit, walking/riding..."></textarea>
+                  <label class="event-photo-field">
+                    <span>Add an event image <small>Optional. We will use the golf placeholder if omitted.</small></span>
+                    <input name="eventImage" type="file" accept="image/*">
+                  </label>
                   <button class="primary" type="submit">Post Tee Time</button>
                 </form>
                 <div id="golfTeeTimeList" class="society-stack"></div>
@@ -791,11 +751,7 @@
                 <p class="eyebrow">Lessons</p>
                 <h3>Golf instructors</h3>
                 <p class="section-copy">Browse local pros and coaches offering swing instruction, short-game help, clinics, and playing lessons.</p>
-                <div id="golfLessonList" class="society-stack">
-                  <article class="society-list-card"><strong>Driver tune-up</strong><span>Watkinsville | 14 miles</span><p>Fix the big miss before the weekend group.</p></article>
-                  <article class="society-list-card"><strong>Short game scoring clinic</strong><span>Athens | 8 miles</span><p>Wedges, putting, and getting up-and-down more often.</p></article>
-                  <article class="society-list-card"><strong>Beginner playing lesson</strong><span>Oconee area</span><p>Course etiquette, pace, club choice, and confidence.</p></article>
-                </div>
+                <div id="golfLessonList" class="society-stack"></div>
                 <article class="lesson-offer-card"><span>For golf pros and coaches</span><strong>Want to give golf lessons?</strong><p>Create an instructor profile so local golfers can find you.</p><button class="primary" data-offer-lessons="golf" type="button" aria-expanded="false">Sign Up to Give Lessons</button></article>
                 <form class="society-form lesson-listing-form" data-lesson-form="golf" hidden aria-hidden="true">
                   <div class="lesson-signup-intro">
@@ -894,12 +850,30 @@
               </section>
             </div>
 
+            <div class="society-tab" data-society-panel="shop">
+              <section class="member-shop-page">
+                <button class="society-back-button" data-society-tab="home" type="button">Home</button>
+                <div class="member-shop-hero">
+                  <span>Society member benefit</span>
+                  <h3>15% off Paddle + Pin. Every order.</h3>
+                  <p>Club Society members receive preferred pricing across the online Paddle + Pin store.</p>
+                  <div class="member-discount-code"><small>Your member code</small><strong>SOCIETY15</strong></div>
+                  <a class="member-shop-button" href="https://www.paddleandpin.com/discount/SOCIETY15?redirect=/collections/all" target="_blank" rel="noopener">Shop with 15% off &rarr;</a>
+                </div>
+                <div class="member-shop-benefits">
+                  <article><span>01</span><strong>Member pricing</strong><p>The member discount link applies your code before you browse.</p></article>
+                  <article><span>02</span><strong>Golf + pickleball style</strong><p>Shop apparel and accessories made for time on and off the court or course.</p></article>
+                  <article><span>03</span><strong>Paddle + Pin experience</strong><p>Your Club Society membership connects play, people, and the brand behind it.</p></article>
+                </div>
+              </section>
+            </div>
+
             <nav class="society-bottom-nav" aria-label="Club Society app navigation">
               <button class="active" data-society-tab="home" type="button">Home</button>
               <button data-society-tab="partners" type="button">Find</button>
               <button data-society-tab="games" type="button">Post</button>
               <button data-society-tab="events" type="button">Events</button>
-              <button data-society-lessons type="button">Lessons</button>
+              <button data-society-tab="shop" type="button">Shop</button>
             </nav>
           </div>
         </section>
@@ -1701,7 +1675,7 @@
       </section>
     </div>
 
-    <script src="app.js?v=2026-10-05-logo-1"></script>
+    <script src="app.js?v=2026-10-05-member-home-1"></script>
   </body>
 </html>
 

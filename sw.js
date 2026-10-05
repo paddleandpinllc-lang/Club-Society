@@ -1,4 +1,4 @@
-const APP_VERSION = "2026-10-05-logo-1";
+const APP_VERSION = "2026-10-05-member-home-1";
 const CACHE_NAME = `club-society-${APP_VERSION}`;
 const versioned = (path) => `${path}?v=${encodeURIComponent(APP_VERSION)}`;
 const ASSETS = [
@@ -9,6 +9,8 @@ const ASSETS = [
   versioned("./manifest.webmanifest"),
   versioned("./club-society-mark.svg"),
   versioned("./club-society-sports-background-v1.png"),
+  versioned("./member-pickleball-placeholder.webp"),
+  versioned("./member-golf-placeholder.webp"),
   versioned("./favicon-32.png"),
   versioned("./apple-touch-icon.png"),
   versioned("./club-society-icon-192.png"),
@@ -89,4 +91,3 @@ self.addEventListener("notificationclick", (event) => {
     return clients.openWindow(destination);
   }));
 });
-

@@ -13,6 +13,8 @@ const staticFiles = [
   "_headers",
   "club-society-mark.svg",
   "club-society-sports-background-v1.png",
+  "member-pickleball-placeholder.webp",
+  "member-golf-placeholder.webp",
   "favicon-32.png",
   "apple-touch-icon.png",
   "club-society-icon-192.png",

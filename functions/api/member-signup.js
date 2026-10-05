@@ -327,7 +327,13 @@ async function getMemberDirectory(payload, env, corsHeaders) {
       LIMIT 100
     `).bind(email).all();
     const profiles = (rows.results || []).map(publicMemberProfile).filter(Boolean);
-    return json({ ok: true, profiles }, 200, corsHeaders);
+    const requestedZip = /^\d{5}$/.test(cleanText(payload.zip)) ? cleanText(payload.zip) : "";
+    const activities = (rows.results || [])
+      .flatMap(publicMemberActivities)
+      .filter((item) => !requestedZip || item.zip === requestedZip)
+      .sort((a, b) => String(b.createdAt || "").localeCompare(String(a.createdAt || "")))
+      .slice(0, 60);
+    return json({ ok: true, profiles, activities, zip: requestedZip }, 200, corsHeaders);
   } catch (error) {
     console.error("Club Society member directory failed", error);
     return json({ ok: false, error: "Server error while loading members" }, 500, corsHeaders);
@@ -372,6 +378,36 @@ function publicMemberProfile(row) {
     dateIdea: cleanText(saved.dateIdea),
     updatedAt: cleanText(saved.updatedAt || row.updated_at),
   };
+}
+
+function publicMemberActivities(row) {
+  const appState = safeJsonParse(row.app_state_json, {});
+  const ownerName = `${cleanText(row.first_name)} ${lastInitial(row.last_name)}`.trim() || "Club member";
+  const fallbackZip = cleanText(row.zip);
+  const cleanActivity = (item, sport, type) => {
+    if (!item || typeof item !== "object") return null;
+    const image = String(item.imageDataUrl || "");
+    return {
+      id: cleanText(item.id || `${type}-${row.id}-${item.createdAt || "activity"}`),
+      type,
+      sport,
+      title: cleanText(item.title || item.course || item.name),
+      day: cleanText(item.day || item.date),
+      time: cleanText(item.time),
+      location: cleanText(item.location || item.course || item.venue),
+      zip: cleanText(item.zip || fallbackZip),
+      note: cleanText(item.note),
+      spots: cleanText(item.spots || item.playersNeeded),
+      ownerName,
+      imageDataUrl: image.startsWith("data:image/") && image.length <= 220000 ? image : "",
+      createdAt: cleanText(item.createdAt || item.updatedAt),
+    };
+  };
+  return [
+    ...(Array.isArray(appState.quickGames) ? appState.quickGames.map((item) => cleanActivity(item, "pickleball", "game")) : []),
+    ...(Array.isArray(appState.casualMatches) ? appState.casualMatches.map((item) => cleanActivity(item, "pickleball", "match")) : []),
+    ...(Array.isArray(appState.golfTeeTimes) ? appState.golfTeeTimes.map((item) => cleanActivity(item, "golf", "round")) : []),
+  ].filter((item) => item?.id && item.title && /^\d{5}$/.test(item.zip));
 }
 
 async function ensureMemberTable(db) {
@@ -813,4 +849,3 @@ function escapeHtml(value) {
 function json(body, status, headers) {
   return Response.json(body, { status, headers });
 }
-
