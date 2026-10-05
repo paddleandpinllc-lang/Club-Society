@@ -72,6 +72,7 @@ const MEMBER_SYNC_KEYS = [
   "clubGroups",
   "casualMatches",
   "quickGames",
+  "memberEvents",
   "posts",
   "golfTeeTimes",
   "golfGroups",
@@ -91,8 +92,8 @@ let memberCloudSyncTimer = 0;
 let suppressMemberCloudSync = false;
 let memberHostRefreshBusy = false;
 let societySportContext = "pickleball";
-const GOLF_SOCIETY_TABS = new Set(["golfHome", "golfFindGame", "golfPostTee", "golfCreateGroup", "golfLessons", "golfCourses", "golfTournament", "golfMessages"]);
-const PICKLEBALL_SOCIETY_TABS = new Set(["pickleballHome", "games", "courts", "memberHost", "partners", "host", "pickleballLessons"]);
+const GOLF_SOCIETY_TABS = new Set(["golfFindGame", "golfPostTee", "golfCreateGroup", "golfLessons", "golfCourses", "golfTournament", "golfMessages"]);
+const PICKLEBALL_SOCIETY_TABS = new Set(["games", "courts", "memberHost", "partners", "host", "pickleballLessons"]);
 const els = {
   navItems: document.querySelectorAll(".nav-item"),
   views: document.querySelectorAll(".view"),
@@ -110,6 +111,7 @@ const els = {
   societyMemberLocation: document.querySelector("#societyMemberLocation"),
   memberDiscoveryForm: document.querySelector("#memberDiscoveryForm"),
   memberDiscoveryZip: document.querySelector("#memberDiscoveryZip"),
+  memberDiscoveryRadius: document.querySelector("#memberDiscoveryRadius"),
   memberDiscoveryNote: document.querySelector("#memberDiscoveryNote"),
   memberDiscoveryList: document.querySelector("#memberDiscoveryList"),
   memberEventList: document.querySelector("#memberEventList"),
@@ -130,7 +132,11 @@ const els = {
   myGroupList: document.querySelector("#myGroupList"),
   quickGameForm: document.querySelector("#quickGameForm"),
   quickGameList: document.querySelector("#quickGameList"),
+  memberEventForm: document.querySelector("#memberEventForm"),
+  memberPostType: document.querySelector("#memberPostType"),
   courtSearch: document.querySelector("#courtSearch"),
+  courtZip: document.querySelector("#courtZip"),
+  courtZipSearchForm: document.querySelector("#courtZipSearchForm"),
   courtDistance: document.querySelector("#courtDistance"),
   courtDirectoryList: document.querySelector("#courtDirectoryList"),
   pickleDateProfileForm: document.querySelector("#pickleDateProfileForm"),
@@ -260,9 +266,11 @@ els.societyFriendSearch.addEventListener("input", renderSocietyFriends);
 els.casualMatchForm?.addEventListener("submit", saveCasualMatch);
 els.clubGroupForm.addEventListener("submit", saveClubGroup);
 els.quickGameForm.addEventListener("submit", saveQuickGame);
+els.memberEventForm?.addEventListener("submit", saveMemberEvent);
 els.memberDiscoveryForm?.addEventListener("submit", searchMemberDiscovery);
-els.courtSearch.addEventListener("input", renderCourtDirectory);
+els.courtSearch.addEventListener("input", renderCourtResults);
 els.courtDistance?.addEventListener("change", renderCourtDirectory);
+els.courtZipSearchForm?.addEventListener("submit", searchCourtsByZip);
 els.pickleDateProfileForm?.addEventListener("submit", savePickleDateProfile);
 els.pickleDateSearch?.addEventListener("input", renderPickleDateProfiles);
 els.memberHostForm?.addEventListener("submit", buildMemberHostedEvent);
@@ -380,9 +388,15 @@ function loadState() {
     memberDirectoryUpdatedAt: "",
     memberActivity: [],
     memberActivityZip: "",
+    memberActivityRadius: "25",
+    memberGroups: [],
+    memberLessons: [],
     memberHomeSport: "pickleball",
     memberHomeZip: "",
     memberHomeNationwide: false,
+    memberSearchRadius: "25",
+    activeSocietyTab: "home",
+    memberEvents: [],
     golfProfile: {},
     golfTeeTimes: [],
     golfGroups: [],
@@ -402,6 +416,10 @@ function loadState() {
     quickGameFilter: "all",
     courtFilter: "all",
     courtDistance: "25",
+    courtZip: "",
+    courtResults: [],
+    courtResultsKey: "",
+    courtFallbackUrl: "",
     golfCourseDistance: "25",
     golfCourseCoordinates: null,
     golfCourseZip: "",
@@ -457,9 +475,15 @@ function normalizeState(data) {
   data.memberDirectoryUpdatedAt = data.memberDirectoryUpdatedAt || "";
   data.memberActivity = (data.memberActivity || []).filter((item) => item && typeof item === "object");
   data.memberActivityZip = data.memberActivityZip || "";
+  data.memberActivityRadius = String(data.memberActivityRadius || "25");
+  data.memberGroups = (data.memberGroups || []).filter((item) => item && typeof item === "object");
+  data.memberLessons = (data.memberLessons || []).filter((item) => item && typeof item === "object");
   data.memberHomeSport = data.memberHomeSport === "golf" ? "golf" : "pickleball";
   data.memberHomeZip = /^\d{5}$/.test(String(data.memberHomeZip || "")) ? String(data.memberHomeZip) : "";
   data.memberHomeNationwide = data.memberHomeNationwide === true;
+  data.memberSearchRadius = ["10", "25", "50", "100", "250", "nationwide"].includes(String(data.memberSearchRadius)) ? String(data.memberSearchRadius) : "25";
+  data.activeSocietyTab = data.activeSocietyTab || "home";
+  data.memberEvents = (data.memberEvents || []).filter((item) => item && typeof item === "object");
   data.players = (data.players || []).map((player) => ({
     waiverSignedAt: "",
     waiverSource: "",
@@ -488,6 +512,10 @@ function normalizeState(data) {
   data.quickGameFilter = data.quickGameFilter || "all";
   data.courtFilter = data.courtFilter || "all";
   data.courtDistance = data.courtDistance || "25";
+  data.courtZip = /^\d{5}$/.test(String(data.courtZip || "")) ? String(data.courtZip) : "";
+  data.courtResults = (data.courtResults || []).filter((item) => item && typeof item === "object");
+  data.courtResultsKey = data.courtResultsKey || "";
+  data.courtFallbackUrl = data.courtFallbackUrl || "";
   const legacyHostDraft = data.memberHostDraft || {};
   data.memberHostFormat = data.memberHostFormat || legacyHostDraft.format || "round-robin";
   data.memberHostDrafts = {
@@ -627,11 +655,14 @@ async function pushMemberCloudState(immediate = false) {
   }
 }
 
-async function refreshMemberDirectory(force = false, activityZip = "") {
+async function refreshMemberDirectory(force = false, activityZip = null, radius = null) {
   if (!canUseMemberCloudSync()) return false;
   const refreshedAt = Date.parse(state.memberDirectoryUpdatedAt || "") || 0;
-  const requestedZip = /^\d{5}$/.test(String(activityZip || "")) ? String(activityZip) : "";
-  if (!force && state.memberActivityZip === requestedZip && Date.now() - refreshedAt < 60000) return true;
+  const profileZip = currentSocietyProfile()?.zip || "";
+  const zipValue = activityZip === null ? (state.memberHomeZip || profileZip) : activityZip;
+  const requestedZip = /^\d{5}$/.test(String(zipValue || "")) ? String(zipValue) : "";
+  const requestedRadius = String(radius || state.memberSearchRadius || "25");
+  if (!force && state.memberActivityZip === requestedZip && state.memberActivityRadius === requestedRadius && Date.now() - refreshedAt < 60000) return true;
   try {
     const response = await fetch("/api/member-signup", {
       method: "POST",
@@ -641,13 +672,17 @@ async function refreshMemberDirectory(force = false, activityZip = "") {
         email: state.cloudMemberSync.email,
         syncToken: state.cloudMemberSync.token,
         zip: requestedZip,
+        radius: requestedRadius,
       }),
     });
     const result = await response.json().catch(() => ({}));
     if (!response.ok || !result.ok) throw new Error(result.error || "Member directory unavailable");
     state.memberDirectory = Array.isArray(result.profiles) ? result.profiles : [];
     state.memberActivity = Array.isArray(result.activities) ? result.activities : [];
+    state.memberGroups = Array.isArray(result.groups) ? result.groups : [];
+    state.memberLessons = Array.isArray(result.lessons) ? result.lessons : [];
     state.memberActivityZip = requestedZip;
+    state.memberActivityRadius = requestedRadius;
     state.memberDirectoryUpdatedAt = new Date().toISOString();
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
     return true;
@@ -663,6 +698,7 @@ function mergeMemberCloudState(appState) {
   state.clubGroups = mergeRecords(state.clubGroups, appState.clubGroups, (item) => item.id);
   state.casualMatches = mergeRecords(state.casualMatches, appState.casualMatches, (item) => item.id);
   state.quickGames = mergeRecords(state.quickGames, appState.quickGames, (item) => item.id);
+  state.memberEvents = mergeRecords(state.memberEvents, appState.memberEvents, (item) => item.id);
   state.posts = mergeRecords(state.posts, appState.posts, (item) => item.id);
   state.golfTeeTimes = mergeRecords(state.golfTeeTimes, appState.golfTeeTimes, (item) => item.id);
   state.golfGroups = mergeRecords(state.golfGroups, appState.golfGroups, (item) => item.id);
@@ -745,7 +781,7 @@ function setMode(mode) {
   if (mode === "golf") {
     closeGolfPreview();
     setView("societyApp");
-    setSocietyTab("golfHome");
+    setSocietyTab("home");
     return;
   }
   closeGolfPreview();
@@ -1419,28 +1455,51 @@ function handleSocietyAppClick(event) {
   const homeSportButton = event.target.closest("[data-home-sport]");
   if (homeSportButton) {
     state.memberHomeSport = homeSportButton.dataset.homeSport === "golf" ? "golf" : "pickleball";
+    societySportContext = state.memberHomeSport;
     saveState();
     renderMemberDiscovery();
     return;
   }
 
   if (event.target.closest("[data-home-post]")) {
-    setSocietyTab(state.memberHomeSport === "golf" ? "golfPostTee" : "games");
+    setSocietyTab("postMenu");
     return;
   }
 
   if (event.target.closest("[data-home-find]")) {
+    setSocietyTab("findMenu");
+    return;
+  }
+
+  if (event.target.closest("[data-find-players]")) {
     setSocietyTab(state.memberHomeSport === "golf" ? "golfFindGame" : "partners");
     return;
   }
 
-  if (event.target.closest("[data-member-nationwide]")) {
-    state.memberHomeNationwide = true;
-    state.memberHomeZip = "";
-    if (els.memberDiscoveryZip) els.memberDiscoveryZip.value = "";
-    saveState();
-    refreshMemberDirectory(true, "").then(() => renderMemberDiscovery());
-    renderMemberDiscovery();
+  if (event.target.closest("[data-home-place]")) {
+    setSocietyTab(state.memberHomeSport === "golf" ? "golfCourses" : "courts");
+    return;
+  }
+
+  if (event.target.closest("[data-home-host]")) {
+    setSocietyTab(state.memberHomeSport === "golf" ? "golfTournament" : "memberHost");
+    return;
+  }
+
+  if (event.target.closest("[data-member-post-continue]")) {
+    const destinations = { game: "games", "tee-time": "golfPostTee", group: "myGroups", event: "memberEventCreate", host: state.memberHomeSport === "golf" ? "golfTournament" : "memberHost" };
+    const destination = destinations[els.memberPostType?.value];
+    if (!destination) {
+      showSocietyAccountMessage("Choose what you want to post.", "notice");
+      els.memberPostType?.focus();
+      return;
+    }
+    setSocietyTab(destination);
+    return;
+  }
+
+  if (event.target.closest("[data-search-scope-apply]")) {
+    applyMemberSearchScope(event.target.closest("[data-search-scope-apply]"));
     return;
   }
 
@@ -1474,11 +1533,6 @@ function handleSocietyAppClick(event) {
     return;
   }
 
-  if (event.target.closest("[data-dating-back]")) {
-    setSocietyTab(societySportContext === "golf" ? "golfHome" : "pickleballHome");
-    return;
-  }
-
   const friendFilterButton = event.target.closest("[data-society-friend-filter]");
   if (friendFilterButton) {
     state.societyFriendFilter = friendFilterButton.dataset.societyFriendFilter;
@@ -1492,6 +1546,7 @@ function handleSocietyAppClick(event) {
     const form = document.querySelector(`[data-lesson-form="${offerLessonsButton.dataset.offerLessons}"]`);
     const isOpen = Boolean(form?.hidden);
     if (form) {
+      if (form.elements.zip && !form.elements.zip.value) form.elements.zip.value = currentSocietyProfile()?.zip || "";
       form.hidden = !isOpen;
       form.setAttribute("aria-hidden", String(!isOpen));
       form.classList.toggle("active", isOpen);
@@ -1683,7 +1738,7 @@ function handleSocietyAppClick(event) {
   if (courtFilterButton) {
     state.courtFilter = courtFilterButton.dataset.courtFilter;
     saveState();
-    renderCourtDirectory();
+    renderCourtResults();
     return;
   }
 
@@ -1733,7 +1788,8 @@ function initializeAuthPanels() {
 }
 
 function setSocietyTab(tab) {
-  const protectedTabs = new Set(["pickleballHome", "games", "courts", "pickleDate", "memberHost", "events", "partners", "connectPlayers", "clubGroups", "myGroups", "host", "pickleballLessons", "settings", "shop", "golfHome", "golfFindGame", "golfPostTee", "golfCreateGroup", "golfLessons", "golfCourses", "golfTournament", "golfMessages"]);
+  if (["pickleballHome", "golfHome"].includes(tab)) tab = "home";
+  const protectedTabs = new Set(["findMenu", "postMenu", "memberEventCreate", "games", "courts", "pickleDate", "memberHost", "events", "partners", "connectPlayers", "clubGroups", "myGroups", "host", "pickleballLessons", "settings", "shop", "golfFindGame", "golfPostTee", "golfCreateGroup", "golfLessons", "golfCourses", "golfTournament", "golfMessages"]);
   if (protectedTabs.has(tab) && !hasSocietyAccess()) {
     setSocietyTab("home");
     els.societyAccountMessage.textContent = "Sign in or Join to access";
@@ -1746,6 +1802,7 @@ function setSocietyTab(tab) {
   closeLessonApplications();
   if (GOLF_SOCIETY_TABS.has(tab)) societySportContext = "golf";
   if (PICKLEBALL_SOCIETY_TABS.has(tab)) societySportContext = "pickleball";
+  state.activeSocietyTab = tab;
   document.querySelectorAll("[data-society-panel]").forEach((panel) => {
     panel.classList.toggle("active", panel.dataset.societyPanel === tab);
   });
@@ -1755,12 +1812,17 @@ function setSocietyTab(tab) {
   document.querySelectorAll("#societyApp [data-society-lessons]").forEach((button) => {
     button.classList.toggle("active", ["pickleballLessons", "golfLessons"].includes(tab));
   });
+  renderMemberSearchScopes();
   if (tab === "home") updateSocietyHome();
   if (tab === "events") renderMemberEvents();
   if (tab === "partners") renderCasualMatches();
   if (tab === "connectPlayers") {
     renderSocietyFriends();
-    refreshMemberDirectory().then((updated) => { if (updated) renderSocietyFriends(); });
+    refreshScopedMemberData(false, renderSocietyFriends);
+  }
+  if (["events", "partners", "clubGroups", "golfFindGame"].includes(tab)) {
+    const rerender = { events: renderMemberEvents, partners: renderCasualMatches, clubGroups: renderClubGroups, golfFindGame: renderGolfMatchDeck }[tab];
+    refreshScopedMemberData(false, rerender);
   }
   if (tab === "clubGroups") renderClubGroups();
   if (tab === "myGroups") renderMyGroups();
@@ -1768,16 +1830,23 @@ function setSocietyTab(tab) {
     if (els.quickGameForm?.elements.zip && !els.quickGameForm.elements.zip.value) els.quickGameForm.elements.zip.value = currentSocietyProfile()?.zip || "";
     renderQuickGames();
   }
+  if (tab === "memberEventCreate" && els.memberEventForm?.elements.zip && !els.memberEventForm.elements.zip.value) {
+    els.memberEventForm.elements.zip.value = currentSocietyProfile()?.zip || "";
+  }
+  if (tab === "myGroups" && els.clubGroupForm?.elements.zip && !els.clubGroupForm.elements.zip.value) {
+    els.clubGroupForm.elements.zip.value = currentSocietyProfile()?.zip || "";
+  }
   if (tab === "golfPostTee" && els.golfTeeTimeForm?.elements.zip && !els.golfTeeTimeForm.elements.zip.value) {
     els.golfTeeTimeForm.elements.zip.value = currentSocietyProfile()?.zip || "";
   }
   if (tab === "courts") {
     if (els.courtDistance) els.courtDistance.value = state.courtDistance || "25";
+    if (els.courtZip) els.courtZip.value = state.courtZip || currentSocietyProfile()?.zip || "";
     renderCourtDirectory();
   }
   if (tab === "pickleDate") {
     renderPickleDateProfiles();
-    refreshMemberDirectory().then((updated) => { if (updated) renderPickleDateProfiles(); });
+    refreshScopedMemberData(false, renderPickleDateProfiles);
   }
   if (tab === "memberHost") {
     fillMemberHostForm();
@@ -1787,8 +1856,75 @@ function setSocietyTab(tab) {
     if (els.golfCourseDistance) els.golfCourseDistance.value = state.golfCourseDistance || "25";
     renderGolfCourses();
   }
-  if (tab === "pickleballLessons") renderLessonListings("pickleball");
-  if (tab === "golfLessons") renderLessonListings("golf");
+  if (tab === "pickleballLessons") {
+    renderLessonListings("pickleball");
+    refreshScopedMemberData(false, () => renderLessonListings("pickleball"));
+  }
+  if (tab === "golfLessons") {
+    renderLessonListings("golf");
+    refreshScopedMemberData(false, () => renderLessonListings("golf"));
+  }
+}
+
+function activeMemberSearchZip() {
+  return state.memberHomeZip || currentSocietyProfile()?.zip || "";
+}
+
+function renderMemberSearchScopes() {
+  const zip = activeMemberSearchZip();
+  const radius = state.memberSearchRadius || "25";
+  const options = [["10", "10 miles"], ["25", "25 miles"], ["50", "50 miles"], ["100", "100 miles"], ["250", "250 miles"], ["nationwide", "Nationwide"]];
+  document.querySelectorAll(".member-scope-slot").forEach((slot) => {
+    slot.innerHTML = `
+      <div class="member-search-scope">
+        <label>Search from ZIP<input data-search-scope-zip inputmode="numeric" maxlength="5" pattern="[0-9]{5}" value="${escapeHtml(zip)}" placeholder="ZIP code"></label>
+        <label>Distance<select data-search-scope-radius>${options.map(([value, label]) => `<option value="${value}"${radius === value ? " selected" : ""}>${label}</option>`).join("")}</select></label>
+        <button data-search-scope-apply type="button">Update area</button>
+      </div>
+      <p class="member-search-scope-note">${radius === "nationwide" ? "Showing results nationwide." : `Default search: within ${escapeHtml(radius)} miles of ${escapeHtml(zip || "your profile ZIP")}.`}</p>`;
+  });
+}
+
+async function applyMemberSearchScope(button) {
+  const scope = button.closest(".member-scope-slot");
+  const zip = String(scope?.querySelector("[data-search-scope-zip]")?.value || "").trim();
+  const radius = String(scope?.querySelector("[data-search-scope-radius]")?.value || "25");
+  if (radius !== "nationwide" && !/^\d{5}$/.test(zip)) {
+    showSocietyAccountMessage("Enter a valid five-digit U.S. ZIP code.", "error");
+    scope?.querySelector("[data-search-scope-zip]")?.focus();
+    return;
+  }
+  state.memberHomeZip = /^\d{5}$/.test(zip) ? zip : (currentSocietyProfile()?.zip || "");
+  state.memberSearchRadius = radius;
+  state.memberHomeNationwide = radius === "nationwide";
+  if (els.memberDiscoveryZip) els.memberDiscoveryZip.value = state.memberHomeZip;
+  if (els.memberDiscoveryRadius) els.memberDiscoveryRadius.value = radius;
+  saveState();
+  renderMemberSearchScopes();
+  showSocietyAccountMessage(radius === "nationwide" ? "Search expanded nationwide." : `Search updated to ${radius} miles from ${state.memberHomeZip}.`, "success");
+  await refreshScopedMemberData(true);
+  renderScopedMemberViews();
+}
+
+function refreshScopedMemberData(force = false, callback = null) {
+  const radius = state.memberSearchRadius || "25";
+  const zip = radius === "nationwide" ? "" : activeMemberSearchZip();
+  return refreshMemberDirectory(force, zip, radius).then((updated) => {
+    if (updated) callback?.();
+    return updated;
+  });
+}
+
+function renderScopedMemberViews() {
+  renderMemberDiscovery();
+  renderCasualMatches();
+  renderSocietyFriends();
+  renderClubGroups();
+  renderMemberEvents();
+  renderPickleDateProfiles();
+  renderGolfMatchDeck();
+  renderLessonListings("pickleball");
+  renderLessonListings("golf");
 }
 
 function closeLessonApplications() {
@@ -1820,8 +1956,12 @@ function saveLessonListing(event) {
 function renderLessonListings(sport) {
   const target = document.querySelector(sport === "golf" ? "#golfLessonList" : "#pickleballLessonList");
   if (!target) return;
-  const listings = state.lessonListings.filter((item) => item.sport === sport && item.paymentStatus === "paid");
-  target.innerHTML = listings.length ? listings.map((item) => `<article class="society-list-card" data-paid-lesson="${escapeHtml(item.id)}"><strong>${escapeHtml(item.name)}</strong><span>${escapeHtml(item.location)} | ${escapeHtml(item.format)}</span><p>${escapeHtml(item.bio)}</p></article>`).join("") : `<div class="empty">No verified ${sport} instructors are listed yet.</div>`;
+  const byId = new Map();
+  [...state.memberLessons, ...state.lessonListings].forEach((item) => {
+    if (item?.id) byId.set(item.id, { ...(byId.get(item.id) || {}), ...item });
+  });
+  const listings = [...byId.values()].filter((item) => item.sport === sport && item.paymentStatus === "paid");
+  target.innerHTML = listings.length ? listings.map((item) => `<article class="society-list-card" data-paid-lesson="${escapeHtml(item.id)}"><strong>${escapeHtml(item.name)}</strong><span>${escapeHtml(item.location)}${item.zip ? ` · ZIP ${escapeHtml(item.zip)}` : ""}${Number.isFinite(Number(item.milesAway)) ? ` · ${Number(item.milesAway).toFixed(1)} miles away` : ""} | ${escapeHtml(item.format)}</span><p>${escapeHtml(item.bio)}</p></article>`).join("") : `<div class="empty">No verified ${sport} instructors are listed in this area yet. Expand the distance or check again soon.</div>`;
 }
 
 function hasSocietyAccess() {
@@ -1844,6 +1984,7 @@ function updateSocietyHome() {
   document.querySelector(".society-bottom-nav")?.classList.toggle("active", hasAccess);
   if (!hasAccess) return;
   const profile = currentSocietyProfile();
+  societySportContext = state.memberHomeSport === "golf" ? "golf" : "pickleball";
   const name = profile ? `${profile.firstName || ""} ${profile.lastName || ""}`.trim() : "Society Member";
   els.societyMemberName.textContent = name || "Society Member";
   if (els.societyMemberFirstName) els.societyMemberFirstName.textContent = profile?.firstName || "member";
@@ -1853,8 +1994,9 @@ function updateSocietyHome() {
   els.societyMemberMeta.textContent = profile
     ? `${profile.city || "Watkinsville"}, ${profile.state || "GA"} | ${profile.preferredSport || "Golf + Pickleball"}`
     : "Golf + Pickleball | 30677";
-  if (!state.memberHomeZip && !state.memberHomeNationwide && profile?.zip) state.memberHomeZip = profile.zip;
+  if (!state.memberHomeZip && profile?.zip) state.memberHomeZip = profile.zip;
   if (els.memberDiscoveryZip) els.memberDiscoveryZip.value = state.memberHomeZip || "";
+  if (els.memberDiscoveryRadius) els.memberDiscoveryRadius.value = state.memberSearchRadius || "25";
   if (els.societyFavoriteCount) els.societyFavoriteCount.textContent = String(state.societyFavorites.length);
   if (els.societyFriendCount) els.societyFriendCount.textContent = String(state.societyFriends.length);
   if (els.societyGroupCount) els.societyGroupCount.textContent = String(myClubGroups().length);
@@ -1863,7 +2005,8 @@ function updateSocietyHome() {
   renderSocietyFriends();
   renderProfileActivity();
   renderMemberDiscovery();
-  refreshMemberDirectory(false, state.memberHomeNationwide ? "" : state.memberHomeZip).then((updated) => {
+  renderMemberSearchScopes();
+  refreshScopedMemberData(false).then((updated) => {
     if (updated) renderMemberDiscovery();
   });
 }
@@ -1871,16 +2014,19 @@ function updateSocietyHome() {
 function searchMemberDiscovery(event) {
   event.preventDefault();
   const zip = String(els.memberDiscoveryZip?.value || "").trim();
-  if (!/^\d{5}$/.test(zip)) {
+  const radius = String(els.memberDiscoveryRadius?.value || "25");
+  if (radius !== "nationwide" && !/^\d{5}$/.test(zip)) {
     showSocietyAccountMessage("Enter a valid five-digit U.S. ZIP code.", "error");
     els.memberDiscoveryZip?.focus();
     return;
   }
-  state.memberHomeZip = zip;
-  state.memberHomeNationwide = false;
+  state.memberHomeZip = /^\d{5}$/.test(zip) ? zip : (currentSocietyProfile()?.zip || "");
+  state.memberSearchRadius = radius;
+  state.memberHomeNationwide = radius === "nationwide";
   saveState();
-  if (els.memberDiscoveryNote) els.memberDiscoveryNote.textContent = `Finding ${state.memberHomeSport} activity in ${zip}...`;
-  refreshMemberDirectory(true, zip).then(() => renderMemberDiscovery());
+  if (els.memberDiscoveryNote) els.memberDiscoveryNote.textContent = radius === "nationwide" ? `Finding ${state.memberHomeSport} activity nationwide...` : `Finding ${state.memberHomeSport} activity within ${radius} miles of ${zip}...`;
+  refreshMemberDirectory(true, radius === "nationwide" ? "" : zip, radius).then(() => renderMemberDiscovery());
+  renderMemberSearchScopes();
   renderMemberDiscovery();
 }
 
@@ -1899,17 +2045,19 @@ function memberDiscoveryItems() {
       location: item.course,
       zip: item.zip || profileZip,
     })),
+    ...state.memberEvents.map((item) => ({ ...item, type: "event", sport: String(item.sport || "both").toLowerCase(), zip: item.zip || profileZip })),
   ].filter((item) => !isSampleActivity(item));
   const byId = new Map();
-  [...state.memberActivity, ...localItems].forEach((item) => {
+  [...localItems, ...state.memberActivity].forEach((item) => {
     if (!item?.id) return;
     byId.set(item.id, { ...(byId.get(item.id) || {}), ...item });
   });
-  const requestedZip = state.memberHomeNationwide ? "" : state.memberHomeZip;
+  const requestedZip = state.memberHomeNationwide ? "" : activeMemberSearchZip();
+  const radius = Number(state.memberSearchRadius || 25);
   return [...byId.values()]
-    .filter((item) => item.sport === state.memberHomeSport)
-    .filter((item) => !requestedZip || String(item.zip || "") === requestedZip)
-    .sort((a, b) => String(b.createdAt || b.day || "").localeCompare(String(a.createdAt || a.day || "")))
+    .filter((item) => item.sport === state.memberHomeSport || item.sport === "both")
+    .filter((item) => !requestedZip || (Number.isFinite(Number(item.milesAway)) ? Number(item.milesAway) <= radius : String(item.zip || "") === requestedZip))
+    .sort((a, b) => (Number(a.milesAway ?? 9999) - Number(b.milesAway ?? 9999)) || String(b.createdAt || b.day || "").localeCompare(String(a.createdAt || a.day || "")))
     .slice(0, 12);
 }
 
@@ -1926,9 +2074,9 @@ function renderMemberDiscovery() {
     button.classList.toggle("active", button.dataset.homeSport === sport);
   });
   const postButton = document.querySelector("[data-home-post]");
-  if (postButton) postButton.innerHTML = sport === "golf" ? "<span>+</span> Post a tee time" : "<span>+</span> Post a game";
-  const place = state.memberHomeNationwide ? "nationwide" : `in ${state.memberHomeZip || "your ZIP"}`;
-  if (els.memberDiscoveryNote) els.memberDiscoveryNote.textContent = `Showing ${sport} activity ${place}. Search any five-digit U.S. ZIP.`;
+  if (postButton) postButton.innerHTML = "<span>+</span> Create a post";
+  const place = state.memberHomeNationwide ? "nationwide" : `within ${state.memberSearchRadius || 25} miles of ${activeMemberSearchZip() || "your profile ZIP"}`;
+  if (els.memberDiscoveryNote) els.memberDiscoveryNote.textContent = `Showing ${sport} activity ${place}. Expand the distance anytime.`;
   const items = memberDiscoveryItems();
   const placeholder = sport === "golf" ? "member-golf-placeholder.webp" : "member-pickleball-placeholder.webp";
   const destination = sport === "golf" ? "golfFindGame" : "partners";
@@ -1936,7 +2084,9 @@ function renderMemberDiscovery() {
     const image = String(item.imageDataUrl || "").startsWith("data:image/") ? item.imageDataUrl : placeholder;
     const owner = item.ownerName ? `Posted by ${publicNameFromString(item.ownerName)}` : "Member post";
     const timing = [item.day || item.date, formatDisplayTime(item.time)].filter(Boolean).join(" · ") || "Schedule with the host";
-    const location = [item.location || item.course, item.zip].filter(Boolean).join(" · ");
+    const distance = Number.isFinite(Number(item.milesAway)) ? `${Number(item.milesAway).toFixed(1)} miles away` : "";
+    const location = [item.location || item.course, item.zip, distance].filter(Boolean).join(" · ");
+    const cardDestination = item.type === "event" ? "events" : destination;
     return `
       <article class="member-discovery-card">
         <div class="member-discovery-image" style="background-image:url('${escapeHtml(image)}')" role="img" aria-label="${escapeHtml(sport)} event image"></div>
@@ -1945,7 +2095,7 @@ function renderMemberDiscovery() {
           <strong>${escapeHtml(item.title || item.course || "Open play")}</strong>
           <p>${escapeHtml(timing)}</p>
           <p>${escapeHtml(location || "Location shared by the host")}${item.spots ? ` · ${escapeHtml(item.spots)} open` : ""}</p>
-          <button data-home-open="${destination}" type="button">View details</button>
+          <button data-home-open="${cardDestination}" type="button">View details</button>
         </div>
       </article>`;
   }).join("") : `
@@ -1953,7 +2103,7 @@ function renderMemberDiscovery() {
       <div class="member-empty-state-image" style="background-image:url('${placeholder}')" role="img" aria-label="${sport} placeholder image"></div>
       <div class="member-empty-state-copy">
         <strong>No ${sport} posts here yet.</strong>
-        <p>Be the first member to post in ${escapeHtml(state.memberHomeNationwide ? "the nationwide feed" : state.memberHomeZip || "this ZIP code")}.</p>
+        <p>Be the first member to post ${escapeHtml(state.memberHomeNationwide ? "in the nationwide feed" : `within ${state.memberSearchRadius || 25} miles of ${activeMemberSearchZip() || "this ZIP"}`)}.</p>
         <button data-home-post type="button">Create the first post</button>
       </div>
     </article>`;
@@ -1961,21 +2111,29 @@ function renderMemberDiscovery() {
 
 function renderMemberEvents() {
   if (!els.memberEventList) return;
-  const events = state.events
-    .filter((item) => item.published !== false)
-    .filter((item) => !String(item?.ownerEmail || "").toLowerCase().endsWith("@example.com"))
+  const localMemberEvents = state.memberEvents.map((item) => ({ ...item, name: item.title, venue: item.location }));
+  const remoteMemberEvents = state.memberActivity.filter((item) => item.type === "event").map((item) => ({ ...item, name: item.title, venue: item.location }));
+  const radius = Number(state.memberSearchRadius || 25);
+  const requestedZip = state.memberHomeNationwide ? "" : activeMemberSearchZip();
+  const byId = new Map();
+  [...state.events, ...localMemberEvents, ...remoteMemberEvents].forEach((item) => {
+    if (!item?.id || item.published === false || String(item.ownerEmail || "").toLowerCase().endsWith("@example.com")) return;
+    byId.set(item.id, { ...(byId.get(item.id) || {}), ...item });
+  });
+  const events = [...byId.values()]
+    .filter((item) => !requestedZip || (Number.isFinite(Number(item.milesAway)) ? Number(item.milesAway) <= radius : String(item.zip || "") === requestedZip))
     .sort((a, b) => String(a.date || "").localeCompare(String(b.date || "")));
   els.memberEventList.innerHTML = events.length ? events.map((item) => `
     <article class="society-list-card">
       <strong>${escapeHtml(item.name)}</strong>
-      <span>${escapeHtml(item.sport || "Club Society")} · ${escapeHtml(item.date || "Date announced by host")}</span>
-      <p>${escapeHtml([item.venue, item.format].filter(Boolean).join(" · ") || item.note || "Member event")}</p>
+      <span>${escapeHtml(item.sport || "Club Society")} · ${escapeHtml(item.date || item.day || "Date announced by host")}${Number.isFinite(Number(item.milesAway)) ? ` · ${Number(item.milesAway).toFixed(1)} miles away` : ""}</span>
+      <p>${escapeHtml([item.venue, item.zip, item.format].filter(Boolean).join(" · ") || item.note || "Member event")}</p>
       <div class="society-post-actions">
         <span>${escapeHtml(item.capacity ? `${item.capacity} spots` : "Member event")}</span>
         <button data-society-event-rsvp="${escapeHtml(item.id)}" type="button">RSVP</button>
         <button data-society-event-message="${escapeHtml(item.id)}" type="button">Message</button>
       </div>
-    </article>`).join("") : `<div class="empty">No published member events yet. New events will appear here after a host publishes them.</div>`;
+    </article>`).join("") : `<div class="empty">No member events were found in this area. Expand the search distance or post the first event.</div>`;
 }
 
 function fillSocietyProfileDrawer(profile) {
@@ -2176,6 +2334,8 @@ function societyDirectoryCards() {
       id: profile.id,
       name: publicMemberName(profile, "Club member"),
       city: profile.city || "Watkinsville",
+      zip: profile.zip || "",
+      milesAway: Number.isFinite(Number(profile.milesAway)) ? Number(profile.milesAway) : null,
       sport: profile.preferredSport || profile.sport || "pickleball",
       skill: profile.skill || profile.pickleballLevel || (profile.handicap ? `Golf handicap ${profile.handicap}` : "Open play"),
       vibe: profile.bio || (profile.socialPlay ? "Open to social play and friendly matchups." : "Looking for local games and club friends."),
@@ -2269,7 +2429,7 @@ function showSocietyProfilePreview(id) {
     <article class="society-profile-preview-card">
       <button class="society-friend-photo large" data-profile-view="${escapeHtml(card.id)}" ${photo} type="button">${card.photoDataUrl ? "" : escapeHtml(initials(card.name))}</button>
       <div>
-        <span>${escapeHtml(card.city)} | ${escapeHtml(card.sport)}</span>
+        <span>${escapeHtml(card.city)}${Number.isFinite(card.milesAway) ? ` · ${card.milesAway.toFixed(1)} miles away` : ""} | ${escapeHtml(card.sport)}</span>
         <strong>${escapeHtml(card.name)}</strong>
         <p>${escapeHtml(card.skill)}</p>
         <p>${escapeHtml(card.bio || card.vibe || "Open to club play.")}</p>
@@ -2303,9 +2463,16 @@ function renderCasualMatches() {
     button.classList.toggle("active", button.dataset.matchFilter === filter);
   });
   const currentEmail = (currentSocietyProfile()?.email || state.societySessionEmail || "").toLowerCase();
-  const posts = [...state.quickGames, ...state.casualMatches]
+  const byId = new Map();
+  [...state.quickGames, ...state.casualMatches, ...state.memberActivity.filter((item) => item.sport === "pickleball" && ["game", "match"].includes(item.type))].forEach((item) => {
+    if (item?.id) byId.set(item.id, { ...(byId.get(item.id) || {}), ...item });
+  });
+  const radius = Number(state.memberSearchRadius || 25);
+  const requestedZip = state.memberHomeNationwide ? "" : activeMemberSearchZip();
+  const posts = [...byId.values()]
     .filter((post) => !isSampleActivity(post))
-    .filter((post) => String(post.ownerEmail || "").toLowerCase() !== currentEmail)
+    .filter((post) => !post.ownerSelf && String(post.ownerEmail || "").toLowerCase() !== currentEmail)
+    .filter((post) => !requestedZip || (Number.isFinite(Number(post.milesAway)) ? Number(post.milesAway) <= radius : String(post.zip || "") === requestedZip))
     .filter((post) => matchesDayFilter(post.day, filter));
   els.casualMatchList.innerHTML = posts.length
     ? posts.map((post) => renderPostCard(post, "match")).join("")
@@ -2334,6 +2501,39 @@ async function saveQuickGame(event) {
   saveState();
   renderQuickGames();
   renderProfileActivity();
+}
+
+async function saveMemberEvent(event) {
+  event.preventDefault();
+  if (!profileHasPhoto()) {
+    promptForSocietyPhoto();
+    return;
+  }
+  const data = Object.fromEntries(new FormData(els.memberEventForm).entries());
+  const imageFile = data.eventImage;
+  delete data.eventImage;
+  let imageDataUrl = "";
+  try {
+    imageDataUrl = await resizeEventPhoto(imageFile);
+  } catch (error) {
+    showSocietyAccountMessage(error.message || "The event image could not be prepared.", "error");
+    return;
+  }
+  state.memberEvents.unshift({
+    ...data,
+    ...currentPostOwner(),
+    id: newId(),
+    sport: String(data.sport || "both").toLowerCase(),
+    imageDataUrl,
+    published: true,
+    createdAt: new Date().toISOString(),
+  });
+  els.memberEventForm.reset();
+  els.memberEventForm.elements.zip.value = currentSocietyProfile()?.zip || "";
+  saveState();
+  renderMemberEvents();
+  setSocietyTab("events");
+  showSocietyAccountMessage(`${data.title} is now visible to members in the selected search area.`, "success");
 }
 
 function renderQuickGames() {
@@ -2467,38 +2667,75 @@ function matchesDayFilter(day, filter) {
   return normalized === filter;
 }
 
-function renderCourtDirectory() {
+async function renderCourtDirectory() {
   if (!els.courtDirectoryList) return;
-  const query = (els.courtSearch?.value || "").trim().toLowerCase();
-  const filter = state.courtFilter || "all";
   const maxMiles = Number(els.courtDistance?.value || state.courtDistance || 25);
   state.courtDistance = String(maxMiles);
+  const zip = String(state.courtZip || currentSocietyProfile()?.zip || "").trim();
+  if (els.courtZip && !els.courtZip.value) els.courtZip.value = zip;
+  if (!/^\d{5}$/.test(zip)) {
+    els.courtDirectoryList.innerHTML = `<article class="society-list-card"><strong>Add a ZIP code</strong><p>Enter any five-digit U.S. ZIP to search for nearby pickleball courts.</p></article>`;
+    return;
+  }
+  const resultKey = `${zip}:${maxMiles}`;
+  if (state.courtResultsKey !== resultKey) {
+    els.courtDirectoryList.innerHTML = `<div class="empty">Finding pickleball courts within ${maxMiles} miles of ${escapeHtml(zip)}...</div>`;
+    try {
+      const response = await fetch(`/api/pickleball-courts?zip=${encodeURIComponent(zip)}&miles=${encodeURIComponent(maxMiles)}`);
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok || !result.ok) throw new Error(result.error || "Court search is unavailable.");
+      state.courtResults = Array.isArray(result.courts) ? result.courts : [];
+      state.courtFallbackUrl = result.fallbackUrl || "";
+      state.courtResultsKey = resultKey;
+      saveState();
+    } catch (error) {
+      els.courtDirectoryList.innerHTML = `<article class="society-list-card"><strong>We could not load courts right now</strong><p>${escapeHtml(error.message)} Try again or expand your search later.</p></article>`;
+      return;
+    }
+  }
+  renderCourtResults();
+}
+
+function renderCourtResults() {
+  const query = (els.courtSearch?.value || "").trim().toLowerCase();
+  const filter = state.courtFilter || "all";
   document.querySelectorAll("[data-court-filter]").forEach((button) => {
     button.classList.toggle("active", button.dataset.courtFilter === filter);
   });
-  const courts = courtDirectory().map((court) => ({ ...court, miles: courtMilesFromProfile(court) })).filter((court) => {
+  const courts = state.courtResults.filter((court) => {
     const text = `${court.name} ${court.city} ${court.address} ${court.access} ${court.surface} ${court.courts} ${court.note}`.toLowerCase();
     const filterMatch = filter === "all"
       || (filter === "club" ? court.access.toLowerCase().includes("club") || court.access.toLowerCase().includes("private") : text.includes(filter));
-    return court.miles <= maxMiles && filterMatch && (!query || text.includes(query));
+    return filterMatch && (!query || text.includes(query));
   });
   els.courtDirectoryList.innerHTML = courts.map((court) => `
     <article class="society-court-card">
-      <span>${court.miles} miles away | ${escapeHtml(court.city)} | ${escapeHtml(court.surface)} | ${escapeHtml(court.access)}</span>
+      <span>${escapeHtml(String(court.miles))} miles away | ${escapeHtml(court.city || "Nearby")} | ${escapeHtml(court.surface || "Court")} | ${escapeHtml(court.access || "Verify access")}</span>
       <strong>${escapeHtml(court.name)}</strong>
-      <p>${escapeHtml(court.address)}</p>
-      <p>${escapeHtml(court.courts)} - ${escapeHtml(court.note)}</p>
+      <p>${escapeHtml(court.address || "Open in Maps for location details")}</p>
+      <p>${escapeHtml(court.courts || "Pickleball courts")} - ${escapeHtml(court.note || "Confirm hours and access before traveling.")}</p>
+      <a class="course-map-link" href="${escapeHtml(placeMapUrl(court))}" target="_blank" rel="noopener">Open in Maps</a>
     </article>
-  `).join("") || `<article class="society-list-card"><strong>No courts inside ${maxMiles} miles</strong><p>Increase your distance to see more options.</p></article>`;
-  saveState();
+  `).join("") || `<article class="society-list-card"><strong>No mapped courts were returned</strong><p>Increase your distance, try another ZIP, or open the live map search.</p>${state.courtFallbackUrl ? `<a class="course-map-link" href="${escapeHtml(state.courtFallbackUrl)}" target="_blank" rel="noopener">Search courts in Maps</a>` : ""}</article>`;
 }
 
-function courtMilesFromProfile(court) {
-  const profileCity = String(currentSocietyProfile()?.city || "Watkinsville").toLowerCase();
-  const city = String(court.city || "").toLowerCase();
-  if (city === profileCity) return 3;
-  const estimates = { athens: 12, bishop: 8, bogart: 10, statham: 18, winder: 27, jefferson: 31, bethlehem: 29 };
-  return estimates[city] || 35;
+function searchCourtsByZip(event) {
+  event.preventDefault();
+  const zip = String(els.courtZip?.value || "").trim();
+  if (!/^\d{5}$/.test(zip)) {
+    showSocietyAccountMessage("Enter a valid five-digit U.S. ZIP code.", "error");
+    els.courtZip?.focus();
+    return;
+  }
+  state.courtZip = zip;
+  state.courtResultsKey = "";
+  saveState();
+  renderCourtDirectory();
+}
+
+function placeMapUrl(place) {
+  const query = place.lat && place.lon ? `${place.lat},${place.lon}` : [place.name, place.address].filter(Boolean).join(" ");
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
 }
 
 async function savePickleDateProfile(event) {
@@ -2529,7 +2766,7 @@ async function savePickleDateProfile(event) {
   profile.updatedAt = new Date().toISOString();
   saveState();
   await pushMemberCloudState(true);
-  await refreshMemberDirectory(true);
+  await refreshScopedMemberData(true);
   renderPickleDateProfiles();
   showSocietyAccountMessage(profile.dateProfileActive ? "Your one dating profile is live for mutual golf and pickleball matches." : "Your dating profile is saved but hidden.", "success");
 }
@@ -2624,12 +2861,9 @@ function datingSportLabel(value = "both") {
 }
 
 function datingDistanceMiles(left, right) {
-  if (left.zip && right.zip && left.zip === right.zip) return 3;
-  const cityMiles = { watkinsville: 0, oconee: 5, bishop: 8, bogart: 10, athens: 12, statham: 18, winder: 27, bethlehem: 29, jefferson: 31 };
-  const leftMiles = cityMiles[String(left.city || "").toLowerCase()];
-  const rightMiles = cityMiles[String(right.city || "").toLowerCase()];
-  if (Number.isFinite(leftMiles) && Number.isFinite(rightMiles)) return Math.max(3, Math.abs(leftMiles - rightMiles));
-  return String(left.city || "").toLowerCase() === String(right.city || "").toLowerCase() ? 3 : 25;
+  if (Number.isFinite(Number(right?.milesAway))) return Number(right.milesAway);
+  if (left.zip && right.zip && left.zip === right.zip) return 0;
+  return Number.POSITIVE_INFINITY;
 }
 
 function activeMemberHostDraft() {
@@ -2820,7 +3054,7 @@ function renderSocietyFriendCard(card) {
     <article class="society-friend-card">
       <button class="society-friend-photo" data-profile-view="${escapeHtml(card.id)}" ${photo} type="button" aria-label="View ${escapeHtml(card.name)}">${card.photoDataUrl ? "" : escapeHtml(initials(card.name))}</button>
       <div>
-        <span>${escapeHtml(card.city)} | ${escapeHtml(card.sport)}</span>
+        <span>${escapeHtml(card.city)}${Number.isFinite(card.milesAway) ? ` · ${card.milesAway.toFixed(1)} miles away` : ""} | ${escapeHtml(card.sport)}</span>
         <button class="profile-name-link" data-profile-view="${escapeHtml(card.id)}" type="button">${escapeHtml(card.name)}</button>
         <p>${escapeHtml(card.skill)} - ${escapeHtml(card.vibe)}</p>
       </div>
@@ -2907,6 +3141,7 @@ function saveClubGroup(event) {
     createdAt: new Date().toISOString(),
   });
   els.clubGroupForm.reset();
+  els.clubGroupForm.elements.zip.value = currentSocietyProfile()?.zip || "";
   saveState();
   renderClubGroups();
   renderMyGroups();
@@ -2949,7 +3184,15 @@ function myClubGroups() {
 function renderClubGroups() {
   if (!els.clubGroupList) return;
   const identity = currentGroupIdentity();
-  const groups = state.clubGroups.filter((group) => group.visibility === "public");
+  const byId = new Map();
+  [...state.memberGroups, ...state.clubGroups].forEach((group) => {
+    if (group?.id) byId.set(group.id, { ...(byId.get(group.id) || {}), ...group });
+  });
+  const requestedZip = state.memberHomeNationwide ? "" : activeMemberSearchZip();
+  const radius = Number(state.memberSearchRadius || 25);
+  const groups = [...byId.values()]
+    .filter((group) => group.visibility === "public")
+    .filter((group) => !requestedZip || (Number.isFinite(Number(group.milesAway)) ? Number(group.milesAway) <= radius : String(group.zip || "") === requestedZip));
   els.clubGroupList.innerHTML = groups.length
     ? groups.map((group) => renderClubGroupCard(group, identity.email, "public")).join("")
     : `<article class="society-list-card"><strong>No public groups yet</strong><p>Create a public group from My Groups and it will show here for members to join.</p></article>`;
@@ -2980,7 +3223,7 @@ function renderClubGroupCard(group, currentEmail, context = "mine") {
     <article class="club-group-card">
       <div class="club-group-head">
         <div>
-          <span>${escapeHtml(group.visibility)} | ${escapeHtml(group.sport)}</span>
+          <span>${escapeHtml(group.visibility)} | ${escapeHtml(group.sport)}${group.zip ? ` · ZIP ${escapeHtml(group.zip)}` : ""}${Number.isFinite(Number(group.milesAway)) ? ` · ${Number(group.milesAway).toFixed(1)} miles away` : ""}</span>
           <strong>${escapeHtml(group.name)}</strong>
           <p>${escapeHtml(group.description || "A Club Society group.")}</p>
         </div>
@@ -2999,7 +3242,14 @@ function renderClubGroupCard(group, currentEmail, context = "mine") {
 }
 
 function joinClubGroup(id) {
-  const group = state.clubGroups.find((item) => item.id === id);
+  let group = state.clubGroups.find((item) => item.id === id);
+  if (!group) {
+    const remote = state.memberGroups.find((item) => item.id === id);
+    if (remote) {
+      group = { ...remote, remoteCopy: true, members: [], invitees: [], messages: [], events: remote.events || [] };
+      state.clubGroups.unshift(group);
+    }
+  }
   const email = currentGroupIdentity().email;
   if (!group || !email) return;
   group.members = group.members || [];
@@ -3411,15 +3661,23 @@ function openPrefilledMessage(to, body) {
 
 function golfMatchCards() {
   const byId = new Map();
-  [...state.memberActivity.filter((item) => item.sport === "golf"), ...state.golfTeeTimes].forEach((item) => {
+  const requestedZip = state.memberHomeNationwide ? "" : activeMemberSearchZip();
+  const radius = Number(state.memberSearchRadius || 25);
+  const currentEmail = String(currentSocietyProfile()?.email || state.societySessionEmail || "").toLowerCase();
+  [...state.golfTeeTimes, ...state.memberActivity.filter((item) => item.sport === "golf" && ["round", "game", "match"].includes(item.type))].forEach((item) => {
     if (!item?.id || isSampleActivity(item)) return;
+    if (item.ownerSelf || String(item.ownerEmail || "").toLowerCase() === currentEmail) {
+      byId.delete(item.id);
+      return;
+    }
+    if (requestedZip && !(Number.isFinite(Number(item.milesAway)) ? Number(item.milesAway) <= radius : String(item.zip || "") === requestedZip)) return;
     byId.set(item.id, {
       id: item.id,
       name: publicNameFromString(item.ownerName || "Club member"),
       course: item.course || item.location || item.title || "Golf round",
       time: [item.date || item.day, formatDisplayTime(item.time)].filter(Boolean).join(" "),
       handicap: item.handicap || "Open",
-      distance: item.zip ? `ZIP ${item.zip}` : "Location shared by host",
+      distance: Number.isFinite(Number(item.milesAway)) ? `${Number(item.milesAway).toFixed(1)} miles away · ZIP ${item.zip}` : (item.zip ? `ZIP ${item.zip}` : "Location shared by host"),
       cta: item.spots ? `${item.spots} spot${String(item.spots) === "1" ? "" : "s"} open` : "Open round",
       tags: [item.note || "Member-hosted round"],
     });

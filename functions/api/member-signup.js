@@ -5,6 +5,7 @@ const APP_ORIGINS = new Set([
   "https://www.clubsocietyapp.com",
   "https://club-society.pages.dev",
 ]);
+const ZIP_COORDINATE_CACHE = new Map();
 
 function corsHeadersFor(request) {
   const origin = request.headers.get("Origin");
@@ -322,18 +323,37 @@ async function getMemberDirectory(payload, env, corsHeaders) {
     const rows = await env.DB.prepare(`
       SELECT id, first_name, last_name, email, gender, age, sport, city, state, zip, app_state_json, updated_at
       FROM club_members
-      WHERE email <> ?
       ORDER BY updated_at DESC
       LIMIT 100
-    `).bind(email).all();
-    const profiles = (rows.results || []).map(publicMemberProfile).filter(Boolean);
+    `).all();
+    const memberRows = rows.results || [];
+    let profiles = memberRows
+      .filter((row) => cleanEmail(row.email) !== email)
+      .map(publicMemberProfile)
+      .filter(Boolean);
     const requestedZip = /^\d{5}$/.test(cleanText(payload.zip)) ? cleanText(payload.zip) : "";
-    const activities = (rows.results || [])
-      .flatMap(publicMemberActivities)
-      .filter((item) => !requestedZip || item.zip === requestedZip)
+    const requestedRadius = cleanText(payload.radius) === "nationwide" ? "nationwide" : String(Math.min(500, Math.max(5, Number(payload.radius) || 25)));
+    let activities = memberRows.flatMap((row) => publicMemberActivities(row, cleanEmail(row.email) === email));
+    let groups = memberRows.flatMap(publicMemberGroups);
+    let lessons = memberRows.flatMap(publicMemberLessons);
+    if (requestedZip && requestedRadius !== "nationwide") {
+      const radiusMiles = Number(requestedRadius);
+      const allZips = [requestedZip, ...profiles.map((item) => item.zip), ...activities.map((item) => item.zip), ...groups.map((item) => item.zip), ...lessons.map((item) => item.zip)];
+      const coordinates = await coordinatesForZips(allZips);
+      const origin = coordinates.get(requestedZip);
+      if (!origin) return json({ ok: false, error: "We could not locate that U.S. ZIP code" }, 400, corsHeaders);
+      profiles = addDistanceAndFilter(profiles, origin, coordinates, radiusMiles);
+      activities = addDistanceAndFilter(activities, origin, coordinates, radiusMiles);
+      groups = addDistanceAndFilter(groups, origin, coordinates, radiusMiles);
+      lessons = addDistanceAndFilter(lessons, origin, coordinates, radiusMiles);
+    }
+    activities = activities
       .sort((a, b) => String(b.createdAt || "").localeCompare(String(a.createdAt || "")))
       .slice(0, 60);
-    return json({ ok: true, profiles, activities, zip: requestedZip }, 200, corsHeaders);
+    groups = groups
+      .sort((a, b) => String(b.createdAt || "").localeCompare(String(a.createdAt || "")))
+      .slice(0, 60);
+    return json({ ok: true, profiles, activities, groups, lessons, zip: requestedZip, radius: requestedRadius }, 200, corsHeaders);
   } catch (error) {
     console.error("Club Society member directory failed", error);
     return json({ ok: false, error: "Server error while loading members" }, 500, corsHeaders);
@@ -380,7 +400,7 @@ function publicMemberProfile(row) {
   };
 }
 
-function publicMemberActivities(row) {
+function publicMemberActivities(row, ownerSelf = false) {
   const appState = safeJsonParse(row.app_state_json, {});
   const ownerName = `${cleanText(row.first_name)} ${lastInitial(row.last_name)}`.trim() || "Club member";
   const fallbackZip = cleanText(row.zip);
@@ -399,6 +419,7 @@ function publicMemberActivities(row) {
       note: cleanText(item.note),
       spots: cleanText(item.spots || item.playersNeeded),
       ownerName,
+      ownerSelf,
       imageDataUrl: image.startsWith("data:image/") && image.length <= 220000 ? image : "",
       createdAt: cleanText(item.createdAt || item.updatedAt),
     };
@@ -407,7 +428,105 @@ function publicMemberActivities(row) {
     ...(Array.isArray(appState.quickGames) ? appState.quickGames.map((item) => cleanActivity(item, "pickleball", "game")) : []),
     ...(Array.isArray(appState.casualMatches) ? appState.casualMatches.map((item) => cleanActivity(item, "pickleball", "match")) : []),
     ...(Array.isArray(appState.golfTeeTimes) ? appState.golfTeeTimes.map((item) => cleanActivity(item, "golf", "round")) : []),
+    ...(Array.isArray(appState.memberEvents) ? appState.memberEvents.map((item) => cleanActivity(item, cleanText(item.sport || "both").toLowerCase(), "event")) : []),
   ].filter((item) => item?.id && item.title && /^\d{5}$/.test(item.zip));
+}
+
+function publicMemberGroups(row) {
+  const appState = safeJsonParse(row.app_state_json, {});
+  const ownerName = `${cleanText(row.first_name)} ${lastInitial(row.last_name)}`.trim() || "Club member";
+  return (Array.isArray(appState.clubGroups) ? appState.clubGroups : [])
+    .filter((group) => group && typeof group === "object" && group.visibility === "public" && group.remoteCopy !== true)
+    .filter((group) => !group.ownerEmail || cleanEmail(group.ownerEmail) === cleanEmail(row.email))
+    .map((group) => ({
+      id: cleanText(group.id || `group-${row.id}-${group.createdAt || "public"}`),
+      name: cleanText(group.name),
+      description: cleanText(group.description),
+      sport: cleanText(group.sport || "Both"),
+      visibility: "public",
+      zip: cleanText(group.zip || row.zip),
+      ownerName,
+      createdAt: cleanText(group.createdAt || row.updated_at),
+      events: (Array.isArray(group.events) ? group.events : []).slice(0, 8).map((event) => ({
+        id: cleanText(event.id),
+        title: cleanText(event.title),
+        date: cleanText(event.date),
+        time: cleanText(event.time),
+        repeats: cleanText(event.repeats),
+      })),
+    }))
+    .filter((group) => group.id && group.name && /^\d{5}$/.test(group.zip));
+}
+
+function publicMemberLessons(row) {
+  const appState = safeJsonParse(row.app_state_json, {});
+  return (Array.isArray(appState.lessonListings) ? appState.lessonListings : [])
+    .filter((listing) => listing && typeof listing === "object" && listing.paymentStatus === "paid")
+    .map((listing) => ({
+      id: cleanText(listing.id || `lesson-${row.id}-${listing.sport || "sport"}`),
+      sport: cleanText(listing.sport).toLowerCase(),
+      name: cleanText(listing.name),
+      location: cleanText(listing.location),
+      zip: cleanText(listing.zip || row.zip),
+      radius: cleanText(listing.radius),
+      experience: cleanText(listing.experience),
+      levels: cleanText(listing.levels),
+      price: cleanText(listing.price),
+      format: cleanText(listing.format),
+      bio: cleanText(listing.bio),
+      paymentStatus: "paid",
+      updatedAt: cleanText(listing.updatedAt || row.updated_at),
+    }))
+    .filter((listing) => listing.id && listing.name && ["golf", "pickleball"].includes(listing.sport) && /^\d{5}$/.test(listing.zip));
+}
+
+async function coordinatesForZips(values) {
+  const zips = [...new Set(values.map((value) => cleanText(value)).filter((value) => /^\d{5}$/.test(value)))];
+  const result = new Map();
+  for (let index = 0; index < zips.length; index += 25) {
+    const batch = zips.slice(index, index + 25);
+    const resolved = await Promise.all(batch.map(async (zip) => [zip, await coordinatesForZip(zip)]));
+    resolved.forEach(([zip, coordinates]) => { if (coordinates) result.set(zip, coordinates); });
+  }
+  return result;
+}
+
+async function coordinatesForZip(zip) {
+  if (ZIP_COORDINATE_CACHE.has(zip)) return ZIP_COORDINATE_CACHE.get(zip);
+  try {
+    const response = await fetch(`https://api.zippopotam.us/us/${encodeURIComponent(zip)}`, {
+      headers: { "User-Agent": "ClubSociety/1.0 (clubsociety.app)" },
+      cf: { cacheEverything: true, cacheTtl: 86400 },
+      signal: AbortSignal.timeout(4000),
+    });
+    if (!response.ok) return null;
+    const data = await response.json();
+    const place = data?.places?.[0];
+    const coordinates = place ? { lat: Number(place.latitude), lon: Number(place.longitude) } : null;
+    if (!coordinates || !Number.isFinite(coordinates.lat) || !Number.isFinite(coordinates.lon)) return null;
+    if (ZIP_COORDINATE_CACHE.size > 500) ZIP_COORDINATE_CACHE.clear();
+    ZIP_COORDINATE_CACHE.set(zip, coordinates);
+    return coordinates;
+  } catch {
+    return null;
+  }
+}
+
+function addDistanceAndFilter(items, origin, coordinates, radiusMiles) {
+  return items.map((item) => {
+    const location = coordinates.get(item.zip);
+    if (!location) return null;
+    const milesAway = haversineMiles(origin.lat, origin.lon, location.lat, location.lon);
+    return milesAway <= radiusMiles ? { ...item, milesAway: Number(milesAway.toFixed(1)) } : null;
+  }).filter(Boolean);
+}
+
+function haversineMiles(aLat, aLon, bLat, bLon) {
+  const radians = (value) => value * Math.PI / 180;
+  const dLat = radians(bLat - aLat);
+  const dLon = radians(bLon - aLon);
+  const value = Math.sin(dLat / 2) ** 2 + Math.cos(radians(aLat)) * Math.cos(radians(bLat)) * Math.sin(dLon / 2) ** 2;
+  return 3958.8 * 2 * Math.atan2(Math.sqrt(value), Math.sqrt(1 - value));
 }
 
 async function ensureMemberTable(db) {

@@ -4,12 +4,12 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="theme-color" content="#0b2231">
-    <meta name="app-version" content="2026-10-05-member-home-1">
+    <meta name="app-version" content="2026-10-05-radius-navigation-1">
     <title>Club Society</title>
-    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png?v=2026-10-05-member-home-1">
-    <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=2026-10-05-member-home-1">
-    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png?v=2026-10-05-member-home-1">
-    <link rel="manifest" href="/manifest.webmanifest?v=2026-10-05-member-home-1">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png?v=2026-10-05-radius-navigation-1">
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=2026-10-05-radius-navigation-1">
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png?v=2026-10-05-radius-navigation-1">
+    <link rel="manifest" href="/manifest.webmanifest?v=2026-10-05-radius-navigation-1">
     <script>
       const localMemberPreviewHost = ["localhost", "127.0.0.1"].includes(window.location.hostname.toLowerCase()) && new URLSearchParams(window.location.search).has("member-preview");
       if (["clubsociety.app", "www.clubsociety.app", "club-society.pages.dev"].includes(window.location.hostname.toLowerCase()) || localMemberPreviewHost) {
@@ -24,7 +24,7 @@
       .member-host main > .view { display: none !important; }
       .member-host main > #societyApp { display: block !important; }
     </style>
-    <link rel="stylesheet" href="styles.css?v=2026-10-05-member-home-1">
+    <link rel="stylesheet" href="styles.css?v=2026-10-05-radius-navigation-1">
   </head>
   <body>
     <aside class="sidebar">
@@ -279,12 +279,20 @@
                 </section>
 
                 <form id="memberDiscoveryForm" class="member-discovery-bar">
-                  <label for="memberDiscoveryZip">Find play by ZIP</label>
-                  <div>
-                    <input id="memberDiscoveryZip" name="zip" inputmode="numeric" maxlength="5" pattern="[0-9]{5}" placeholder="Any U.S. ZIP code" required>
+                  <label for="memberDiscoveryZip">Find play near a ZIP</label>
+                  <div class="member-discovery-fields">
+                    <input id="memberDiscoveryZip" name="zip" inputmode="numeric" maxlength="5" pattern="[0-9]{5}" placeholder="Any U.S. ZIP code">
+                    <select id="memberDiscoveryRadius" name="radius" aria-label="Search radius">
+                      <option value="10">10 miles</option>
+                      <option value="25" selected>25 miles</option>
+                      <option value="50">50 miles</option>
+                      <option value="100">100 miles</option>
+                      <option value="250">250 miles</option>
+                      <option value="nationwide">Nationwide</option>
+                    </select>
                     <button type="submit">Search</button>
                   </div>
-                  <button class="member-nationwide-button" data-member-nationwide type="button">Show all nationwide</button>
+                  <small>Defaults to 25 miles from the ZIP in your profile. Expand it anytime.</small>
                 </form>
 
                 <div class="member-quick-actions" aria-label="Member shortcuts">
@@ -293,6 +301,16 @@
                   <button data-society-tab="myGroups" type="button"><span>◎</span><strong>Groups</strong><small>Meet your people</small></button>
                   <button data-society-lessons type="button"><span>↗</span><strong>Lessons</strong><small>Improve your game</small></button>
                 </div>
+
+                <section class="member-path-section" aria-label="More ways to connect">
+                  <div class="member-section-title"><div><span>Explore</span><h3>More ways to connect</h3></div></div>
+                  <div class="member-path-grid">
+                    <button data-home-place type="button"><span>01</span><strong>Find a court or course</strong><small>Search from any ZIP &rarr;</small></button>
+                    <button data-society-tab="myGroups" type="button"><span>02</span><strong>My Groups</strong><small>Find or create a group &rarr;</small></button>
+                    <button data-home-host type="button"><span>03</span><strong>Host a tournament</strong><small>Build the competition &rarr;</small></button>
+                    <button class="member-date-path" data-society-tab="pickleDate" type="button"><span>04</span><strong>Date on the court or course</strong><small>Meet beyond the match &rarr;</small></button>
+                  </div>
+                </section>
 
                 <section class="member-nearby-section">
                   <div class="member-section-title">
@@ -366,30 +384,62 @@
               </section>
             </div>
 
-            <div class="society-tab" data-society-panel="pickleballHome">
-              <section class="pickleball-hub">
-                <button class="society-back-button" data-society-tab="home" type="button">Sports</button>
-                <div>
-                  <p class="eyebrow">Pickleball &middot; Club Society</p>
-                  <h3>Your next game starts here.</h3>
-                  <p>Find local players, put a game on the board, explore events, or sharpen your play.</p>
+            <div class="society-tab" data-society-panel="findMenu">
+              <section class="society-section member-menu-page">
+                <button class="society-back-button" data-society-tab="home" type="button">Home</button>
+                <p class="eyebrow">Find</p>
+                <h3>What are you looking for?</h3>
+                <div class="member-scope-slot"></div>
+                <div class="member-menu-grid">
+                  <button data-find-players type="button"><span>Players + games</span><strong>Find someone ready to play</strong></button>
+                  <button data-home-place type="button"><span>Courts + courses</span><strong>Find a place to play</strong></button>
+                  <button data-society-tab="clubGroups" type="button"><span>Groups</span><strong>Find your people</strong></button>
+                  <button data-society-tab="events" type="button"><span>Events</span><strong>Find something happening</strong></button>
+                  <button data-society-lessons type="button"><span>Lessons</span><strong>Find an instructor</strong></button>
+                  <button data-society-tab="pickleDate" type="button"><span>Date</span><strong>Date on the court or course</strong></button>
                 </div>
-                <div class="pickleball-hub-grid" aria-label="Pickleball actions">
-                  <button data-society-tab="partners" type="button"><span>01 &middot; Find</span><strong>Players &amp; games</strong><i>See who is ready &rarr;</i></button>
-                  <button data-society-tab="games" type="button"><span>02 &middot; Post</span><strong>Put a game out there</strong><i>Invite local players &rarr;</i></button>
-                  <button data-society-tab="events" type="button"><span>03 &middot; Events</span><strong>Play something bigger</strong><i>Browse the calendar &rarr;</i></button>
-                  <button data-society-tab="pickleballLessons" type="button"><span>04 &middot; Lessons</span><strong>Work on your game</strong><i>Find instruction &rarr;</i></button>
-                  <button data-society-tab="courts" type="button"><span>05 &middot; Courts</span><strong>Find a court nearby</strong><i>Set your distance &rarr;</i></button>
-                  <button data-society-tab="myGroups" type="button"><span>06 &middot; Groups</span><strong>My Groups</strong><i>Create or find a group &rarr;</i></button>
-                  <button class="member-host-card" data-society-tab="memberHost" type="button"><span>07 &middot; Host</span><strong>Your own round robin or tournament</strong><i>Build the competition &rarr;</i></button>
-                  <button class="pickle-date-card" data-society-tab="pickleDate" type="button"><span>08 &middot; Date</span><strong>It&rsquo;s Just Pickleball</strong><i>Meet beyond the match &rarr;</i></button>
-                </div>
+              </section>
+            </div>
+
+            <div class="society-tab" data-society-panel="postMenu">
+              <section class="society-section member-menu-page">
+                <button class="society-back-button" data-society-tab="home" type="button">Home</button>
+                <p class="eyebrow">Post</p>
+                <h3>What are you posting?</h3>
+                <label class="member-post-type-select">Choose a post type
+                  <select id="memberPostType">
+                    <option value="">Select one</option>
+                    <option value="game">Pickleball game</option>
+                    <option value="tee-time">Golf tee time</option>
+                    <option value="group">New group</option>
+                    <option value="event">Event or social</option>
+                    <option value="host">Tournament or round robin</option>
+                  </select>
+                </label>
+                <button class="primary member-post-continue" data-member-post-continue type="button">Continue</button>
+              </section>
+            </div>
+
+            <div class="society-tab" data-society-panel="memberEventCreate">
+              <section class="society-section">
+                <button class="society-back-button" data-society-tab="postMenu" type="button">Post</button>
+                <p class="eyebrow">New event</p>
+                <h3>Post an event or social</h3>
+                <form id="memberEventForm" class="society-form society-post-form">
+                  <input name="title" placeholder="Event name" required>
+                  <div class="form-pair"><select name="sport"><option>Pickleball</option><option>Golf</option><option>Both</option></select><input name="zip" inputmode="numeric" maxlength="5" pattern="[0-9]{5}" placeholder="ZIP code" required></div>
+                  <div class="form-pair"><input name="date" type="date" required><input name="time" type="time" required></div>
+                  <input name="location" placeholder="Venue or meeting place" required>
+                  <textarea name="note" rows="3" placeholder="What should members know?"></textarea>
+                  <label class="event-photo-field"><span>Add an event image <small>Optional. We will use the matching sport placeholder if omitted.</small></span><input name="eventImage" type="file" accept="image/*"></label>
+                  <button class="primary" type="submit">Publish Event</button>
+                </form>
               </section>
             </div>
 
             <div class="society-tab" data-society-panel="games">
               <section class="society-section">
-                <button class="society-back-button" data-society-tab="pickleballHome" type="button">Back</button>
+                <button class="society-back-button" data-society-tab="postMenu" type="button">Post</button>
                 <p class="eyebrow">Play</p>
                 <h3>Post a last-minute game</h3>
                 <p class="section-copy">Create a quick game for today, tomorrow, or this weekend so other members can RSVP.</p>
@@ -426,12 +476,13 @@
 
             <div class="society-tab" data-society-panel="partners">
               <section class="society-section">
-                <button class="society-back-button" data-society-tab="pickleballHome" type="button">Back</button>
+                <button class="society-back-button" data-society-tab="findMenu" type="button">Find</button>
                 <div class="society-social-hero">
                   <p class="eyebrow">Casual matches</p>
                   <h3>Find a Match</h3>
                   <p>Browse posts from other members who are looking to play today, tomorrow, or this weekend. RSVP when a match fits.</p>
                 </div>
+                <div class="member-scope-slot"></div>
                 <div class="society-search-card">
                   <div class="society-filter-row">
                     <button class="active" data-match-filter="all" type="button">All</button>
@@ -454,12 +505,13 @@
 
             <div class="society-tab" data-society-panel="connectPlayers">
               <section class="society-section">
-                <button class="society-back-button" data-society-tab="pickleballHome" type="button">Back</button>
+                <button class="society-back-button" data-society-tab="findMenu" type="button">Find</button>
                 <div class="society-social-hero">
                   <p class="eyebrow">Connect Players</p>
                   <h3>Find members who want to be found.</h3>
                   <p>Only discoverable members appear here. Tap a photo or name to preview the profile, add them as a friend, or start a message.</p>
                 </div>
+                <div class="member-scope-slot"></div>
                 <div class="society-search-card">
                   <input id="societyFriendSearch" type="search" placeholder="Search players by name, city, sport, skill, or vibe">
                   <div class="society-filter-row">
@@ -477,17 +529,18 @@
 
             <div class="society-tab" data-society-panel="clubGroups">
               <section class="society-section">
-                <button class="society-back-button" data-society-tab="home" type="button">Sports</button>
+                <button class="society-back-button" data-society-tab="findMenu" type="button">Find</button>
                 <p class="eyebrow">Club Groups</p>
                 <h3>Public groups posted by members.</h3>
                 <p class="section-copy">Browse open groups and join the ones that fit how you like to play.</p>
+                <div class="member-scope-slot"></div>
                 <div id="clubGroupList" class="society-stack"></div>
               </section>
             </div>
 
             <div class="society-tab" data-society-panel="memberHost">
               <section class="society-section member-host-section">
-                <button class="society-back-button" data-society-tab="pickleballHome" type="button">Back</button>
+                <button class="society-back-button" data-society-tab="home" type="button">Home</button>
                 <div class="member-host-hero"><span>Club Society Host</span><h3>Run the games. We&rsquo;ll help with the format.</h3><p>Create a casual round robin or a scored singles or doubles tournament from your phone.</p></div>
                 <div class="member-host-format-tabs">
                   <button class="active" data-member-host-format="round-robin" type="button">Round Robin</button>
@@ -522,7 +575,7 @@
 
             <div class="society-tab" data-society-panel="myGroups">
               <section class="society-section">
-                <button class="society-back-button" data-society-tab="home" type="button">Sports</button>
+                <button class="society-back-button" data-society-tab="home" type="button">Home</button>
                 <p class="eyebrow">My Groups</p>
                 <h3>Find your people or start something new.</h3>
                 <div class="member-host-format-tabs group-choice-tabs">
@@ -542,6 +595,7 @@
                       <option>Both</option>
                     </select>
                   </div>
+                  <input name="zip" inputmode="numeric" maxlength="5" pattern="[0-9]{5}" placeholder="Home ZIP for this group" required>
                   <textarea name="description" rows="2" placeholder="Who is this group for?"></textarea>
                   <input name="invitees" placeholder="Invite members by name or email, separated by commas">
                   <button class="primary" type="submit">Create Group</button>
@@ -552,7 +606,7 @@
 
             <div class="society-tab" data-society-panel="host">
               <section class="society-section">
-                <button class="society-back-button" data-society-tab="pickleballHome" type="button">Back</button>
+                <button class="society-back-button" data-society-tab="home" type="button">Home</button>
                 <p class="eyebrow">Host tools</p>
                 <h3>Host a tournament or round robin</h3>
                 <div class="society-action-card">
@@ -573,10 +627,11 @@
 
             <div class="society-tab" data-society-panel="pickleballLessons">
               <section class="society-section">
-                <button class="society-back-button" data-society-tab="pickleballHome" type="button">Back</button>
+                <button class="society-back-button" data-society-tab="findMenu" type="button">Find</button>
                 <p class="eyebrow">Local instruction</p>
                 <h3>Pickleball instructors</h3>
                 <p class="section-copy">Browse local pros and coaches offering private lessons, group instruction, and clinics.</p>
+                <div class="member-scope-slot"></div>
                 <div id="pickleballLessonList" class="society-stack"></div>
                 <article class="lesson-offer-card"><span>For teaching pros and coaches</span><strong>Want to give pickleball lessons?</strong><p>Create an instructor profile so local players can find you.</p><button class="primary" data-offer-lessons="pickleball" type="button" aria-expanded="false">Sign Up to Give Lessons</button></article>
                 <form class="society-form lesson-listing-form" data-lesson-form="pickleball" hidden aria-hidden="true">
@@ -586,7 +641,8 @@
                     <p>Complete your instructor profile below. A one-time $25 listing fee applies. Updates to the same listing are included.</p>
                   </div>
                   <input name="name" placeholder="Instructor or business name" required>
-                  <div class="form-pair"><input name="location" placeholder="City or teaching location" required><input name="radius" inputmode="numeric" placeholder="Travel radius (miles)"></div>
+                  <div class="form-pair"><input name="location" placeholder="City or teaching location" required><input name="zip" inputmode="numeric" maxlength="5" pattern="[0-9]{5}" placeholder="ZIP code" required></div>
+                  <input name="radius" inputmode="numeric" placeholder="Travel radius (miles)">
                   <input name="experience" placeholder="Experience, credentials, or certifications" required>
                   <div class="form-pair"><input name="levels" placeholder="Levels taught"><input name="price" placeholder="Lesson price or range"></div>
                   <select name="format"><option>Private and group lessons</option><option>Private lessons</option><option>Group clinics</option></select>
@@ -598,24 +654,27 @@
 
             <div class="society-tab" data-society-panel="courts">
               <section class="society-section">
-                <button class="society-back-button" data-society-tab="pickleballHome" type="button">Back</button>
+                <button class="society-back-button" data-society-tab="findMenu" type="button">Find</button>
                 <p class="eyebrow">Nearby courts</p>
                 <h3>Find a Court</h3>
-                <p class="section-copy">Choose how far you want to travel, then browse public, indoor, outdoor, and private-access courts near your profile location.</p>
+                <p class="section-copy">Search any U.S. ZIP. The default area is 25 miles from the ZIP in your profile.</p>
+                <form id="courtZipSearchForm" class="course-zip-form">
+                  <input id="courtZip" name="zip" inputmode="numeric" maxlength="5" pattern="[0-9]{5}" placeholder="Enter ZIP code" required>
+                  <button type="submit">Search ZIP</button>
+                </form>
                 <label class="society-range-control">Distance from me
                   <select id="courtDistance">
                     <option value="5">Within 5 miles</option>
                     <option value="10">Within 10 miles</option>
                     <option value="25" selected>Within 25 miles</option>
                     <option value="50">Within 50 miles</option>
+                    <option value="100">Within 100 miles</option>
                   </select>
                 </label>
                 <input id="courtSearch" type="search" placeholder="Search courts, city, access, indoor/outdoor">
                 <div class="society-filter-row court-filter-row">
                   <button class="active" data-court-filter="all" type="button">All</button>
                   <button data-court-filter="public" type="button">Public</button>
-                  <button data-court-filter="indoor" type="button">Indoor</button>
-                  <button data-court-filter="outdoor" type="button">Outdoor</button>
                   <button data-court-filter="club" type="button">Club/private</button>
                 </div>
                 <div id="courtDirectoryList" class="society-stack"></div>
@@ -624,12 +683,13 @@
 
             <div class="society-tab" data-society-panel="pickleDate">
               <section class="society-section pickle-date-section">
-                <button class="society-back-button" data-dating-back type="button">Back</button>
+                <button class="society-back-button" data-society-tab="findMenu" type="button">Find</button>
                 <div class="pickle-date-hero">
-                  <span>It&rsquo;s Just Golf + Pickleball</span>
+                  <span>Date on the Court or Course</span>
                   <h3>One profile. The right connections.</h3>
                   <p>Create one private dating profile for both sports. You will only see mutual matches that fit both people&rsquo;s preferences.</p>
                 </div>
+                <div class="member-scope-slot"></div>
                 <input id="pickleDateSearch" class="dating-search" type="search" placeholder="Search matches by name, city, sport, or interests">
                 <article class="pickle-date-event">
                   <div><span>Featured date</span><strong>It&rsquo;s Just&hellip; Mixer</strong><p>Golf and pickleball members, easy introductions, and a casual social afterward. Dating profile optional.</p></div>
@@ -649,7 +709,7 @@
                     <label>Age from<input name="dateAgeMin" type="number" min="18" max="99" value="25" required></label>
                     <label>Age to<input name="dateAgeMax" type="number" min="18" max="99" value="55" required></label>
                   </div>
-                  <label>Maximum distance<select name="dateMiles" required><option value="10">10 miles</option><option value="25" selected>25 miles</option><option value="50">50 miles</option></select></label>
+                  <label>Maximum distance<select name="dateMiles" required><option value="10">10 miles</option><option value="25" selected>25 miles</option><option value="50">50 miles</option><option value="100">100 miles</option><option value="250">250 miles</option></select></label>
                   <textarea name="dateBio" rows="3" placeholder="A little about you, your playing style, and what you enjoy..." required></textarea>
                   <input name="dateIdea" placeholder="Ideal first meet: coffee, open play, nine holes, a mixer..." required>
                   <label class="checkbox-line society-check"><input name="dateProfileActive" type="checkbox"> Show my profile to mutual matches in It&rsquo;s Just&hellip;</label>
@@ -662,35 +722,20 @@
 
             <div class="society-tab" data-society-panel="events">
               <section class="society-section">
-                <button class="society-back-button" data-society-tab="pickleballHome" type="button">Back</button>
+                <button class="society-back-button" data-society-tab="home" type="button">Home</button>
                 <p class="eyebrow">Events + tournaments</p>
-                <h3>Challenge board</h3>
+                <h3>Events near you</h3>
+                <div class="member-scope-slot"></div>
                 <div id="memberEventList" class="society-stack"></div>
-              </section>
-            </div>
-
-            <div class="society-tab" data-society-panel="golfHome">
-              <section class="pickleball-hub golf-member-hub">
-                <button class="society-back-button" data-society-tab="home" type="button">Sports</button>
-                <div><p class="eyebrow">Golf &middot; Club Society</p><h3>Your next round starts here.</h3><p>Find golfers, post an open tee time, explore events, courses, groups, and instruction.</p></div>
-                <div class="pickleball-hub-grid" aria-label="Golf actions">
-                  <button data-society-tab="golfFindGame" type="button"><span>01 &middot; Find</span><strong>Golfers &amp; rounds</strong><i>See who is playing &rarr;</i></button>
-                  <button data-society-tab="golfPostTee" type="button"><span>02 &middot; Post</span><strong>Share an open tee time</strong><i>Fill your group &rarr;</i></button>
-                  <button data-society-tab="events" type="button"><span>03 &middot; Events</span><strong>Golf events nearby</strong><i>Browse the calendar &rarr;</i></button>
-                  <button data-society-tab="golfLessons" type="button"><span>04 &middot; Lessons</span><strong>Work on your game</strong><i>Find instruction &rarr;</i></button>
-                  <button data-society-tab="golfCourses" type="button"><span>05 &middot; Courses</span><strong>Find a course nearby</strong><i>Set your distance &rarr;</i></button>
-                  <button data-society-tab="myGroups" type="button"><span>06 &middot; Groups</span><strong>My Groups</strong><i>Create or find a group &rarr;</i></button>
-                  <button class="member-host-card" data-society-tab="golfTournament" type="button"><span>07 &middot; Tournament</span><strong>Host a golf tournament</strong><i>Contact Club Society &rarr;</i></button>
-                  <button class="pickle-date-card" data-society-tab="pickleDate" type="button"><span>08 &middot; Date</span><strong>It&rsquo;s Just Golf</strong><i>Meet beyond the round &rarr;</i></button>
-                </div>
               </section>
             </div>
 
             <div class="society-tab" data-society-panel="golfFindGame">
               <section class="society-section">
-                <button class="society-back-button" data-society-tab="golfHome" type="button">Back</button>
+                <button class="society-back-button" data-society-tab="findMenu" type="button">Find</button>
                 <p class="eyebrow">Find Game</p>
                 <h3>Last-minute partner deck</h3>
+                <div class="member-scope-slot"></div>
                 <div id="golfMatchDeck" class="golf-match-deck"></div>
                 <div class="golf-swipe-actions">
                   <button id="golfPassBtn" type="button">Pass</button>
@@ -701,7 +746,7 @@
 
             <div class="society-tab" data-society-panel="golfPostTee">
               <section class="society-section">
-                <button class="society-back-button" data-society-tab="golfHome" type="button">Back</button>
+                <button class="society-back-button" data-society-tab="postMenu" type="button">Post</button>
                 <p class="eyebrow">Post tee time</p>
                 <h3>Fill an open slot</h3>
                 <form id="golfTeeTimeForm" class="society-form">
@@ -727,7 +772,7 @@
 
             <div class="society-tab" data-society-panel="golfCreateGroup">
               <section class="society-section">
-                <button class="society-back-button" data-society-tab="golfHome" type="button">Back</button>
+                <button class="society-back-button" data-society-tab="postMenu" type="button">Post</button>
                 <p class="eyebrow">Create Group</p>
                 <h3>Build your golf circle</h3>
                 <form id="golfGroupForm" class="society-form">
@@ -747,10 +792,11 @@
 
             <div class="society-tab" data-society-panel="golfLessons">
               <section class="society-section">
-                <button class="society-back-button" data-society-tab="golfHome" type="button">Back</button>
+                <button class="society-back-button" data-society-tab="findMenu" type="button">Find</button>
                 <p class="eyebrow">Lessons</p>
                 <h3>Golf instructors</h3>
                 <p class="section-copy">Browse local pros and coaches offering swing instruction, short-game help, clinics, and playing lessons.</p>
+                <div class="member-scope-slot"></div>
                 <div id="golfLessonList" class="society-stack"></div>
                 <article class="lesson-offer-card"><span>For golf pros and coaches</span><strong>Want to give golf lessons?</strong><p>Create an instructor profile so local golfers can find you.</p><button class="primary" data-offer-lessons="golf" type="button" aria-expanded="false">Sign Up to Give Lessons</button></article>
                 <form class="society-form lesson-listing-form" data-lesson-form="golf" hidden aria-hidden="true">
@@ -760,7 +806,8 @@
                     <p>Complete your instructor profile below. A one-time $25 listing fee applies. Updates to the same listing are included.</p>
                   </div>
                   <input name="name" placeholder="Instructor or academy name" required>
-                  <div class="form-pair"><input name="location" placeholder="Course, range, or city" required><input name="radius" inputmode="numeric" placeholder="Travel radius (miles)"></div>
+                  <div class="form-pair"><input name="location" placeholder="Course, range, or city" required><input name="zip" inputmode="numeric" maxlength="5" pattern="[0-9]{5}" placeholder="ZIP code" required></div>
+                  <input name="radius" inputmode="numeric" placeholder="Travel radius (miles)">
                   <input name="experience" placeholder="Experience, credentials, or certifications" required>
                   <div class="form-pair"><input name="levels" placeholder="Players taught"><input name="price" placeholder="Lesson price or range"></div>
                   <select name="format"><option>Private and group lessons</option><option>Private lessons</option><option>Group clinics</option><option>Playing lessons</option></select>
@@ -772,7 +819,7 @@
 
             <div class="society-tab" data-society-panel="golfCourses">
               <section class="society-section">
-                <button class="society-back-button" data-society-tab="golfHome" type="button">Back</button>
+                <button class="society-back-button" data-society-tab="findMenu" type="button">Find</button>
                 <p class="eyebrow">Nearby courses</p>
                 <h3>Find a Course</h3>
                 <p class="society-section-intro">Choose how far you want to travel and see courses inside that range.</p>
@@ -789,6 +836,7 @@
                     <option value="10">Within 10 miles</option>
                     <option value="25" selected>Within 25 miles</option>
                     <option value="50">Within 50 miles</option>
+                    <option value="75">Within 75 miles</option>
                   </select>
                 </label>
                 <div id="golfCourseList" class="society-stack"></div>
@@ -798,7 +846,7 @@
 
             <div class="society-tab" data-society-panel="golfTournament">
               <section class="society-section member-host-section">
-                <button class="society-back-button" data-society-tab="golfHome" type="button">Back</button>
+                <button class="society-back-button" data-society-tab="home" type="button">Home</button>
                 <div class="member-host-hero golf-tournament-hero"><span>Golf Tournament Hosting</span><h3>Bring the players. We&rsquo;ll help run the tournament.</h3><p>Club Society can help with registration, pairings, scoring, and event operations.</p></div>
                 <article class="charity-host-card"><span>Ready to plan?</span><strong>Contact Club Society</strong><p>Tell us about your golf tournament and the hosting support you need.</p><button data-golf-tournament-contact type="button">Contact Club Society</button><em>Destination site to be determined.</em></article>
               </section>
@@ -806,7 +854,7 @@
 
             <div class="society-tab" data-society-panel="golfMessages">
               <section class="society-section">
-                <button class="society-back-button" data-society-tab="golfHome" type="button">Back</button>
+                <button class="society-back-button" data-society-tab="home" type="button">Home</button>
                 <p class="eyebrow">Messages</p>
                 <h3>Member chat</h3>
                 <form id="golfMessageForm" class="society-form">
@@ -870,8 +918,8 @@
 
             <nav class="society-bottom-nav" aria-label="Club Society app navigation">
               <button class="active" data-society-tab="home" type="button">Home</button>
-              <button data-society-tab="partners" type="button">Find</button>
-              <button data-society-tab="games" type="button">Post</button>
+              <button data-society-tab="findMenu" type="button">Find</button>
+              <button data-society-tab="postMenu" type="button">Post</button>
               <button data-society-tab="events" type="button">Events</button>
               <button data-society-tab="shop" type="button">Shop</button>
             </nav>
@@ -1675,7 +1723,7 @@
       </section>
     </div>
 
-    <script src="app.js?v=2026-10-05-member-home-1"></script>
+    <script src="app.js?v=2026-10-05-radius-navigation-1"></script>
   </body>
 </html>
 
