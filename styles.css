@@ -3320,7 +3320,7 @@ textarea {
   border-radius: 30px;
   background:
     linear-gradient(90deg, rgba(4, 38, 31, 0.98) 0%, rgba(4, 38, 31, 0.92) 42%, rgba(4, 38, 31, 0.62) 72%, rgba(4, 38, 31, 0.54) 100%),
-    url("club-society-sports-background-v1.png?v=2026-10-05-back-home-1") right -24px top -14px / 72% auto no-repeat,
+    url("club-society-sports-background-v1.png?v=2026-10-05-member-tagline-1") right -24px top -14px / 72% auto no-repeat,
     #073d31 !important;
   box-shadow: 0 30px 70px rgba(7, 55, 44, 0.17);
 }
@@ -3569,7 +3569,7 @@ textarea {
     border-radius: 24px;
     background:
       linear-gradient(90deg, rgba(4, 38, 31, 0.96) 0%, rgba(4, 38, 31, 0.88) 54%, rgba(4, 38, 31, 0.6) 100%),
-      url("club-society-sports-background-v1.png?v=2026-10-05-back-home-1") right 2px top 58px / 92% auto no-repeat,
+      url("club-society-sports-background-v1.png?v=2026-10-05-member-tagline-1") right 2px top 58px / 92% auto no-repeat,
       #073d31 !important;
   }
 
@@ -3746,7 +3746,7 @@ textarea {
   border-radius: 28px;
   background:
     linear-gradient(105deg, rgba(4, 42, 34, 0.97), rgba(4, 57, 44, 0.88)),
-    url("club-society-sports-background-v1.png?v=2026-10-05-back-home-1") right center / 68% auto no-repeat,
+    url("club-society-sports-background-v1.png?v=2026-10-05-member-tagline-1") right center / 68% auto no-repeat,
     #063d31;
   color: #fff;
   box-shadow: 0 22px 48px rgba(8, 44, 35, 0.19);
