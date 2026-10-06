@@ -246,6 +246,7 @@ resetProfileLocationDefaults();
 
 els.navItems.forEach((item) => item.addEventListener("click", () => setView(item.dataset.view)));
 document.querySelectorAll("[data-jump]").forEach((button) => button.addEventListener("click", () => setView(button.dataset.jump)));
+document.querySelectorAll("[data-host-mode]").forEach((button) => button.addEventListener("click", () => setHostMode(button.dataset.hostMode)));
 els.modes.forEach((button) => button.addEventListener("click", () => {
   setMode(button.dataset.mode);
 }));
@@ -788,6 +789,45 @@ function setMode(mode) {
   setView("command");
 }
 
+function setHostMode(mode) {
+  state.mode = mode;
+  els.modes.forEach((item) => item.classList.toggle("active", item.dataset.mode === mode));
+  saveState();
+  render();
+  setView("command");
+}
+
+function renderCommandStation() {
+  const sport = state.mode || "pickleball";
+  const modeLabel = sport === "golf" ? "Golf host mode" : "Pickleball host mode";
+  const events = state.events
+    .filter((event) => (event.sport || "pickleball") === sport)
+    .slice()
+    .sort((a, b) => String(a.date || "").localeCompare(String(b.date || "")));
+  const today = new Date().toISOString().slice(0, 10);
+  const nextEvent = events.find((event) => !event.date || event.date >= today) || events[0];
+  const codeSeed = nextEvent?.slug || nextEvent?.name || (sport === "golf" ? "GOLF" : "PICKLE");
+  const code = makeHostEntryCode(codeSeed, nextEvent?.date);
+
+  document.querySelectorAll("[data-host-mode]").forEach((button) => {
+    button.classList.toggle("active", button.dataset.hostMode === sport);
+  });
+  text("#hostModeLabel", modeLabel);
+  text("#commandEventName", nextEvent ? nextEvent.name : `Next ${sport} host event`);
+  text("#hostEntryCode", code);
+}
+
+function makeHostEntryCode(seed = "club", date = "") {
+  const cleanSeed = String(seed)
+    .toUpperCase()
+    .replace(/[^A-Z0-9]+/g, "")
+    .slice(0, 5) || "CLUB";
+  const cleanDate = String(date || "")
+    .replace(/[^0-9]+/g, "")
+    .slice(-4) || "30677";
+  return `${cleanSeed}-${cleanDate}`;
+}
+
 function openGolfPreview() {
   setView("golfSoon");
   document.body.classList.add("golf-drawer-open");
@@ -801,6 +841,7 @@ function closeGolfPreview() {
 
 function render() {
   els.modes.forEach((item) => item.classList.toggle("active", item.dataset.mode === state.mode));
+  renderCommandStation();
   updateTournamentFormatControls();
   renderMetrics();
   renderEvents();

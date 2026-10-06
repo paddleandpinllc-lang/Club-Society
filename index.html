@@ -36,19 +36,15 @@
         </div>
       </div>
       <nav class="nav" aria-label="Main navigation">
-        <button class="nav-item active" data-view="command">Command</button>
+        <button class="nav-item active" data-view="command">Host Station</button>
         <button class="nav-item" data-view="events">Events</button>
-        <button class="nav-item public-nav" data-view="publicEvents">Public Events</button>
         <button class="nav-item public-nav" data-view="profile">Player Profile</button>
         <button class="nav-item" data-view="checkin">Check-In</button>
         <button class="nav-item" data-view="rounds">Round Robin</button>
         <button class="nav-item" data-view="tournament">Tournament</button>
-        <button class="nav-item" data-view="community">Community</button>
         <button class="nav-item" data-view="host">Host Dashboard</button>
-        <button class="nav-item" data-view="shop">Shop</button>
         <button class="nav-item" data-view="archive">Archive</button>
         <button class="nav-item" data-view="integrations">Integrations</button>
-        <button class="nav-item" data-view="launch">Launch</button>
       </nav>
       <div class="mode-card">
         <span>Play mode</span>
@@ -75,44 +71,108 @@
 
       <main>
         <section class="view active" id="command">
-          <div class="metric-grid">
-            <article class="metric"><span>Active players</span><strong id="metricPlayers">0</strong></article>
-            <article class="metric"><span>Checked in</span><strong id="metricCheckedIn">0</strong></article>
-            <article class="metric"><span>Open events</span><strong id="metricEvents">0</strong></article>
-            <article class="metric"><span>Community posts</span><strong id="metricPosts">0</strong></article>
-          </div>
-          <div class="workspace two">
-            <section class="panel">
-              <div class="panel-head">
-                <div>
-                  <p class="eyebrow">Tonight</p>
-                  <h2>Event Control</h2>
-                </div>
-                <div class="toolbar">
-                  <button data-jump="discover">Discover</button>
-                  <button data-jump="publicEvents">Public Events</button>
-                  <button data-jump="checkin">Check-In</button>
-                  <button class="primary" data-jump="checkin">Admin Check-In</button>
+          <div class="command-station">
+            <section class="command-hero-panel">
+              <div class="command-hero-copy">
+                <p class="eyebrow">Club Society Host Station</p>
+                <h2>Run the night from one clean command center.</h2>
+                <p>Choose the sport, start check-in, build courts, manage scores, and keep every player record tied to the existing Club Society data.</p>
+                <div class="command-hero-actions">
+                  <button class="primary" data-jump="checkin">Start Check-In</button>
+                  <button data-jump="events">Create Event</button>
+                  <button data-jump="archive">Open Archive</button>
                 </div>
               </div>
-              <div id="commandEvents" class="stack"></div>
-            </section>
-            <section class="panel art-panel">
-              <img class="panel-mark" src="club-society-mark.svg" alt="">
-              <div>
-                <p class="eyebrow">Club concept</p>
-                <h2>One app for pickleball nights, golf groups, hosts, players, and local commerce.</h2>
-              </div>
-              <div class="play-card">
-                <span>Next build targets</span>
-                <ul>
-                  <li>Hosted PWA for admins</li>
-                  <li>Shared cloud event data</li>
-                  <li>Public player matching</li>
-                  <li>Paddle + Pin shopping paths</li>
-                </ul>
+              <div class="command-mark-wrap">
+                <img src="club-society-mark.svg" alt="">
+                <span id="hostModeLabel">Pickleball host mode</span>
               </div>
             </section>
+
+            <section class="host-sport-panel" aria-label="Choose host sport">
+              <button class="host-sport-card active" data-host-mode="pickleball" type="button">
+                <span>Pickleball</span>
+                <strong>Round robins, tournaments, check-ins, and scores.</strong>
+                <small>Use this for Paddle + Pint nights and court events.</small>
+              </button>
+              <button class="host-sport-card" data-host-mode="golf" type="button">
+                <span>Golf</span>
+                <strong>Tee sheets, group play, golf events, and scoring.</strong>
+                <small>Stage golf hosts without mixing the pickleball roster.</small>
+              </button>
+            </section>
+
+            <div class="command-stat-grid">
+              <article class="metric"><span>Active players</span><strong id="metricPlayers">0</strong></article>
+              <article class="metric"><span>Checked in</span><strong id="metricCheckedIn">0</strong></article>
+              <article class="metric"><span>Open events</span><strong id="metricEvents">0</strong></article>
+              <article class="metric"><span>Saved posts</span><strong id="metricPosts">0</strong></article>
+            </div>
+
+            <section class="host-action-grid" aria-label="Host tools">
+              <button data-jump="events" type="button">
+                <span>Build</span>
+                <strong>Events</strong>
+                <small>Create, edit, publish, and archive host events.</small>
+              </button>
+              <button data-jump="checkin" type="button">
+                <span>Gate</span>
+                <strong>Check-In</strong>
+                <small>Confirm waivers, RSVPs, and attendance.</small>
+              </button>
+              <button data-jump="rounds" type="button">
+                <span>Courts</span>
+                <strong>Round Robin</strong>
+                <small>Rotate checked-in players and manage games.</small>
+              </button>
+              <button data-jump="tournament" type="button">
+                <span>Bracket</span>
+                <strong>Tournament</strong>
+                <small>Seed, score, and advance players or teams.</small>
+              </button>
+              <button data-jump="host" type="button">
+                <span>Control</span>
+                <strong>Host Dashboard</strong>
+                <small>Review live event status and host tools.</small>
+              </button>
+              <button data-jump="integrations" type="button">
+                <span>Sync</span>
+                <strong>Integrations</strong>
+                <small>Import Paddle + Pint signups and connect services.</small>
+              </button>
+            </section>
+
+            <div class="workspace two command-workspace">
+              <section class="panel command-event-panel">
+                <div class="panel-head">
+                  <div>
+                    <p class="eyebrow">Current staging</p>
+                    <h2 id="commandEventName">Next host event</h2>
+                  </div>
+                  <button class="primary" data-jump="checkin">Open Gate</button>
+                </div>
+                <div class="host-code-card">
+                  <span>Player entry code</span>
+                  <strong id="hostEntryCode">CLUB-30677</strong>
+                  <p>Players can use the app or public check-in to join the event. Score upload can attach to this code in the next build.</p>
+                  <div class="card-actions">
+                    <button type="button" data-jump="public">Player Check-In</button>
+                    <button type="button" data-jump="rounds">Score Setup</button>
+                  </div>
+                </div>
+                <div id="commandEvents" class="stack"></div>
+              </section>
+              <section class="panel command-roadmap-panel">
+                <p class="eyebrow">Host flow</p>
+                <h2>Built for tournaments and round robins.</h2>
+                <div class="host-flow-list">
+                  <article><span>1</span><strong>Create the event.</strong><p>Set sport, venue, date, capacity, and publish status.</p></article>
+                  <article><span>2</span><strong>Check players in.</strong><p>Confirm profiles, waivers, RSVPs, and attendance.</p></article>
+                  <article><span>3</span><strong>Run play.</strong><p>Generate rounds or brackets from checked-in players.</p></article>
+                  <article><span>4</span><strong>Save history.</strong><p>Archive the event and export records when it ends.</p></article>
+                </div>
+              </section>
+            </div>
           </div>
         </section>
 
