@@ -1,3 +1,5 @@
+import { sendConfirmation } from '../../lib/paddle-pint-email.js';
+
 const SHOPIFY_ORIGIN = "https://www.paddleandpin.com";
 const ALLOWED_ORIGINS = new Set([
   "null",
@@ -85,7 +87,7 @@ export async function onRequest(context) {
       payload.selected_shirt = null;
       payload.notes = 'Returning player RSVP. No shirt requested. ' + (payload.notes || '');
     }
-    await env.DB.prepare(`
+    const savedSubmission = await env.DB.prepare(`
       INSERT INTO paddle_pint_submissions (
         type,
         first_name,
@@ -119,6 +121,14 @@ export async function onRequest(context) {
       cleanText(payload.source)
     ).run();
 
+    if (payload.type === 'round_robin_event' && env.RESEND_API_KEY && env.PADDLE_PINT_EMAIL_ENABLED === 'true') {
+      const confirmation = sendConfirmation(env, payload, savedSubmission.meta?.last_row_id)
+        .catch(() => console.error('Paddle + Pint confirmation failed after registration was saved'));
+      // An email provider failure must never turn a saved signup into an error
+      // that encourages the customer to submit the registration again.
+      if (context.waitUntil) context.waitUntil(confirmation);
+      else await confirmation;
+    }
     return json({ ok: true, message: "Submission saved" }, 200, corsHeaders);
   } catch (error) {
     console.error("Paddle + Pint submission save failed", error);
