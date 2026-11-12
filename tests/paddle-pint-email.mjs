@@ -12,6 +12,13 @@ assert.match(message.html,/Monday, December 7, 2026/);
 assert.match(message.html,/6:00 PM \(Eastern Time\)/);
 assert.match(message.html,/South Main Brewing Warehouse/);
 assert.match(message.html,/PP_NEW_CREST.png/);
+assert.match(message.html,/paddleandpint20/);
+assert.match(message.html,/Shop Paddle \+ Pin/);
+for (const url of ['https://www.instagram.com/paddleandpin/', 'https://www.facebook.com/paddleandpin/', 'https://www.tiktok.com/@paddleandpin', 'https://www.youtube.com/@PaddleandPin', 'https://www.facebook.com/groups/794530843219907']) {
+  assert.ok(message.html.includes(url));
+  assert.ok(message.text.includes(url));
+}
+assert.match(message.text,/save 20% with code paddleandpint20/);
 assert.equal(eventDateLabel('Monday, December 14, 2026'),'Monday, December 14, 2026');
 assert.throws(()=>eventDateLabel('bad date'));
 const escaped = buildConfirmation({...payload,first_name:'<img src=x onerror=alert(1)>',additional_players:[{first_name:'A&B',last_name:'<Guest>'}]});
